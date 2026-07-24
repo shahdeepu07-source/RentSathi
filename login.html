@@ -8,93 +8,136 @@
         :root { --bg:#0b1120; --card:#111827; --text:#f8fafc; --accent:#2563eb; --border:#1f2937; }
         * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter',system-ui,sans-serif; }
         body { background:var(--bg); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
-        .login-container { width:100%; max-width:420px; }
+        .login-container { width:100%; max-width:420px; position:relative; }
         .login-card { background:var(--card); padding:40px 32px; border-radius:16px; border:1px solid var(--border); box-shadow:0 20px 60px rgba(0,0,0,0.5); }
         .login-card h1 { font-size:2rem; font-weight:700; text-align:center; margin-bottom:8px; color:var(--text); }
-        .login-card .subtitle { text-align:center; color:#94a3b8; font-size:0.9rem; margin-bottom:32px; }
-        .login-card .form-group { margin-bottom:20px; }
-        .login-card label { display:block; font-size:0.75rem; font-weight:600; text-transform:uppercase; color:#94a3b8; letter-spacing:0.5px; margin-bottom:6px; }
+        .login-card .subtitle { text-align:center; color:#94a3b8; font-size:0.9rem; margin-bottom:24px; }
+        .login-card .form-group { margin-bottom:16px; }
+        .login-card label { display:block; font-size:0.75rem; font-weight:600; text-transform:uppercase; color:#94a3b8; letter-spacing:0.5px; margin-bottom:4px; }
         .login-card input { width:100%; padding:12px 14px; background:#0f172a; border:1px solid #334155; border-radius:8px; color:var(--text); font-size:1rem; transition:0.2s; }
         .login-card input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,0.2); }
-        .login-card button { width:100%; padding:14px; background:var(--accent); border:none; border-radius:8px; color:#fff; font-weight:600; font-size:1rem; cursor:pointer; transition:0.2s; position:relative; }
+        .login-card button { width:100%; padding:14px; background:var(--accent); border:none; border-radius:8px; color:#fff; font-weight:600; font-size:1rem; cursor:pointer; transition:0.2s; }
         .login-card button:hover { background:#1d4ed8; transform:translateY(-1px); }
-        .login-card button:disabled { opacity:0.6; cursor:not-allowed; transform:none; }
         .login-card .error { background:rgba(239,68,68,0.15); color:#ef4444; padding:10px 14px; border-radius:8px; margin-bottom:16px; display:none; font-size:0.9rem; text-align:center; }
-        .login-card .footer-text { text-align:center; color:#64748b; font-size:0.8rem; margin-top:20px; }
+        .login-card .footer-text { text-align:center; color:#64748b; font-size:0.8rem; margin-top:16px; }
+        .login-card .footer-text a { color:var(--accent); text-decoration:none; }
+        .login-card .footer-text a:hover { text-decoration:underline; }
         .spinner { display:inline-block; width:20px; height:20px; border:2px solid rgba(255,255,255,0.3); border-radius:50%; border-top-color:#fff; animation:spin 0.6s linear infinite; vertical-align:middle; margin-right:8px; }
         @keyframes spin { to { transform:rotate(360deg); } }
         .btn-text { display:inline-block; vertical-align:middle; }
+        .admin-link { position:absolute; top:12px; right:16px; font-size:0.7rem; color:#64748b; text-decoration:none; }
+        .admin-link:hover { color:var(--accent); }
+        .role-selector { display:flex; gap:12px; justify-content:center; margin-bottom:20px; }
+        .role-selector button { background:transparent; border:1px solid var(--border); border-radius:20px; padding:6px 16px; color:var(--text-muted); font-size:0.8rem; cursor:pointer; transition:0.2s; }
+        .role-selector button.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+        .role-selector button:hover { border-color:var(--accent); }
+        @media(max-width:480px){ .login-card { padding:28px 20px; } }
     </style>
 </head>
 <body>
 <div class="login-container">
+    <a href="/login.html" class="admin-link" style="display:none;">Admin</a>
     <div class="login-card">
         <h1>🏠 RentSathi</h1>
-        <p class="subtitle">Sign in to manage your properties</p>
-        <div id="loginError" class="error">Invalid username or password.</div>
-        <div class="form-group">
-            <label for="username">Username</label>
-            <input type="text" id="username" placeholder="Enter your username" autofocus>
+        <p class="subtitle">Sign in to your dashboard</p>
+        <div class="role-selector">
+            <button class="active" data-role="owner">Owner</button>
+            <button data-role="tenant">Tenant</button>
         </div>
-        <div class="form-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" placeholder="Enter your password">
+        <div id="loginError" class="error"></div>
+        <form id="loginForm">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="username" placeholder="Enter your username" autofocus>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="password" placeholder="Enter your password">
+            </div>
+            <button type="submit" id="loginBtn">
+                <span class="btn-text">Sign In</span>
+            </button>
+        </form>
+        <div class="footer-text">
+            New owner? <a href="/register.html">Register here</a>
         </div>
-        <button id="loginBtn">
-            <span class="btn-text">Sign In</span>
-        </button>
-        <p class="footer-text">Need help? Contact your property owner.</p>
+        <div style="margin-top:8px;text-align:center;font-size:0.7rem;color:#64748b;">
+            <span id="adminLoginLink" style="cursor:pointer;color:var(--accent);text-decoration:underline;">Admin / SuperAdmin Login</span>
+        </div>
     </div>
 </div>
 <script>
     const API_BASE = '/api';
-    const usernameInput = document.getElementById('username');
-    const passwordInput = document.getElementById('password');
-    const loginBtn = document.getElementById('loginBtn');
+    const form = document.getElementById('loginForm');
     const errorEl = document.getElementById('loginError');
+    const btn = document.getElementById('loginBtn');
+    const roleBtns = document.querySelectorAll('.role-selector button');
+    let selectedRole = 'owner';
+    const adminLink = document.getElementById('adminLoginLink');
 
-    async function login() {
-        const username = usernameInput.value.trim();
-        const password = passwordInput.value.trim();
+    roleBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            roleBtns.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            selectedRole = this.dataset.role;
+            // Adjust placeholder and label
+            const usernameField = document.getElementById('username');
+            usernameField.placeholder = selectedRole === 'owner' ? 'Enter your username' : 'Enter your tenant username';
+        });
+    });
+
+    // Admin/SuperAdmin login link – shows a small extra field? We'll just use the same form but note that admin/superadmin can login too.
+    adminLink.addEventListener('click', function() {
+        // No separate field – just instruct user to enter admin username.
+        const usernameField = document.getElementById('username');
+        usernameField.placeholder = 'Enter admin or superadmin username';
+        document.querySelector('.role-selector button.active').classList.remove('active');
+        document.querySelector('.role-selector button:first-child').classList.add('active'); // reset selection
+        selectedRole = 'admin';
+    });
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value.trim();
+
         if (!username || !password) {
             errorEl.textContent = 'Please enter both username and password.';
             errorEl.style.display = 'block';
             return;
         }
-        loginBtn.disabled = true;
-        loginBtn.innerHTML = `<span class="spinner"></span><span class="btn-text">Signing in...</span>`;
+        errorEl.style.display = 'none';
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner"></span><span class="btn-text">Signing in...</span>`;
+
         try {
             const res = await fetch(`${API_BASE}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password })
             });
+            const data = await res.json();
             if (!res.ok) {
-                errorEl.textContent = 'Invalid credentials. Please try again.';
+                errorEl.textContent = data.error || 'Invalid credentials';
                 errorEl.style.display = 'block';
+                btn.disabled = false;
+                btn.innerHTML = `<span class="btn-text">Sign In</span>`;
                 return;
             }
-            const data = await res.json();
-            const token = data.token;
-            const user = data.user;
-            localStorage.setItem('token', token);
-            localStorage.setItem('user', JSON.stringify(user));
-            let redirectUrl = '/index.html';
-            if (user.role === 'admin') redirectUrl = '/admin.html';
-            else if (user.role === 'tenant') redirectUrl = '/tenant.html';
-            window.location.href = redirectUrl;
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            let redirect = '/index.html';
+            if (data.user.role === 'admin') redirect = '/admin.html';
+            else if (data.user.role === 'superadmin') redirect = '/admin.html'; // superadmin uses admin UI with extra permissions
+            else if (data.user.role === 'tenant') redirect = '/tenant.html';
+            window.location.href = redirect;
         } catch (err) {
             errorEl.textContent = 'Something went wrong. Please try again.';
             errorEl.style.display = 'block';
-        } finally {
-            loginBtn.disabled = false;
-            loginBtn.innerHTML = `<span class="btn-text">Sign In</span>`;
+            btn.disabled = false;
+            btn.innerHTML = `<span class="btn-text">Sign In</span>`;
         }
-    }
-
-    loginBtn.addEventListener('click', login);
-    usernameInput.addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
-    passwordInput.addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+    });
 
     // Auto-redirect if already logged in
     const token = localStorage.getItem('token');
@@ -104,10 +147,10 @@
         })
         .then(res => res.ok ? res.json() : Promise.reject())
         .then(user => {
-            let redirectUrl = '/index.html';
-            if (user.role === 'admin') redirectUrl = '/admin.html';
-            else if (user.role === 'tenant') redirectUrl = '/tenant.html';
-            window.location.href = redirectUrl;
+            let redirect = '/index.html';
+            if (user.role === 'admin' || user.role === 'superadmin') redirect = '/admin.html';
+            else if (user.role === 'tenant') redirect = '/tenant.html';
+            window.location.href = redirect;
         })
         .catch(() => {
             localStorage.removeItem('token');

@@ -1,711 +1,827 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RentSathi - Owner Dashboard</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <style>
-        /* ─────────────── ROOT VARIABLES ─────────────── */
-        :root { --bg:#0b1120; --card:#111827; --text:#f8fafc; --accent:#2563eb; --success:#10b981; --warn:#f59e0b; --danger:#ef4444; --border:#1f2937; }
-        * { box-sizing:border-box; margin:0; padding:0; font-family:'Inter',system-ui,sans-serif; }
-        body { background:var(--bg); color:var(--text); padding:20px; min-height:100vh; }
-        .container { max-width:1150px; margin:0 auto; }
-        header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:12px; }
-        h1 { font-size:1.4rem; font-weight:700; letter-spacing:0.5px; }
-        .tabs { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
-        .tab { padding:10px 18px; background:var(--card); border:1px solid var(--border); border-radius:8px; cursor:pointer; transition:0.2s; font-weight:500; font-size:0.9rem; }
-        .tab:hover, .tab.active { background:var(--accent); border-color:var(--accent); color:#fff; }
-        .panel { display:none; } .panel.active { display:block; }
-        .card { background:var(--card); padding:20px; border-radius:12px; border:1px solid var(--border); margin-bottom:16px; }
-        .form-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
-        .form-group { display:flex; flex-direction:column; gap:5px; }
-        label { font-size:0.72rem; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:0.4px; }
-        input, select, textarea { width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:7px; font-size:0.9rem; transition:0.2s; }
-        input:focus, select:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 2px rgba(37,99,235,0.3); }
-        button { padding:10px 18px; background:var(--accent); color:#fff; font-weight:600; cursor:pointer; border:none; border-radius:7px; transition:0.2s; font-size:0.9rem; }
-        button:hover { opacity:0.9; transform:translateY(-1px); }
-        .btn-del { background:var(--danger); padding:5px 10px; font-size:0.75rem; }
-        .btn-fix { background:var(--warn); color:#000; padding:5px 10px; font-size:0.75rem; margin-right:5px; }
-        .btn-pay { background:var(--warn); color:#000; padding:5px 10px; font-size:0.75rem; margin-right:5px; }
-        .btn-logout { background:var(--danger); padding:5px 15px; font-size:0.8rem; }
-        .badge-paid { background:var(--success); color:#000; padding:2px 8px; border-radius:12px; font-size:0.7rem; font-weight:600; }
-        .badge-unpaid { background:var(--danger); color:#fff; padding:2px 8px; border-radius:12px; font-size:0.7rem; font-weight:600; }
-        .bill-preview { background:#0f172a; padding:14px; border-radius:8px; border:1px dashed var(--border); margin-top:14px; font-size:0.82rem; }
-        .bill-row { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #1f2937; }
-        .bill-row:last-child { border:none; }
-        .bill-label { color:#94a3b8; }
-        .bill-row.total { font-weight:700; font-size:1.05rem; color:var(--success); margin-top:10px; padding-top:10px; border-top:2px solid var(--border); }
-        .bill-row.ded { color:var(--danger); }
-        table { width:100%; border-collapse:collapse; margin-top:10px; font-size:0.9rem; }
-        th, td { padding:10px; text-align:left; border-bottom:1px solid var(--border); }
-        th { color:#94a3b8; font-size:0.7rem; text-transform:uppercase; }
-        .hidden { display:none !important; }
-
-        .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); justify-content:center; align-items:center; z-index:100; backdrop-filter:blur(5px); }
-        .modal-content { background:var(--card); padding:20px; border-radius:14px; width:92%; max-width:620px; max-height:90vh; overflow-y:auto; border:1px solid var(--border); box-shadow:0 10px 30px rgba(0,0,0,0.5); }
-        .close { float:right; cursor:pointer; font-size:1.6rem; color:var(--danger); line-height:1; }
-
-        .pro-bill { background:#fff; color:#111; padding:35px 40px; border-radius:6px; font-family:'Helvetica Neue',Arial,sans-serif; box-shadow:0 4px 20px rgba(0,0,0,0.15); }
-        .pb-head { text-align:center; margin-bottom:28px; padding-bottom:18px; border-bottom:3px solid #000; }
-        .pb-head h2 { font-size:2rem; font-weight:800; letter-spacing:3px; margin:0; text-transform:uppercase; }
-        .pb-info { display:flex; justify-content:space-between; margin-bottom:24px; font-size:1rem; }
-        .pb-info strong { font-weight:700; color:#222; }
-        .pb-readings { display:grid; grid-template-columns:1fr 1fr 1fr; gap:25px; margin:30px 0; border-top:2px solid #ddd; border-bottom:2px solid #ddd; padding:22px 0; text-align:center; }
-        .pb-reading-label { font-size:0.8rem; color:#666; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
-        .pb-reading-val { font-size:1.9rem; font-weight:800; }
-        .pb-table { width:100%; border-collapse:collapse; margin:20px 0; }
-        .pb-table td { padding:12px 0; border-bottom:1px solid #eee; }
-        .pb-row-desc { color:#333; font-weight:600; }
-        .pb-row-val { text-align:right; font-weight:700; font-family:'Courier New',monospace; font-size:1.05rem; }
-        .pb-ded-row { color:#d93025; font-style:italic; }
-        .pb-ded-row td { border-bottom:1px dashed #d93025; }
-        .pb-total-section { text-align:right; margin:35px 0 10px; }
-        .pb-total-label { font-size:0.85rem; color:#555; text-transform:uppercase; letter-spacing:1px; font-weight:700; }
-        .pb-total-val { font-size:2.6rem; font-weight:900; color:#000; }
-        .pb-note-box { background:#f8fafc; padding:16px; border-left:4px solid var(--accent); margin:20px 0; border-radius:4px; text-align:left; }
-        .pb-note-label { font-weight:800; color:#444; font-size:0.85rem; display:block; margin-bottom:5px; text-transform:uppercase; }
-        .pb-note-text { font-weight:600; color:#000; font-size:1.05rem; }
-        .pb-footer { text-align:center; margin-top:40px; font-size:0.8rem; color:#888; letter-spacing:2px; text-transform:uppercase; }
-        .user-email { color:#94a3b8; font-size:0.85rem; margin-right:15px; }
-
-        .checkbox-group { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
-        .checkbox-group input[type="checkbox"] { width:auto; accent-color:var(--accent); cursor:pointer; }
-        .checkbox-group label { font-size:0.85rem; font-weight:500; text-transform:none; color:var(--text); cursor:pointer; }
-        .tenant-login-fields { padding:12px 16px; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid var(--border); margin-bottom:12px; display:none; }
-        .tenant-login-fields.visible { display:block; }
-
-        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); z-index:1000; justify-content:center; align-items:center; padding:20px; }
-        .modal-overlay.active { display:flex; }
-        .modal-box { background:var(--card); border:1px solid var(--border); border-radius:12px; max-width:400px; width:100%; padding:28px; box-shadow:0 20px 60px rgba(0,0,0,0.5); }
-        .modal-box h3 { margin-bottom:16px; }
-        .modal-box .form-group { margin-bottom:12px; }
-        .modal-box input { width:100%; padding:10px; background:#0f172a; border:1px solid var(--border); border-radius:6px; color:#fff; }
-        .modal-box .actions { display:flex; gap:10px; justify-content:flex-end; margin-top:16px; }
-
-        @media(max-width:800px) { .form-grid { grid-template-columns:1fr 1fr; } }
-        @media(max-width:500px) { .form-grid { grid-template-columns:1fr; } }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RentSathi - Owner Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    /* ─────────────── ROOT VARIABLES ─────────────── */
+    :root { --bg:#0b1120; --card:#111827; --text:#f8fafc; --text-muted:#94a3b8; --accent:#2563eb; --accent-hover:#1d4ed8; --success:#10b981; --warn:#f59e0b; --danger:#ef4444; --border:#1f2937; --radius:12px; --shadow:0 4px 24px rgba(0,0,0,0.3); --transition:0.2s ease; }
+    * { box-sizing:border-box; margin:0; padding:0; font-family:'Inter',system-ui,-apple-system,sans-serif; }
+    body { background:var(--bg); color:var(--text); padding:20px; min-height:100vh; }
+    .container { max-width:1150px; margin:0 auto; }
+    header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid var(--border); }
+    header h1 { font-size:1.4rem; font-weight:700; letter-spacing:0.5px; }
+    .user-email { color:var(--text-muted); font-size:0.85rem; margin-right:15px; }
+    .btn-logout { background:var(--danger); color:#fff; border:none; padding:5px 15px; border-radius:6px; cursor:pointer; font-size:0.8rem; font-weight:600; transition:var(--transition); }
+    .btn-logout:hover { opacity:0.85; transform:translateY(-1px); }
+    .tabs { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
+    .tab { padding:10px 18px; background:var(--card); border:1px solid var(--border); border-radius:8px; cursor:pointer; transition:var(--transition); font-weight:500; font-size:0.9rem; }
+    .tab:hover, .tab.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+    .panel { display:none; } .panel.active { display:block; }
+    .card { background:var(--card); padding:20px; border-radius:var(--radius); border:1px solid var(--border); margin-bottom:16px; box-shadow:var(--shadow); }
+    .card h3 { font-size:1.1rem; font-weight:600; margin-bottom:12px; }
+    .form-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
+    .form-group { display:flex; flex-direction:column; gap:5px; }
+    label { font-size:0.72rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.4px; }
+    input, select, textarea { width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:var(--text); border-radius:7px; font-size:0.9rem; transition:var(--transition); }
+    input:focus, select:focus, textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 2px rgba(37,99,235,0.3); }
+    button { padding:10px 18px; background:var(--accent); color:#fff; font-weight:600; cursor:pointer; border:none; border-radius:7px; transition:var(--transition); font-size:0.9rem; }
+    button:hover { opacity:0.9; transform:translateY(-1px); }
+    .btn-del { background:var(--danger); padding:5px 10px; font-size:0.75rem; }
+    .btn-fix { background:var(--warn); color:#000; padding:5px 10px; font-size:0.75rem; margin-right:5px; }
+    .btn-pay { background:var(--warn); color:#000; padding:5px 10px; font-size:0.75rem; margin-right:5px; }
+    .badge-paid { background:var(--success); color:#000; padding:2px 8px; border-radius:12px; font-size:0.7rem; font-weight:600; }
+    .badge-unpaid { background:var(--danger); color:#fff; padding:2px 8px; border-radius:12px; font-size:0.7rem; font-weight:600; }
+    .badge-balance-due { background:var(--danger); color:#fff; padding:2px 8px; border-radius:12px; font-size:0.7rem; font-weight:600; }
+    .badge-balance-advance { background:var(--success); color:#000; padding:2px 8px; border-radius:12px; font-size:0.7rem; font-weight:600; }
+    .badge-balance-zero { background:var(--text-muted); color:#fff; padding:2px 8px; border-radius:12px; font-size:0.7rem; font-weight:600; }
+    .bill-preview { background:#0f172a; padding:14px; border-radius:8px; border:1px dashed var(--border); margin-top:14px; font-size:0.82rem; }
+    .bill-row { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #1f2937; }
+    .bill-row:last-child { border:none; }
+    .bill-label { color:var(--text-muted); }
+    .bill-row.total { font-weight:700; font-size:1.05rem; color:var(--success); margin-top:10px; padding-top:10px; border-top:2px solid var(--border); }
+    .bill-row.ded { color:var(--danger); }
+    table { width:100%; border-collapse:collapse; margin-top:10px; font-size:0.9rem; }
+    th, td { padding:10px; text-align:left; border-bottom:1px solid var(--border); }
+    th { color:var(--text-muted); font-size:0.7rem; text-transform:uppercase; }
+    .hidden { display:none !important; }
+    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(5px); z-index:100; justify-content:center; align-items:center; }
+    .modal-content { background:var(--card); padding:24px; border-radius:var(--radius); width:92%; max-width:560px; max-height:90vh; overflow-y:auto; border:1px solid var(--border); box-shadow:var(--shadow); }
+    .modal-content .close { float:right; cursor:pointer; font-size:1.6rem; color:var(--danger); line-height:1; }
+    .modal-content .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+    .modal-content .modal-header h3 { font-weight:600; font-size:1.1rem; }
+    .modal-content .form-group { margin-bottom:14px; }
+    .modal-content .form-group label { display:block; font-size:0.7rem; font-weight:600; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.5px; margin-bottom:4px; }
+    .modal-content .form-group input, .modal-content .form-group select, .modal-content .form-group textarea { width:100%; padding:10px; background:#0f172a; border:1px solid #334155; color:var(--text); border-radius:6px; font-size:0.9rem; }
+    .modal-content .form-group textarea { resize:vertical; min-height:60px; }
+    .modal-content .form-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:16px; }
+    .pro-bill { background:#fff; color:#111; padding:35px 40px; border-radius:6px; font-family:'Helvetica Neue',Arial,sans-serif; box-shadow:0 4px 20px rgba(0,0,0,0.15); }
+    .pb-head { text-align:center; margin-bottom:28px; padding-bottom:18px; border-bottom:3px solid #000; }
+    .pb-head h2 { font-size:2rem; font-weight:800; letter-spacing:3px; margin:0; text-transform:uppercase; }
+    .pb-info { display:flex; justify-content:space-between; margin-bottom:24px; font-size:1rem; }
+    .pb-info strong { font-weight:700; color:#222; }
+    .pb-readings { display:grid; grid-template-columns:1fr 1fr 1fr; gap:25px; margin:30px 0; border-top:2px solid #ddd; border-bottom:2px solid #ddd; padding:22px 0; text-align:center; }
+    .pb-reading-label { font-size:0.8rem; color:#666; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
+    .pb-reading-val { font-size:1.9rem; font-weight:800; }
+    .pb-table { width:100%; border-collapse:collapse; margin:20px 0; }
+    .pb-table td { padding:12px 0; border-bottom:1px solid #eee; }
+    .pb-row-desc { color:#333; font-weight:600; }
+    .pb-row-val { text-align:right; font-weight:700; font-family:'Courier New',monospace; font-size:1.05rem; }
+    .pb-ded-row { color:#d93025; font-style:italic; }
+    .pb-ded-row td { border-bottom:1px dashed #d93025; }
+    .pb-total-section { text-align:right; margin:35px 0 10px; }
+    .pb-total-label { font-size:0.85rem; color:#555; text-transform:uppercase; letter-spacing:1px; font-weight:700; }
+    .pb-total-val { font-size:2.6rem; font-weight:900; color:#000; }
+    .pb-note-box { background:#f8fafc; padding:16px; border-left:4px solid var(--accent); margin:20px 0; border-radius:4px; text-align:left; }
+    .pb-note-label { font-weight:800; color:#444; font-size:0.85rem; display:block; margin-bottom:5px; text-transform:uppercase; }
+    .pb-note-text { font-weight:600; color:#000; font-size:1.05rem; }
+    .pb-footer { text-align:center; margin-top:40px; font-size:0.8rem; color:#888; letter-spacing:2px; text-transform:uppercase; }
+    .checkbox-group { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+    .checkbox-group input[type="checkbox"] { width:auto; accent-color:var(--accent); cursor:pointer; }
+    .checkbox-group label { font-size:0.85rem; font-weight:500; text-transform:none; color:var(--text); cursor:pointer; }
+    .tenant-login-fields { padding:12px 16px; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid var(--border); margin-bottom:12px; display:none; }
+    .tenant-login-fields.visible { display:block; }
+    .trial-banner { background:linear-gradient(135deg, var(--warn), #d97706); color:#000; padding:12px 20px; border-radius:var(--radius); margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; font-weight:600; }
+    .trial-banner .days { font-size:1.2rem; background:rgba(0,0,0,0.2); padding:2px 12px; border-radius:20px; }
+    .footer-text { text-align:center; color:var(--text-muted); font-size:0.75rem; margin-top:30px; padding-top:16px; border-top:1px solid var(--border); }
+    @media(max-width:800px){ .form-grid { grid-template-columns:1fr 1fr; } }
+    @media(max-width:500px){ .form-grid { grid-template-columns:1fr; } }
+  </style>
 </head>
 <body>
 
 <div id="app">
-    <div class="container">
-        <header>
-            <h1>🏠 RentSathi</h1>
-            <div>
-                <span class="user-email" id="userDisplay"></span>
-                <button class="btn-logout" id="logoutBtn">Logout</button>
-            </div>
-        </header>
+  <div class="container">
 
-        <div id="houseSelector" style="margin-bottom:20px; padding:15px; background:var(--card); border-radius:8px; border:1px solid var(--border);">
-            <label style="font-weight:bold; margin-right:10px;">🏢 Active House:</label>
-            <select id="globalHouseSelect" onchange="changeHouse(this.value)" style="padding:8px 15px; border-radius:5px; background:#0f172a; color:white; border:1px solid #475569; font-size:15px; cursor:pointer;">
-                <option value="">Loading...</option>
-            </select>
-        </div>
+    <!-- HEADER -->
+    <header>
+      <h1>🏠 RentSathi</h1>
+      <div>
+        <span class="user-email" id="userDisplay"></span>
+        <button class="btn-logout" id="logoutBtn">Logout</button>
+      </div>
+    </header>
 
-        <div class="tabs">
-            <div class="tab active" onclick="showTab('billing')">⚡ Create Bill</div>
-            <div class="tab" onclick="showTab('tenants')">👥 Tenants</div>
-            <div class="tab" onclick="showTab('history')">📜 History</div>
-        </div>
-
-        <!-- Billing Panel -->
-        <div id="billing" class="panel active">
-            <div class="card">
-                <h3 style="margin-bottom:16px; font-size:1.1rem;">Generate Monthly Bill</h3>
-                <form id="billingForm" onsubmit="event.preventDefault(); generateBill();">
-                    <div class="form-grid">
-                        <div class="form-group"><label>1. Select Tenant</label><select id="bTenant" onchange="updatePreview()"><option value="">-- Choose --</option></select></div>
-                        <div class="form-group"><label>2. Billing Month</label><input type="text" id="bMonth" placeholder="e.g., Ashwin 2081" required></div>
-                        <div class="form-group"><label>3. Current Reading</label><input type="number" id="bCurr" placeholder="Meter" required oninput="updatePreview()"></div>
-                        <div class="form-group"><label>4. Water Unit Charge</label><input type="number" id="bWater" value="0" oninput="updatePreview()"></div>
-                        <div class="form-group"><label>5. Waste (Rs.)</label><input type="number" id="bWaste" value="0" oninput="updatePreview()"></div>
-                        <div class="form-group"><label>6. Previous Due (Rs.)</label><input type="number" id="bDue" value="0" oninput="updatePreview()"></div>
-                        <div class="form-group"><label>7. Deduction (Rs.)</label><input type="number" id="bDed" value="0" oninput="updatePreview()"></div>
-                        <div class="form-group"><label>8. Ded. Reason</label><input type="text" id="bDedReason" placeholder="Why?"></div>
-                    </div>
-                    <div class="form-group" style="margin-bottom:12px;"><label>Notice / Note</label><textarea id="bNote" rows="2" placeholder="Important message for tenant..."></textarea></div>
-                    <div class="bill-preview" id="previewBox">
-                        <div class="bill-row"><span class="bill-label">Prev Reading</span><span id="pPrev">—</span></div>
-                        <div class="bill-row"><span class="bill-label">Current Reading</span><span id="pCurr">—</span></div>
-                        <div class="bill-row"><span class="bill-label">Units (×15)</span><span id="pUnits">0</span></div>
-                        <div class="bill-row"><span class="bill-label">Electricity</span><span id="pElec">Rs. 0</span></div>
-                        <div class="bill-row"><span class="bill-label">Rent</span><span id="pRent">Rs. 0</span></div>
-                        <div class="bill-row"><span class="bill-label">Water Unit Charge</span><span id="pWater">Rs. 0</span></div>
-                        <div class="bill-row"><span class="bill-label">Waste</span><span id="pWaste">Rs. 0</span></div>
-                        <div class="bill-row"><span class="bill-label">Previous Due</span><span id="pDue">Rs. 0</span></div>
-                        <div class="bill-row ded"><span class="bill-label">Deduction</span><span id="pDed">- Rs. 0</span></div>
-                        <div class="bill-row total"><span>TOTAL PAYABLE</span><span id="pTotal">Rs. 0</span></div>
-                    </div>
-                    <button type="submit" style="width:100%; margin-top:14px; font-size:1rem; padding:12px;">💾 Generate & Save Bill</button>
-                </form>
-            </div>
-        </div>
-
-        <!-- Tenants Panel -->
-        <div id="tenants" class="panel">
-            <div class="card">
-                <h3 style="margin-bottom:14px; font-size:1.1rem;">Manage Tenants</h3>
-                <form id="tenantForm" class="form-grid" style="grid-template-columns:1fr 1fr 1fr auto; margin-bottom:12px;" onsubmit="event.preventDefault(); saveTenant();">
-                    <input type="hidden" id="editId">
-                    <div class="form-group"><label>Name</label><input type="text" id="tName" required></div>
-                    <div class="form-group"><label>Rent (Rs.)</label><input type="number" id="tRent" required></div>
-                    <div class="form-group"><label>Last Reading</label><input type="number" id="tReading" value="0"></div>
-                    <button type="submit" style="margin-top:18px;">Save</button>
-                </form>
-
-                <div style="margin:12px 0 8px; padding:12px 16px; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid var(--border);">
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="createTenantUser" onchange="toggleTenantUserFields()">
-                        <label for="createTenantUser">✏️ Create login for this tenant</label>
-                    </div>
-                    <div id="tenantUserFields" class="tenant-login-fields">
-                        <div class="form-grid" style="grid-template-columns:1fr 1fr; gap:12px; margin-bottom:0;">
-                            <div class="form-group"><label>Tenant Username *</label><input type="text" id="tUsername" placeholder="e.g., harka"></div>
-                            <div class="form-group"><label>Tenant Password *</label><input type="text" id="tPassword" placeholder="••••••••"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="card">
-                <table><thead><tr><th>Name</th><th>Rent</th><th>Reading</th><th>Actions</th></tr></thead><tbody id="tenantTable"></tbody></table>
-            </div>
-        </div>
-
-        <!-- History Panel -->
-        <div id="history" class="panel">
-            <div class="card">
-                <h3 style="margin-bottom:12px; font-size:1.1rem;">Bill History</h3>
-                <table>
-                    <thead><tr><th>Tenant</th><th>Month</th><th>Units</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
-                    <tbody id="historyTable"></tbody>
-                </table>
-            </div>
-        </div>
+    <!-- TRIAL BANNER (shown only for trial owners) -->
+    <div id="trialBanner" class="trial-banner hidden">
+      <span>⏳ Free Trial</span>
+      <span><span id="trialDaysLeft">30</span> days remaining</span>
     </div>
+
+    <!-- HOUSE SELECTOR -->
+    <div id="houseSelector" style="margin-bottom:20px; padding:15px; background:var(--card); border-radius:8px; border:1px solid var(--border);">
+      <label style="font-weight:bold; margin-right:10px;">🏢 Active House:</label>
+      <select id="globalHouseSelect" onchange="changeHouse(this.value)" style="padding:8px 15px; border-radius:5px; background:#0f172a; color:white; border:1px solid #475569; font-size:15px; cursor:pointer;">
+        <option value="">Loading...</option>
+      </select>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('billing')">⚡ Create Bill</div>
+      <div class="tab" onclick="showTab('tenants')">👥 Tenants</div>
+      <div class="tab" onclick="showTab('history')">📜 History</div>
+    </div>
+
+    <!-- BILLING PANEL -->
+    <div id="billing" class="panel active">
+      <div class="card">
+        <h3>Generate Monthly Bill</h3>
+        <form id="billingForm" onsubmit="event.preventDefault(); generateBill();">
+          <div class="form-grid">
+            <div class="form-group"><label>1. Select Tenant</label><select id="bTenant" onchange="updatePreview()"><option value="">-- Choose --</option></select></div>
+            <div class="form-group"><label>2. Billing Month</label><input type="text" id="bMonth" placeholder="e.g., Ashwin 2081" required></div>
+            <div class="form-group"><label>3. Current Reading</label><input type="number" id="bCurr" placeholder="Meter" required oninput="updatePreview()"></div>
+            <div class="form-group"><label>4. Water Unit Charge</label><input type="number" id="bWater" value="0" oninput="updatePreview()"></div>
+            <div class="form-group"><label>5. Waste (Rs.)</label><input type="number" id="bWaste" value="0" oninput="updatePreview()"></div>
+            <div class="form-group"><label>6. Previous Due (Rs.)</label><input type="number" id="bDue" value="0" oninput="updatePreview()"></div>
+            <div class="form-group"><label>7. Deduction (Rs.)</label><input type="number" id="bDed" value="0" oninput="updatePreview()"></div>
+            <div class="form-group"><label>8. Ded. Reason</label><input type="text" id="bDedReason" placeholder="Why?"></div>
+          </div>
+          <div class="form-group" style="margin-bottom:12px;"><label>Notice / Note</label><textarea id="bNote" rows="2" placeholder="Important message for tenant..."></textarea></div>
+          <div class="bill-preview" id="previewBox">
+            <div class="bill-row"><span class="bill-label">Prev Reading</span><span id="pPrev">—</span></div>
+            <div class="bill-row"><span class="bill-label">Current Reading</span><span id="pCurr">—</span></div>
+            <div class="bill-row"><span class="bill-label">Units (×15)</span><span id="pUnits">0</span></div>
+            <div class="bill-row"><span class="bill-label">Electricity</span><span id="pElec">Rs. 0</span></div>
+            <div class="bill-row"><span class="bill-label">Rent</span><span id="pRent">Rs. 0</span></div>
+            <div class="bill-row"><span class="bill-label">Water Unit Charge</span><span id="pWater">Rs. 0</span></div>
+            <div class="bill-row"><span class="bill-label">Waste</span><span id="pWaste">Rs. 0</span></div>
+            <div class="bill-row"><span class="bill-label">Previous Due</span><span id="pDue">Rs. 0</span></div>
+            <div class="bill-row ded"><span class="bill-label">Deduction</span><span id="pDed">- Rs. 0</span></div>
+            <div class="bill-row total"><span>TOTAL PAYABLE</span><span id="pTotal">Rs. 0</span></div>
+          </div>
+          <button type="submit" style="width:100%; margin-top:14px; font-size:1rem; padding:12px;">💾 Generate & Save Bill</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- TENANTS PANEL -->
+    <div id="tenants" class="panel">
+      <div class="card">
+        <h3>Manage Tenants</h3>
+        <form id="tenantForm" class="form-grid" style="grid-template-columns:1fr 1fr 1fr auto; margin-bottom:12px;" onsubmit="event.preventDefault(); saveTenant();">
+          <input type="hidden" id="editId">
+          <div class="form-group"><label>Name *</label><input type="text" id="tName" required></div>
+          <div class="form-group"><label>Rent (Rs.) *</label><input type="number" id="tRent" required></div>
+          <div class="form-group"><label>Last Reading</label><input type="number" id="tReading" value="0"></div>
+          <button type="submit" style="margin-top:18px;">Save</button>
+        </form>
+
+        <!-- Extra fields for tenant details -->
+        <div style="margin:12px 0 8px; padding:12px 16px; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid var(--border);">
+          <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr; gap:12px;">
+            <div class="form-group"><label>Phone</label><input type="tel" id="tPhone" placeholder="9841234567"></div>
+            <div class="form-group"><label>Email</label><input type="email" id="tEmail" placeholder="tenant@example.com"></div>
+            <div class="form-group"><label>Address</label><input type="text" id="tAddress" placeholder="Kathmandu"></div>
+          </div>
+          <div class="checkbox-group">
+            <input type="checkbox" id="createTenantUser" onchange="toggleTenantUserFields()">
+            <label for="createTenantUser">✏️ Create login for this tenant</label>
+          </div>
+          <div id="tenantUserFields" class="tenant-login-fields">
+            <div class="form-grid" style="grid-template-columns:1fr 1fr; gap:12px;">
+              <div class="form-group"><label>Tenant Username *</label><input type="text" id="tUsername" placeholder="e.g., harka"></div>
+              <div class="form-group"><label>Tenant Password *</label><input type="text" id="tPassword" placeholder="••••••••"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Name</th><th>Rent</th><th>Reading</th><th>Balance</th><th>Actions</th></tr></thead>
+          <tbody id="tenantTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- HISTORY PANEL -->
+    <div id="history" class="panel">
+      <div class="card">
+        <h3>Bill History</h3>
+        <table>
+          <thead><tr><th>Tenant</th><th>Month</th><th>Units</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="historyTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer-text">
+      Created by Gnomon Studio • © 2026 RentSathi
+    </div>
+  </div>
 </div>
 
-<!-- Bill Modal -->
+<!-- BILL MODAL (Preview) -->
 <div id="billModal" class="modal">
-    <div class="modal-content">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <span style="color:#94a3b8; font-size:0.85rem; font-weight:600;">Bill Preview</span>
-            <span class="close" onclick="closeModal()">×</span>
-        </div>
-        <div id="printArea" class="pro-bill"></div>
-        <div style="margin-top:16px; display:flex; gap:10px;">
-            <button onclick="downloadImage()" style="flex:1; background:var(--success);">📸 Download Image</button>
-            <button onclick="closeModal()" style="flex:1; background:var(--danger);">Close</button>
-        </div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Bill Preview</h3>
+      <span class="close" onclick="closeBillModal()">×</span>
     </div>
+    <div id="printArea" class="pro-bill"></div>
+    <div style="margin-top:16px; display:flex; gap:10px;">
+      <button onclick="downloadBillImage()" style="flex:1; background:var(--success);">📸 Download Image</button>
+      <button onclick="closeBillModal()" style="flex:1; background:var(--danger);">Close</button>
+    </div>
+  </div>
 </div>
 
-<!-- Password Modal -->
-<div class="modal-overlay" id="passwordModal">
-    <div class="modal-box">
-        <h3>🔐 Confirm Password</h3>
-        <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:12px;">Enter your password to delete this tenant.</p>
-        <div class="form-group">
-            <input type="password" id="ownerPasswordConfirm" placeholder="Your password" required>
-        </div>
-        <div class="actions">
-            <button class="btn-outline" onclick="closePasswordModal()">Cancel</button>
-            <button class="btn-del" id="confirmDeleteBtn">Delete</button>
-        </div>
+<!-- PAYMENT MODAL -->
+<div id="paymentModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>💰 Mark Payment</h3>
+      <span class="close" onclick="closePaymentModal()">×</span>
     </div>
+    <form id="paymentForm">
+      <div class="form-group">
+        <label>Payment Type</label>
+        <select id="paymentType" required>
+          <option value="equal">Equal (Zero Balance)</option>
+          <option value="due">Due (Add to Balance)</option>
+          <option value="advance">Advance (Reduce Balance)</option>
+        </select>
+      </div>
+      <div class="form-group" id="amountGroup">
+        <label>Amount (Rs.)</label>
+        <input type="number" id="paymentAmount" placeholder="Enter amount" step="0.01" min="0">
+      </div>
+      <div class="form-group">
+        <label>Reason / Remarks</label>
+        <textarea id="paymentReason" rows="2" placeholder="e.g., Partial payment, excess paid"></textarea>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn-outline" onclick="closePaymentModal()">Cancel</button>
+        <button type="submit" class="btn-success">Confirm Payment</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- PASSWORD MODAL (for delete tenant) -->
+<div class="modal" id="passwordModal">
+  <div class="modal-content" style="max-width:400px;">
+    <div class="modal-header">
+      <h3>🔐 Confirm Password</h3>
+      <span class="close" onclick="closePasswordModal()">×</span>
+    </div>
+    <div class="form-group">
+      <label>Enter your password</label>
+      <input type="password" id="ownerPasswordConfirm" placeholder="••••••••">
+    </div>
+    <div class="form-actions">
+      <button type="button" class="btn-outline" onclick="closePasswordModal()">Cancel</button>
+      <button type="button" class="btn-del" id="confirmDeleteBtn">Delete</button>
+    </div>
+  </div>
 </div>
 
 <script>
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // AUTHENTICATION & ROLE CHECK
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    const API_BASE = '/api';
-    const token = localStorage.getItem('token');
-    if (!token) window.location.href = '/login.html';
-    const userStr = localStorage.getItem('user');
-    let user = null;
-    try { user = JSON.parse(userStr); } catch(e) {}
-    if (!user || (user.role !== 'owner' && user.role !== 'admin')) {
-        localStorage.removeItem('token'); localStorage.removeItem('user');
-        window.location.href = '/login.html';
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// AUTHENTICATION & ROLE CHECK
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const API_BASE = '/api';
+const token = localStorage.getItem('token');
+if (!token) window.location.href = '/login.html';
+const userStr = localStorage.getItem('user');
+let user = null;
+try { user = JSON.parse(userStr); } catch(e) {}
+if (!user || (user.role !== 'owner' && user.role !== 'admin' && user.role !== 'superadmin')) {
+  localStorage.removeItem('token'); localStorage.removeItem('user');
+  window.location.href = '/login.html';
+}
+let authToken = token;
+let tenants = [];
+const RATE = 15;
+let currentHouseId = '';
+
+function logout() {
+  localStorage.removeItem('token'); localStorage.removeItem('user');
+  window.location.href = '/login.html';
+}
+document.getElementById('logoutBtn').addEventListener('click', logout);
+document.getElementById('userDisplay').textContent = user.username;
+
+// ─── Trial banner ──────────────────────────────────────────
+function updateTrialBanner() {
+  const banner = document.getElementById('trialBanner');
+  if (user.role === 'owner' && user.subscription_status === 'trial') {
+    const trialEnd = new Date(user.trial_end);
+    const now = new Date();
+    const daysLeft = Math.max(0, Math.ceil((trialEnd - now) / (1000 * 60 * 60 * 24)));
+    document.getElementById('trialDaysLeft').textContent = daysLeft;
+    banner.classList.remove('hidden');
+    if (daysLeft <= 5) {
+      banner.style.background = 'linear-gradient(135deg, var(--danger), #dc2626)';
+      banner.style.color = '#fff';
+    } else {
+      banner.style.background = 'linear-gradient(135deg, var(--warn), #d97706)';
+      banner.style.color = '#000';
     }
-    let authToken = token;
-    let tenants = [];
-    const RATE = 15;
-    let currentHouseId = '';
+  } else {
+    banner.classList.add('hidden');
+  }
+}
+updateTrialBanner();
 
-    function logout() {
-        localStorage.removeItem('token'); localStorage.removeItem('user');
-        window.location.href = '/login.html';
+// ─── API helper ──────────────────────────────────────────────
+async function api(method, url, data) {
+  const opts = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${authToken}`
     }
-    document.getElementById('logoutBtn').addEventListener('click', logout);
+  };
+  if (data) opts.body = JSON.stringify(data);
+  const res = await fetch(`${API_BASE}${url}`, opts);
+  if (!res.ok) {
+    if (res.status === 401) { logout(); throw new Error('Session expired'); }
+    const err = await res.text();
+    throw new Error(err || 'Request failed');
+  }
+  return res.json();
+}
 
-    // ─── API ──────────────────────────────────────────────────────
-    async function api(method, url, data) {
-        const opts = {
-            method,
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authToken}`
-            }
-        };
-        if (data) opts.body = JSON.stringify(data);
-        const res = await fetch(`${API_BASE}${url}`, opts);
-        if (!res.ok) {
-            if (res.status === 401) { logout(); throw new Error('Session expired'); }
-            const err = await res.text();
-            throw new Error(err || 'Request failed');
-        }
-        return res.json();
+// ─── Toast ──────────────────────────────────────────────────
+function showToast(msg) {
+  const existing = document.getElementById('toast');
+  if (existing) existing.remove();
+  const div = document.createElement('div');
+  div.id = 'toast';
+  div.style.cssText = `
+    position:fixed; bottom:24px; right:24px;
+    background:var(--card); color:var(--text);
+    padding:12px 24px; border-radius:8px;
+    border:1px solid var(--border);
+    box-shadow:var(--shadow);
+    z-index:9999;
+    font-size:0.9rem;
+    opacity:0;
+    transition: opacity 0.3s ease;
+    border-left: 4px solid var(--success);
+    max-width:400px;
+  `;
+  div.textContent = msg;
+  document.body.appendChild(div);
+  setTimeout(() => div.style.opacity = '1', 50);
+  setTimeout(() => {
+    div.style.opacity = '0';
+    setTimeout(() => div.remove(), 400);
+  }, 3000);
+}
+
+// ─── Tabs ──────────────────────────────────────────────────
+window.showTab = (id) => {
+  document.querySelectorAll('.panel').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => {
+    if (t.textContent.includes(id==='billing'?'Create':id==='tenants'?'Tenants':'History')) t.classList.add('active');
+  });
+};
+
+// ─── Houses ──────────────────────────────────────────────────
+async function loadHouses() {
+  try {
+    const houses = await api('GET', '/houses');
+    const select = document.getElementById('globalHouseSelect');
+    if (!houses || houses.length === 0) {
+      select.innerHTML = '<option value="">No houses assigned</option>';
+      currentHouseId = '';
+      await loadTenants();
+      return;
     }
-
-    // ─── Password Modal ──────────────────────────────────────────
-    let pendingDeleteTenantId = null;
-
-    function openPasswordModal(tenantId) {
-        pendingDeleteTenantId = tenantId;
-        document.getElementById('ownerPasswordConfirm').value = '';
-        document.getElementById('passwordModal').classList.add('active');
+    select.innerHTML = houses.map(h => `<option value="${h}" ${h===currentHouseId?'selected':''}>${h}</option>`).join('');
+    if (!houses.includes(currentHouseId) || !currentHouseId) {
+      currentHouseId = houses[0];
+      select.value = currentHouseId;
     }
+    if (!currentHouseId) currentHouseId = select.value;
+    await loadTenants();
+  } catch (e) {
+    console.error('loadHouses error:', e);
+    document.getElementById('globalHouseSelect').innerHTML = '<option value="">Error loading houses</option>';
+  }
+}
 
-    function closePasswordModal() {
-        document.getElementById('passwordModal').classList.remove('active');
-        pendingDeleteTenantId = null;
+window.changeHouse = async (newHouse) => {
+  currentHouseId = newHouse;
+  await loadTenants();
+};
+
+// ─── Tenants ──────────────────────────────────────────────────
+async function loadTenants() {
+  if (!currentHouseId) {
+    tenants = [];
+    renderTenants();
+    renderTenantSelect();
+    renderHistory();
+    return;
+  }
+  try {
+    tenants = await api('GET', `/tenants?houseId=${currentHouseId}`);
+    renderTenants();
+    renderTenantSelect();
+    renderHistory();
+  } catch (e) {
+    console.error('loadTenants error:', e);
+    tenants = [];
+    renderTenants();
+    renderTenantSelect();
+    renderHistory();
+  }
+}
+
+function renderTenantSelect() {
+  const select = document.getElementById('bTenant');
+  const currentVal = select.value;
+  select.innerHTML = '<option value="">-- Choose --</option>';
+  tenants.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t.id;
+    opt.textContent = t.name;
+    select.appendChild(opt);
+  });
+  if (currentVal) select.value = currentVal;
+  updatePreview();
+}
+
+function renderTenants() {
+  const tbody = document.getElementById('tenantTable');
+  if (!currentHouseId) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">No house selected</td></tr>`;
+    return;
+  }
+  if (!tenants.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">No tenants in this house</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = tenants.map(t => {
+    const balance = t.balance || 0;
+    let balanceClass = 'badge-balance-zero';
+    let balanceLabel = balance === 0 ? 'Zero' : (balance > 0 ? 'Due' : 'Advance');
+    if (balance > 0) balanceClass = 'badge-balance-due';
+    else if (balance < 0) balanceClass = 'badge-balance-advance';
+    return `
+      <tr>
+        <td><strong>${t.name}</strong> ${t.tenant_user_id ? '🔑' : ''}</td>
+        <td>Rs. ${Number(t.rent_amount).toLocaleString()}</td>
+        <td>${t.last_reading}</td>
+        <td><span class="${balanceClass}">${balanceLabel} (Rs. ${Math.abs(balance).toLocaleString()})</span></td>
+        <td>
+          <button class="btn-fix" onclick="editTenant(${t.id})">Edit</button>
+          <button class="btn-del" onclick="deleteTenant(${t.id})">🗑️</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// ─── Save Tenant (with phone, email, address) ──────────────
+window.saveTenant = async () => {
+  if (!currentHouseId) {
+    alert('No house selected. Please select a house first.');
+    return;
+  }
+  const id = document.getElementById('editId').value;
+  const name = document.getElementById('tName').value.trim();
+  const rent = Number(document.getElementById('tRent').value);
+  const reading = Number(document.getElementById('tReading').value);
+  const phone = document.getElementById('tPhone').value.trim();
+  const email = document.getElementById('tEmail').value.trim();
+  const address = document.getElementById('tAddress').value.trim();
+
+  if (!name || !rent) { alert('Name and rent required'); return; }
+
+  const data = { name, rent_amount: rent, last_reading: reading, phone, email, address };
+
+  const createUser = document.getElementById('createTenantUser').checked;
+  if (createUser) {
+    const username = document.getElementById('tUsername').value.trim();
+    const password = document.getElementById('tPassword').value.trim();
+    if (!username || !password) {
+      alert('Please provide both username and password for the tenant login.');
+      return;
     }
+    data.tenant_username = username;
+    data.tenant_password = password;
+    data.tenant_fullName = name;
+    data.tenant_phone = phone;
+    data.tenant_email = email;
+  }
 
-    document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
-        const password = document.getElementById('ownerPasswordConfirm').value.trim();
-        if (!password) {
-            alert('Please enter your password.');
-            return;
-        }
-        try {
-            await api('POST', '/auth/verify-password', { password });
-            if (pendingDeleteTenantId !== null) {
-                await deleteTenantAction(pendingDeleteTenantId);
-                closePasswordModal();
-                await loadTenants();
-            }
-        } catch (err) {
-            alert('Incorrect password. Action cancelled.');
-        }
+  try {
+    if (id) {
+      await api('PUT', `/tenants/${id}?houseId=${currentHouseId}`, data);
+    } else {
+      await api('POST', `/tenants?houseId=${currentHouseId}`, data);
+      showToast(createUser ? '✅ Tenant created with login!' : '✅ Tenant added!');
+    }
+    document.getElementById('tenantForm').reset();
+    document.getElementById('editId').value = '';
+    document.getElementById('createTenantUser').checked = false;
+    document.getElementById('tenantUserFields').classList.remove('visible');
+    document.getElementById('tUsername').value = '';
+    document.getElementById('tPassword').value = '';
+    await loadTenants();
+  } catch (err) { alert('Error: ' + err.message); }
+};
+
+// ─── Edit Tenant ──────────────────────────────────────────────
+window.editTenant = (id) => {
+  const t = tenants.find(x => x.id === id);
+  if (!t) return;
+  document.getElementById('editId').value = t.id;
+  document.getElementById('tName').value = t.name;
+  document.getElementById('tRent').value = t.rent_amount;
+  document.getElementById('tReading').value = t.last_reading;
+  document.getElementById('tPhone').value = t.phone || '';
+  document.getElementById('tEmail').value = t.email || '';
+  document.getElementById('tAddress').value = t.address || '';
+  document.getElementById('createTenantUser').checked = false;
+  document.getElementById('tenantUserFields').classList.remove('visible');
+  window.showTab('tenants');
+};
+
+// ─── Delete Tenant ────────────────────────────────────────────
+let pendingDeleteId = null;
+window.deleteTenant = (id) => {
+  if (!confirm('Delete this tenant and all records?')) return;
+  pendingDeleteId = id;
+  document.getElementById('ownerPasswordConfirm').value = '';
+  document.getElementById('passwordModal').style.display = 'flex';
+};
+
+document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
+  const password = document.getElementById('ownerPasswordConfirm').value.trim();
+  if (!password) { alert('Please enter your password.'); return; }
+  try {
+    await api('POST', '/auth/verify-password', { password });
+    if (pendingDeleteId !== null) {
+      await api('POST', `/tenants/${pendingDeleteId}/delete?houseId=${currentHouseId}`, {});
+      showToast('Tenant moved to trash.');
+      closePasswordModal();
+      await loadTenants();
+    }
+  } catch (err) {
+    alert('Incorrect password. Action cancelled.');
+  }
+});
+
+function closePasswordModal() {
+  document.getElementById('passwordModal').style.display = 'none';
+  pendingDeleteId = null;
+}
+
+window.toggleTenantUserFields = function() {
+  const checked = document.getElementById('createTenantUser').checked;
+  const fields = document.getElementById('tenantUserFields');
+  if (checked) {
+    fields.classList.add('visible');
+  } else {
+    fields.classList.remove('visible');
+    document.getElementById('tUsername').value = '';
+    document.getElementById('tPassword').value = '';
+  }
+};
+
+// ─── Bill Preview ──────────────────────────────────────────────
+function updatePreview() {
+  const t = tenants.find(x => x.id == document.getElementById('bTenant').value);
+  const curr = Number(document.getElementById('bCurr').value) || 0;
+  const prev = t ? (t.last_reading || 0) : 0;
+  const units = t ? Math.max(0, curr - prev) : 0;
+  const elec = units * RATE;
+  const water = Number(document.getElementById('bWater').value) || 0;
+  const waste = Number(document.getElementById('bWaste').value) || 0;
+  const due = Number(document.getElementById('bDue').value) || 0;
+  const ded = Number(document.getElementById('bDed').value) || 0;
+  const rent = t ? Number(t.rent_amount) : 0;
+  const total = elec + rent + water + waste + due - ded;
+  document.getElementById('pPrev').innerText = t ? prev : '—';
+  document.getElementById('pCurr').innerText = curr || '—';
+  document.getElementById('pUnits').innerText = units || '0';
+  document.getElementById('pElec').innerText = `Rs. ${elec.toLocaleString()}`;
+  document.getElementById('pRent').innerText = `Rs. ${rent.toLocaleString()}`;
+  document.getElementById('pWater').innerText = `Rs. ${water.toLocaleString()}`;
+  document.getElementById('pWaste').innerText = `Rs. ${waste.toLocaleString()}`;
+  document.getElementById('pDue').innerText = `Rs. ${due.toLocaleString()}`;
+  document.getElementById('pDed').innerText = `- Rs. ${ded.toLocaleString()}`;
+  document.getElementById('pTotal').innerText = `Rs. ${total.toLocaleString()}`;
+}
+
+// ─── Generate Bill ──────────────────────────────────────────────
+window.generateBill = async () => {
+  if (!currentHouseId) { alert('No house selected'); return; }
+  const tId = document.getElementById('bTenant').value;
+  if (!tId) return alert("Select a tenant");
+  const month = document.getElementById('bMonth').value.trim();
+  if (!month) return alert("Enter billing month");
+  const data = {
+    id: tId,
+    curr: Number(document.getElementById('bCurr').value),
+    water: Number(document.getElementById('bWater').value) || 0,
+    waste: Number(document.getElementById('bWaste').value) || 0,
+    due: Number(document.getElementById('bDue').value) || 0,
+    ded: Number(document.getElementById('bDed').value) || 0,
+    month,
+    dedReason: document.getElementById('bDedReason').value,
+    note: document.getElementById('bNote').value
+  };
+  if (!data.curr || data.curr <= 0) { alert("Enter valid current reading"); return; }
+  try {
+    const bill = await api('POST', `/calculate?houseId=${currentHouseId}`, data);
+    showBillModal(bill);
+    await loadTenants();
+    document.getElementById('bTenant').value = "";
+    document.getElementById('bCurr').value = "";
+    document.getElementById('bWater').value = "0";
+    document.getElementById('bWaste').value = "0";
+    document.getElementById('bDue').value = "0";
+    document.getElementById('bDed').value = "0";
+    document.getElementById('bDedReason').value = "";
+    document.getElementById('bNote').value = "";
+    updatePreview();
+  } catch (err) { alert(err.message); }
+};
+
+function showBillModal(bill) {
+  document.getElementById('billModal').style.display = 'flex';
+  const noteHtml = bill.note ? `<div class="pb-note-box"><span class="pb-note-label">⚠️ NOTICE</span><span class="pb-note-text">${bill.note}</span></div>` : '';
+  const dedHtml = bill.ded > 0 ? `<tr class="pb-ded-row"><td class="pb-row-desc">Deduction (${bill.dedReason || 'Applied'})</td><td class="pb-row-val">- Rs. ${Number(bill.ded).toLocaleString()}</td></tr>` : '';
+  document.getElementById('printArea').innerHTML = `
+    <div class="pb-head"><h2>MONTHLY BILL</h2></div>
+    <div class="pb-info"><div><strong>Tenant:</strong> ${bill.name}</div><div><strong>Month:</strong> ${bill.month}</div></div>
+    <div class="pb-readings"><div><div class="pb-reading-label">Previous</div><div class="pb-reading-val">${bill.prev}</div></div><div><div class="pb-reading-label">Current</div><div class="pb-reading-val">${bill.curr}</div></div><div><div class="pb-reading-label">Units</div><div class="pb-reading-val">${bill.units}</div></div></div>
+    <table class="pb-table">
+      <tr><td class="pb-row-desc">Electricity (${bill.units} units × 15)</td><td class="pb-row-val">Rs. ${Number(bill.electricity).toLocaleString()}</td></tr>
+      <tr><td class="pb-row-desc">Room Rent</td><td class="pb-row-val">Rs. ${Number(bill.rent).toLocaleString()}</td></tr>
+      <tr><td class="pb-row-desc">Water Unit Charge</td><td class="pb-row-val">Rs. ${Number(bill.water).toLocaleString()}</td></tr>
+      <tr><td class="pb-row-desc">Waste Charge</td><td class="pb-row-val">Rs. ${Number(bill.waste).toLocaleString()}</td></tr>
+      <tr><td class="pb-row-desc">Previous Due</td><td class="pb-row-val">Rs. ${Number(bill.due).toLocaleString()}</td></tr>
+      ${dedHtml}
+    </table>
+    ${noteHtml}
+    <div class="pb-total-section"><div class="pb-total-label">GRAND TOTAL</div><div class="pb-total-val">Rs. ${Number(bill.total).toLocaleString()}</div></div>
+    <div class="pb-footer">RentSathi • Pay on time</div>
+  `;
+}
+
+function closeBillModal() {
+  document.getElementById('billModal').style.display = 'none';
+}
+window.downloadBillImage = function() {
+  const el = document.getElementById('printArea');
+  const month = document.getElementById('bMonth').value.replace(/\s+/g, '_') || 'Statement';
+  html2canvas(el, { scale: 3, backgroundColor: '#ffffff', logging: false }).then(canvas => {
+    const link = document.createElement('a');
+    link.download = `Bill_${month}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+};
+
+// ─── Payment Modal ──────────────────────────────────────────────
+let pendingPayment = null;
+
+function openPaymentModal(billId, tenantId, tenantName) {
+  pendingPayment = { billId, tenantId };
+  document.getElementById('paymentType').value = 'equal';
+  document.getElementById('paymentAmount').value = '';
+  document.getElementById('paymentReason').value = '';
+  document.getElementById('paymentModal').style.display = 'flex';
+  // Show/hide amount field based on selection
+  toggleAmountField();
+}
+
+function closePaymentModal() {
+  document.getElementById('paymentModal').style.display = 'none';
+  pendingPayment = null;
+}
+
+function toggleAmountField() {
+  const type = document.getElementById('paymentType').value;
+  const group = document.getElementById('amountGroup');
+  if (type === 'equal') {
+    group.style.display = 'none';
+  } else {
+    group.style.display = 'block';
+  }
+}
+document.getElementById('paymentType').addEventListener('change', toggleAmountField);
+
+document.getElementById('paymentForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!pendingPayment) return;
+  const type = document.getElementById('paymentType').value;
+  let amount = 0;
+  let reason = document.getElementById('paymentReason').value.trim();
+  if (type !== 'equal') {
+    amount = parseFloat(document.getElementById('paymentAmount').value);
+    if (isNaN(amount) || amount <= 0) {
+      alert('Please enter a valid amount.');
+      return;
+    }
+  }
+  if (!reason) reason = type === 'equal' ? 'Full payment (Equal)' : type === 'due' ? 'Due payment' : 'Advance payment';
+  try {
+    await api('PATCH', '/bills/pay', {
+      houseId: currentHouseId,
+      tenantId: pendingPayment.tenantId,
+      billId: pendingPayment.billId,
+      paymentType: type,
+      amount: amount,
+      reason: reason
     });
+    showToast('✅ Payment recorded successfully!');
+    closePaymentModal();
+    await loadTenants();
+  } catch (err) {
+    alert('Error: ' + err.message);
+  }
+});
 
-    // ─── Delete Tenant ──────────────────────────────────────────
-    async function deleteTenantAction(tenantId) {
-        if (!currentHouseId) throw new Error('No house selected');
-        await api('POST', `/tenants/${tenantId}/delete?houseId=${currentHouseId}`, {});
-        showToast('Tenant moved to trash.');
+// ─── History ──────────────────────────────────────────────────
+function renderHistory() {
+  const tbody = document.getElementById('historyTable');
+  const houseId = currentHouseId || document.getElementById('globalHouseSelect').value;
+  if (!houseId) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">No house selected</td></tr>`;
+    return;
+  }
+  let rows = [];
+  tenants.forEach(t => {
+    if (t.history && t.history.length) {
+      t.history.forEach((h, i) => rows.push({...h, tid: t.id, idx: i, tName: t.name}));
     }
+  });
+  rows.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">No bills</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(h => `
+    <tr>
+      <td>${h.tName}</td>
+      <td>${h.month}</td>
+      <td>${h.units}</td>
+      <td><strong>Rs. ${Number(h.total).toLocaleString()}</strong></td>
+      <td>
+        <span class="${h.paid_status ? 'badge-paid' : 'badge-unpaid'}">
+          ${h.paid_status ? 'Paid' : 'Unpaid'}
+        </span>
+      </td>
+      <td>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;">
+          ${!h.paid_status ? `<button class="btn-pay" onclick="openPaymentModal(${h.id}, ${h.tid}, '${h.tName}')">💰 Pay</button>` : ''}
+          <button class="btn-fix" onclick="redoBill(${h.tid}, ${h.idx})">Fix</button>
+          <button class="btn-del" onclick="deleteBill(${h.tid}, ${h.idx})">🗑️</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
 
-    window.deleteTenant = (id) => {
-        if (!confirm('Are you sure you want to delete this tenant?')) return;
-        openPasswordModal(id);
-    };
+// ─── Redo / Delete Bill ──────────────────────────────────────
+window.redoBill = async (tid, idx) => {
+  if (!currentHouseId) { alert('No house selected'); return; }
+  const tenant = tenants.find(t => t.id === tid);
+  if (!tenant || !tenant.history || !tenant.history[idx]) return;
+  const bill = tenant.history[idx];
+  if (!confirm(`Delete bill for ${bill.month} and revert reading?`)) return;
+  try {
+    await api('DELETE', `/tenants/${tid}/history/${idx}?houseId=${currentHouseId}`, {});
+    await loadTenants();
+    window.showTab('billing');
+    document.getElementById('bTenant').value = tid;
+    document.getElementById('bMonth').value = bill.month;
+    document.getElementById('bCurr').value = bill.curr;
+    document.getElementById('bWater').value = bill.water;
+    document.getElementById('bWaste').value = bill.waste;
+    document.getElementById('bDue').value = bill.due;
+    document.getElementById('bDed').value = bill.ded;
+    document.getElementById('bDedReason').value = bill.dedReason || '';
+    document.getElementById('bNote').value = bill.note || '';
+    updatePreview();
+  } catch (err) { alert(err.message); }
+};
 
-    // ─── TOAST ────────────────────────────────────────────────────
-    function showToast(msg) {
-        const existing = document.getElementById('toast');
-        if (existing) existing.remove();
-        const div = document.createElement('div');
-        div.id = 'toast';
-        div.style.cssText = `
-            position:fixed; bottom:24px; right:24px;
-            background:#111827; color:#f8fafc;
-            padding:12px 24px; border-radius:8px;
-            border:1px solid #1f2937;
-            box-shadow:0 4px 20px rgba(0,0,0,0.5);
-            z-index:9999;
-            font-size:0.9rem;
-            opacity:0;
-            transition: opacity 0.3s ease;
-            border-left: 4px solid #10b981;
-        `;
-        div.textContent = msg;
-        document.body.appendChild(div);
-        setTimeout(() => div.style.opacity = '1', 50);
-        setTimeout(() => {
-            div.style.opacity = '0';
-            setTimeout(() => div.remove(), 400);
-        }, 3000);
-    }
+window.deleteBill = async (tid, idx) => {
+  if (!currentHouseId) { alert('No house selected'); return; }
+  if (!confirm("Delete this bill?")) return;
+  try {
+    await api('DELETE', `/tenants/${tid}/history/${idx}?houseId=${currentHouseId}`, {});
+    await loadTenants();
+  } catch (err) { alert(err.message); }
+};
 
-    // ─── CORE FUNCTIONS ──────────────────────────────────────────
-    window.showTab = (id) => {
-        document.querySelectorAll('.panel').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        document.querySelectorAll('.tab').forEach(t => {
-            if (t.textContent.includes(id==='billing'?'Create':id==='tenants'?'Tenants':'History')) t.classList.add('active');
-        });
-    };
-
-    window.toggleTenantUserFields = function() {
-        const checked = document.getElementById('createTenantUser').checked;
-        const fields = document.getElementById('tenantUserFields');
-        if (checked) {
-            fields.classList.add('visible');
-        } else {
-            fields.classList.remove('visible');
-            document.getElementById('tUsername').value = '';
-            document.getElementById('tPassword').value = '';
-        }
-    };
-
-    async function loadHouses() {
-        try {
-            const houses = await api('GET', '/houses');
-            const select = document.getElementById('globalHouseSelect');
-            if (!houses || houses.length === 0) {
-                select.innerHTML = '<option value="">No houses assigned</option>';
-                currentHouseId = '';
-                await loadTenants();
-                return;
-            }
-            select.innerHTML = houses.map(h => `<option value="${h}" ${h===currentHouseId?'selected':''}>${h}</option>`).join('');
-            if (!houses.includes(currentHouseId) || !currentHouseId) {
-                currentHouseId = houses[0];
-                select.value = currentHouseId;
-            }
-            if (!currentHouseId) {
-                currentHouseId = select.value;
-            }
-            await loadTenants();
-        } catch (e) {
-            console.error('loadHouses error:', e);
-            document.getElementById('globalHouseSelect').innerHTML = '<option value="">Error loading houses</option>';
-        }
-    }
-
-    window.changeHouse = async (newHouse) => {
-        currentHouseId = newHouse;
-        await loadTenants();
-    };
-
-    async function loadTenants() {
-        if (!currentHouseId) {
-            tenants = [];
-            renderTenants();
-            renderTenantSelect();
-            renderHistory();
-            return;
-        }
-        try {
-            tenants = await api('GET', `/tenants?houseId=${currentHouseId}`);
-            renderTenants();
-            renderTenantSelect();
-            renderHistory();
-        } catch (e) {
-            console.error('loadTenants error:', e);
-            tenants = [];
-            renderTenants();
-            renderTenantSelect();
-            renderHistory();
-        }
-    }
-
-    function renderTenantSelect() {
-        const select = document.getElementById('bTenant');
-        const currentVal = select.value;
-        select.innerHTML = '<option value="">-- Choose --</option>';
-        if (tenants.length > 0) {
-            tenants.forEach(t => {
-                const opt = document.createElement('option');
-                opt.value = t.id;
-                opt.textContent = t.name;
-                select.appendChild(opt);
-            });
-        }
-        if (currentVal) select.value = currentVal;
-        updatePreview();
-    }
-
-    window.saveTenant = async () => {
-        if (!currentHouseId) {
-            alert('No house selected. Please select a house first.');
-            return;
-        }
-        const id = document.getElementById('editId').value;
-        const name = document.getElementById('tName').value;
-        const rent = Number(document.getElementById('tRent').value);
-        const reading = Number(document.getElementById('tReading').value);
-
-        if (!name || !rent) { alert('Name and rent required'); return; }
-
-        const data = {
-            name,
-            rent_amount: rent,
-            last_reading: reading
-        };
-
-        const createUser = document.getElementById('createTenantUser').checked;
-        console.log('🔍 Checkbox checked?', createUser);
-
-        if (createUser) {
-            const username = document.getElementById('tUsername').value.trim();
-            const password = document.getElementById('tPassword').value.trim();
-            console.log('🔍 Username:', username, 'Password:', password ? '****' : '(empty)');
-            if (!username || !password) {
-                alert('Please provide both username and password for the tenant login.');
-                return;
-            }
-            data.tenant_username = username;
-            data.tenant_password = password;
-        }
-
-        console.log('📤 Sending to server:', data);
-
-        try {
-            let result;
-            if (id) {
-                result = await api('PUT', `/tenants/${id}?houseId=${currentHouseId}`, data);
-            } else {
-                result = await api('POST', `/tenants?houseId=${currentHouseId}`, data);
-                if (createUser) {
-                    showToast('✅ Tenant created with login credentials.');
-                } else {
-                    showToast('✅ Tenant added successfully.');
-                }
-            }
-            document.getElementById('tenantForm').reset();
-            document.getElementById('editId').value = '';
-            document.getElementById('createTenantUser').checked = false;
-            document.getElementById('tenantUserFields').classList.remove('visible');
-            document.getElementById('tUsername').value = '';
-            document.getElementById('tPassword').value = '';
-            await loadTenants();
-        } catch (err) {
-            alert('Error: ' + err.message);
-        }
-    };
-
-    window.editTenant = (id) => {
-        const t = tenants.find(x => x.id === id);
-        if (!t) return;
-        document.getElementById('editId').value = t.id;
-        document.getElementById('tName').value = t.name;
-        document.getElementById('tRent').value = t.rent_amount;
-        document.getElementById('tReading').value = t.last_reading;
-        document.getElementById('createTenantUser').checked = false;
-        document.getElementById('tenantUserFields').classList.remove('visible');
-        document.getElementById('tUsername').value = '';
-        document.getElementById('tPassword').value = '';
-        window.showTab('tenants');
-    };
-
-    window.deleteTenant = (id) => {
-        if (!confirm('Are you sure you want to delete this tenant?')) return;
-        openPasswordModal(id);
-    };
-
-    function renderTenants() {
-        const tbody = document.getElementById('tenantTable');
-        if (!currentHouseId) {
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#64748b;">No house selected</td></tr>`;
-            return;
-        }
-        if (!tenants.length) {
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#64748b;">No tenants in this house</td></tr>`;
-            return;
-        }
-        tbody.innerHTML = tenants.map(t => `
-            <tr>
-                <td><strong>${t.name}</strong> ${t.tenant_user_id ? '🔑' : ''}</td>
-                <td>Rs. ${Number(t.rent_amount).toLocaleString()}</td>
-                <td>${t.last_reading}</td>
-                <td>
-                    <button class="btn-fix" onclick="editTenant(${t.id})">Edit</button>
-                    <button class="btn-del" onclick="deleteTenant(${t.id})">🗑️</button>
-                </td>
-            </tr>
-        `).join('');
-    }
-
-    function updatePreview() {
-        const t = tenants.find(x => x.id == document.getElementById('bTenant').value);
-        const curr = Number(document.getElementById('bCurr').value) || 0;
-        const prev = t ? (t.last_reading || 0) : 0;
-        const units = t ? Math.max(0, curr - prev) : 0;
-        const elec = units * RATE;
-        const water = Number(document.getElementById('bWater').value) || 0;
-        const waste = Number(document.getElementById('bWaste').value) || 0;
-        const due = Number(document.getElementById('bDue').value) || 0;
-        const ded = Number(document.getElementById('bDed').value) || 0;
-        const rent = t ? Number(t.rent_amount) : 0;
-        const total = elec + rent + water + waste + due - ded;
-        document.getElementById('pPrev').innerText = t ? prev : '—';
-        document.getElementById('pCurr').innerText = curr || '—';
-        document.getElementById('pUnits').innerText = units || '0';
-        document.getElementById('pElec').innerText = `Rs. ${elec.toLocaleString()}`;
-        document.getElementById('pRent').innerText = `Rs. ${rent.toLocaleString()}`;
-        document.getElementById('pWater').innerText = `Rs. ${water.toLocaleString()}`;
-        document.getElementById('pWaste').innerText = `Rs. ${waste.toLocaleString()}`;
-        document.getElementById('pDue').innerText = `Rs. ${due.toLocaleString()}`;
-        document.getElementById('pDed').innerText = `- Rs. ${ded.toLocaleString()}`;
-        document.getElementById('pTotal').innerText = `Rs. ${total.toLocaleString()}`;
-    }
-
-    window.generateBill = async () => {
-        if (!currentHouseId) { alert('No house selected'); return; }
-        const tId = document.getElementById('bTenant').value;
-        if (!tId) return alert("Select a tenant");
-        const month = document.getElementById('bMonth').value;
-        if (!month) return alert("Enter billing month");
-        const data = {
-            id: tId,
-            curr: Number(document.getElementById('bCurr').value),
-            water: Number(document.getElementById('bWater').value) || 0,
-            waste: Number(document.getElementById('bWaste').value) || 0,
-            due: Number(document.getElementById('bDue').value) || 0,
-            ded: Number(document.getElementById('bDed').value) || 0,
-            month,
-            dedReason: document.getElementById('bDedReason').value,
-            note: document.getElementById('bNote').value
-        };
-        if (!data.curr || data.curr <= 0) { alert("Enter valid current reading"); return; }
-        try {
-            const bill = await api('POST', `/calculate?houseId=${currentHouseId}`, data);
-            showBillModal(bill);
-            await loadTenants();
-            document.getElementById('bTenant').value = "";
-            document.getElementById('bCurr').value = "";
-            document.getElementById('bWater').value = "0";
-            document.getElementById('bWaste').value = "0";
-            document.getElementById('bDue').value = "0";
-            document.getElementById('bDed').value = "0";
-            document.getElementById('bDedReason').value = "";
-            document.getElementById('bNote').value = "";
-            updatePreview();
-        } catch (err) { alert(err.message); }
-    };
-
-    function renderHistory() {
-        const tbody = document.getElementById('historyTable');
-        const houseId = currentHouseId || document.getElementById('globalHouseSelect').value;
-        if (!houseId) {
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#64748b;">No house selected</td></tr>`;
-            return;
-        }
-        let rows = [];
-        tenants.forEach(t => {
-            if (t.history && t.history.length) {
-                t.history.forEach((h, i) => rows.push({...h, tid: t.id, idx: i, tName: t.name}));
-            }
-        });
-        rows.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        if (!rows.length) {
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#64748b;">No bills</td></tr>`;
-            return;
-        }
-        tbody.innerHTML = rows.map(h => `
-            <tr>
-                <td>${h.tName}</td>
-                <td>${h.month}</td>
-                <td>${h.units}</td>
-                <td><strong>Rs. ${Number(h.total).toLocaleString()}</strong></td>
-                <td>
-                    <span class="${h.paid_status ? 'badge-paid' : 'badge-unpaid'}">
-                        ${h.paid_status ? 'Paid' : 'Unpaid'}
-                    </span>
-                </td>
-                <td>
-                    <button class="btn-pay" onclick="togglePaid('${houseId}', ${h.tid}, ${h.id})">
-                        ${h.paid_status ? 'Mark Unpaid' : 'Mark Paid'}
-                    </button>
-                    <button class="btn-fix" onclick="redoBill(${h.tid}, ${h.idx})">Fix/Re-do</button>
-                    <button class="btn-del" onclick="deleteBill(${h.tid}, ${h.idx})">🗑️</button>
-                </td>
-            </tr>
-        `).join('');
-    }
-
-    window.togglePaid = async (houseId, tenantId, billId) => {
-        console.log('🔍 togglePaid called with:', { houseId, tenantId, billId });
-        if (!houseId || !tenantId || !billId) {
-            alert('Missing required data. Please select a house first.');
-            return;
-        }
-        try {
-            const result = await api('PATCH', '/bills/pay', { houseId, tenantId, billId });
-            if (result.success) {
-                await loadTenants();
-            } else {
-                alert('Failed to update bill');
-            }
-        } catch (err) { alert(err.message); }
-    };
-
-    window.redoBill = async (tid, idx) => {
-        if (!currentHouseId) { alert('No house selected'); return; }
-        const tenant = tenants.find(t => t.id === tid);
-        if (!tenant || !tenant.history || !tenant.history[idx]) return;
-        const bill = tenant.history[idx];
-        if (!confirm(`Delete bill for ${bill.month}?`)) return;
-        try {
-            await api('DELETE', `/tenants/${tid}/history/${idx}?houseId=${currentHouseId}`);
-            await loadTenants();
-            window.showTab('billing');
-            document.getElementById('bTenant').value = tid;
-            document.getElementById('bMonth').value = bill.month;
-            document.getElementById('bCurr').value = bill.curr;
-            document.getElementById('bWater').value = bill.water;
-            document.getElementById('bWaste').value = bill.waste;
-            document.getElementById('bDue').value = bill.due;
-            document.getElementById('bDed').value = bill.ded;
-            document.getElementById('bDedReason').value = bill.dedReason || '';
-            document.getElementById('bNote').value = bill.note || '';
-            updatePreview();
-        } catch (err) { alert(err.message); }
-    };
-
-    window.deleteBill = async (tid, idx) => {
-        if (!currentHouseId) { alert('No house selected'); return; }
-        if (!confirm("Delete this bill?")) return;
-        try {
-            await api('DELETE', `/tenants/${tid}/history/${idx}?houseId=${currentHouseId}`);
-            await loadTenants();
-        } catch (err) { alert(err.message); }
-    };
-
-    function showBillModal(bill) {
-        document.getElementById('billModal').style.display = 'flex';
-        const noteHtml = bill.note ? `<div class="pb-note-box"><span class="pb-note-label">⚠️ IMPORTANT NOTICE</span><span class="pb-note-text">${bill.note}</span></div>` : '';
-        const dedHtml = bill.ded > 0 ? `<tr class="pb-ded-row"><td class="pb-row-desc">Deduction (${bill.dedReason || 'Applied Discount'})</td><td class="pb-row-val">- Rs. ${Number(bill.ded).toLocaleString()}</td></tr>` : '';
-        document.getElementById('printArea').innerHTML = `
-            <div class="pb-head"><h2>MONTHLY BILL</h2></div>
-            <div class="pb-info"><div><strong>Tenant:</strong> ${bill.name}</div><div><strong>Month:</strong> ${bill.month}</div></div>
-            <div class="pb-readings"><div><div class="pb-reading-label">Previous</div><div class="pb-reading-val">${bill.prev}</div></div><div><div class="pb-reading-label">Current</div><div class="pb-reading-val">${bill.curr}</div></div><div><div class="pb-reading-label">Units</div><div class="pb-reading-val">${bill.units}</div></div></div>
-            <table class="pb-table">
-                <tr><td class="pb-row-desc">Electricity (${bill.units} units × 15)</td><td class="pb-row-val">Rs. ${Number(bill.electricity).toLocaleString()}</td></tr>
-                <tr><td class="pb-row-desc">Room Rent</td><td class="pb-row-val">Rs. ${Number(bill.rent).toLocaleString()}</td></tr>
-                <tr><td class="pb-row-desc">Water Unit Charge</td><td class="pb-row-val">Rs. ${Number(bill.water).toLocaleString()}</td></tr>
-                <tr><td class="pb-row-desc">Waste Charge</td><td class="pb-row-val">Rs. ${Number(bill.waste).toLocaleString()}</td></tr>
-                <tr><td class="pb-row-desc">Previous Due</td><td class="pb-row-val">Rs. ${Number(bill.due).toLocaleString()}</td></tr>
-                ${dedHtml}
-            </table>
-            ${noteHtml}
-            <div class="pb-total-section"><div class="pb-total-label">GRAND TOTAL</div><div class="pb-total-val">Rs. ${Number(bill.total).toLocaleString()}</div></div>
-            <div class="pb-footer">RentSathi • Pay on time</div>
-        `;
-    }
-
-    window.closeModal = () => document.getElementById('billModal').style.display = 'none';
-    window.downloadImage = () => {
-        const el = document.getElementById('printArea');
-        const filenameMonth = document.getElementById('bMonth').value.replace(/\s+/g, '_') || 'Statement';
-        html2canvas(el, { scale: 3, backgroundColor: '#ffffff', logging: false }).then(canvas => {
-            const link = document.createElement('a');
-            link.download = `Bill_${filenameMonth}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-        });
-    };
-
-    // ─── INIT ──────────────────────────────────────────────────
-    loadHouses();
+// ─── Init ──────────────────────────────────────────────────
+loadHouses();
 </script>
 </body>
 </html>
