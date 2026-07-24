@@ -8,7 +8,7 @@
         :root { --bg:#0b1120; --card:#111827; --text:#f8fafc; --accent:#2563eb; --border:#1f2937; }
         * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter',system-ui,sans-serif; }
         body { background:var(--bg); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
-        .login-container { width:100%; max-width:420px; position:relative; }
+        .login-container { width:100%; max-width:420px; }
         .login-card { background:var(--card); padding:40px 32px; border-radius:16px; border:1px solid var(--border); box-shadow:0 20px 60px rgba(0,0,0,0.5); }
         .login-card h1 { font-size:2rem; font-weight:700; text-align:center; margin-bottom:8px; color:var(--text); }
         .login-card .subtitle { text-align:center; color:#94a3b8; font-size:0.9rem; margin-bottom:24px; }
@@ -25,8 +25,6 @@
         .spinner { display:inline-block; width:20px; height:20px; border:2px solid rgba(255,255,255,0.3); border-radius:50%; border-top-color:#fff; animation:spin 0.6s linear infinite; vertical-align:middle; margin-right:8px; }
         @keyframes spin { to { transform:rotate(360deg); } }
         .btn-text { display:inline-block; vertical-align:middle; }
-        .admin-link { position:absolute; top:12px; right:16px; font-size:0.7rem; color:#64748b; text-decoration:none; }
-        .admin-link:hover { color:var(--accent); }
         .role-selector { display:flex; gap:12px; justify-content:center; margin-bottom:20px; }
         .role-selector button { background:transparent; border:1px solid var(--border); border-radius:20px; padding:6px 16px; color:var(--text-muted); font-size:0.8rem; cursor:pointer; transition:0.2s; }
         .role-selector button.active { background:var(--accent); border-color:var(--accent); color:#fff; }
@@ -36,7 +34,6 @@
 </head>
 <body>
 <div class="login-container">
-    <a href="/login.html" class="admin-link" style="display:none;">Admin</a>
     <div class="login-card">
         <h1>🏠 RentSathi</h1>
         <p class="subtitle">Sign in to your dashboard</p>
@@ -61,9 +58,6 @@
         <div class="footer-text">
             New owner? <a href="/register.html">Register here</a>
         </div>
-        <div style="margin-top:8px;text-align:center;font-size:0.7rem;color:#64748b;">
-            <span id="adminLoginLink" style="cursor:pointer;color:var(--accent);text-decoration:underline;">Admin / SuperAdmin Login</span>
-        </div>
     </div>
 </div>
 <script>
@@ -73,27 +67,15 @@
     const btn = document.getElementById('loginBtn');
     const roleBtns = document.querySelectorAll('.role-selector button');
     let selectedRole = 'owner';
-    const adminLink = document.getElementById('adminLoginLink');
 
     roleBtns.forEach(btn => {
         btn.addEventListener('click', function() {
             roleBtns.forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             selectedRole = this.dataset.role;
-            // Adjust placeholder and label
-            const usernameField = document.getElementById('username');
-            usernameField.placeholder = selectedRole === 'owner' ? 'Enter your username' : 'Enter your tenant username';
+            const field = document.getElementById('username');
+            field.placeholder = selectedRole === 'owner' ? 'Enter your username' : 'Enter your tenant username';
         });
-    });
-
-    // Admin/SuperAdmin login link – shows a small extra field? We'll just use the same form but note that admin/superadmin can login too.
-    adminLink.addEventListener('click', function() {
-        // No separate field – just instruct user to enter admin username.
-        const usernameField = document.getElementById('username');
-        usernameField.placeholder = 'Enter admin or superadmin username';
-        document.querySelector('.role-selector button.active').classList.remove('active');
-        document.querySelector('.role-selector button:first-child').classList.add('active'); // reset selection
-        selectedRole = 'admin';
     });
 
     form.addEventListener('submit', async (e) => {
@@ -127,8 +109,7 @@
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
             let redirect = '/index.html';
-            if (data.user.role === 'admin') redirect = '/admin.html';
-            else if (data.user.role === 'superadmin') redirect = '/admin.html'; // superadmin uses admin UI with extra permissions
+            if (data.user.role === 'admin' || data.user.role === 'superadmin') redirect = '/admin.html';
             else if (data.user.role === 'tenant') redirect = '/tenant.html';
             window.location.href = redirect;
         } catch (err) {
