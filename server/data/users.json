@@ -1,0 +1,36 @@
+[
+  {
+    "id": 1,
+    "username": "admin",
+    "password": "$2b$10$F8zrnD3dFN5q4pazYR5F/.Dn0m7e4.aTMK7s2MIi1A30z0wQTvbXi",
+    "role": "admin",
+    "fullName": "Administrator",
+    "phone": "",
+    "email": "",
+    "address": "",
+    "notes": "",
+    "subscription_status": "active",
+    "trial_start": null,
+    "trial_end": null,
+    "deleted": false,
+    "deleted_at": null,
+    "created_at": "2026-07-24T19:25:06.665Z"
+  },
+  {
+    "id": 2,
+    "username": "Super_Admin",
+    "password": "$2b$10$u/c1vSjbQ.gn5pqp5tiaX.r7QIJGNUgvBZcY/bX66OVtR6yJa4d3W",
+    "role": "superadmin",
+    "fullName": "Kali",
+    "phone": "",
+    "email": "",
+    "address": "",
+    "notes": "",
+    "subscription_status": "active",
+    "trial_start": null,
+    "trial_end": null,
+    "deleted": false,
+    "deleted_at": null,
+    "created_at": "2026-07-24T19:25:06.665Z"
+  }
+]
