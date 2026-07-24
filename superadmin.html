@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RentSathi - SuperAdmin</title>
+  <style>
+    /* ─────────────── ROOT VARIABLES ─────────────── */
+    :root {
+      --bg: #0b1120;
+      --card: #111827;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --success: #10b981;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --border: #1f2937;
+      --radius: 12px;
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+      --transition: 0.2s ease;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* ─── HEADER ─── */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+
+    header h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    header h1 span {
+      background: var(--danger);
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 2px 12px;
+      border-radius: 20px;
+      color: #fff;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .header-actions a {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.85rem;
+      transition: var(--transition);
+    }
+
+    .header-actions a:hover {
+      text-decoration: underline;
+    }
+
+    .btn-logout {
+      background: var(--danger);
+      color: #fff;
+      border: none;
+      padding: 6px 18px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 600;
+      transition: var(--transition);
+    }
+
+    .btn-logout:hover {
+      opacity: 0.85;
+      transform: translateY(-1px);
+    }
+
+    /* ─── STATS ─── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      box-shadow: var(--shadow);
+      transition: var(--transition);
+    }
+
+    .stat-card:hover {
+      border-color: var(--accent);
+    }
+
+    .stat-card .label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+
+    .stat-card .value {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+
+    .stat-card .value.blue {
+      color: var(--accent);
+    }
+    .stat-card .value.green {
+      color: var(--success);
+    }
+    .stat-card .value.yellow {
+      color: var(--warn);
+    }
+    .stat-card .value.red {
+      color: var(--danger);
+    }
+
+    /* ─── SECTION CARDS ─── */
+    .section-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .section-header h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .section-header .badge-count {
+      background: var(--bg);
+      padding: 2px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .filter-bar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .filter-bar input,
+    .filter-bar select {
+      flex: 1;
+      min-width: 150px;
+      padding: 10px 14px;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.9rem;
+      transition: var(--transition);
+    }
+
+    .filter-bar input:focus,
+    .filter-bar select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    .filter-bar input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    th {
+      text-align: left;
+      padding: 10px 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-admin {
+      background: var(--accent);
+      color: #fff;
+    }
+    .badge-owner {
+      background: var(--warn);
+      color: #000;
+    }
+    .badge-tenant {
+      background: var(--success);
+      color: #000;
+    }
+    .badge-superadmin {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    .text-muted {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    /* ─── ACTIONS ─── */
+    .actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .actions button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 0.85rem;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: var(--transition);
+      color: var(--text-muted);
+    }
+
+    .actions button:hover {
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .actions .btn-edit {
+      color: var(--accent);
+    }
+    .actions .btn-reset {
+      color: var(--warn);
+    }
+    .actions .btn-delete {
+      color: var(--danger);
+    }
+    .actions .btn-restore {
+      color: var(--success);
+    }
+
+    /* ─── BUTTONS ─── */
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: #fff;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .btn-success:hover {
+      opacity: 0.85;
+      transform: translateY(-1px);
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: #fff;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .btn-danger:hover {
+      opacity: 0.85;
+      transform: translateY(-1px);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .btn-outline:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ─── MODALS ─── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      max-width: 560px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 28px 32px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .modal-header h3 {
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.6rem;
+      cursor: pointer;
+      transition: var(--transition);
+      line-height: 1;
+    }
+
+    .modal-close:hover {
+      color: var(--danger);
+    }
+
+    .modal .form-group {
+      margin-bottom: 16px;
+    }
+
+    .modal .form-group label {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .modal .form-group input,
+    .modal .form-group select,
+    .modal .form-group textarea {
+      width: 100%;
+      padding: 10px 12px;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.9rem;
+      transition: var(--transition);
+    }
+
+    .modal .form-group input:focus,
+    .modal .form-group select:focus,
+    .modal .form-group textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    .modal .form-group textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+
+    .modal .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .modal .form-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      justify-content: flex-end;
+    }
+
+    /* ─── TOAST ─── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 24px;
+      box-shadow: var(--shadow);
+      z-index: 2000;
+      transform: translateY(120px);
+      opacity: 0;
+      transition: all 0.4s ease;
+      max-width: 400px;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .toast.success {
+      border-left: 4px solid var(--success);
+    }
+    .toast.error {
+      border-left: 4px solid var(--danger);
+    }
+    .toast.warning {
+      border-left: 4px solid var(--warn);
+    }
+
+    /* ─── TRASH TABS ─── */
+    .trash-tab {
+      display: inline-block;
+      padding: 8px 16px;
+      background: var(--bg);
+      border-radius: 20px;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: var(--transition);
+      margin-bottom: 12px;
+    }
+
+    .trash-tab:hover,
+    .trash-tab.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .trash-section {
+      display: none;
+    }
+
+    .trash-section.active {
+      display: block;
+    }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 768px) {
+      .stats-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .modal .form-row {
+        grid-template-columns: 1fr;
+      }
+      header h1 {
+        font-size: 1.2rem;
+      }
+      .section-header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+      .modal {
+        padding: 20px 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+
+    <!-- HEADER -->
+    <header>
+      <h1>⚙️ RentSathi Control <span>SuperAdmin</span></h1>
+      <div class="header-actions">
+        <a href="/" target="_blank">🏠 Home</a>
+        <a href="/tenant.html" target="_blank">👤 Tenant View</a>
+        <span class="text-muted" id="adminUserDisplay">superadmin</span>
+        <button class="btn-logout" id="logoutBtn">Logout</button>
+      </div>
+    </header>
+
+    <!-- STATS -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="label">Owners</div>
+        <div class="value yellow" id="totalOwners">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Tenants</div>
+        <div class="value green" id="totalTenants">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Houses</div>
+        <div class="value blue" id="totalHouses">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Admins</div>
+        <div class="value red" id="totalAdmins">0</div>
+      </div>
+    </div>
+
+    <!-- USERS -->
+    <div class="section-card">
+      <div class="section-header">
+        <h3>👥 Users <span class="badge-count" id="usersCount">0</span></h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-primary" id="createUserBtn">➕ Create Owner</button>
+          <button class="btn-primary" id="createAdminBtn" style="background:var(--danger);">➕ Create Admin</button>
+        </div>
+      </div>
+      <div class="filter-bar">
+        <input type="text" id="usersSearch" placeholder="🔍 Search by username or name...">
+        <select id="usersRoleFilter">
+          <option value="">All Roles</option>
+          <option value="owner">Owner</option>
+          <option value="admin">Admin</option>
+          <option value="superadmin">SuperAdmin</option>
+        </select>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Full Name</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="usersTable">
+            <tr><td colspan="5" class="text-muted" style="text-align:center;">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- HOUSES -->
+    <div class="section-card">
+      <div class="section-header">
+        <h3>🏠 Houses <span class="badge-count" id="housesCount">0</span></h3>
+        <button class="btn-primary" id="createHouseBtn">➕ Create House</button>
+      </div>
+      <div class="filter-bar">
+        <input type="text" id="housesSearch" placeholder="🔍 Search by name...">
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Owner</th>
+              <th>Tenants</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="housesTable">
+            <tr><td colspan="4" class="text-muted" style="text-align:center;">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TRASH -->
+    <div class="section-card">
+      <div class="section-header"><h3>🗑️ Trash</h3></div>
+      <div>
+        <span class="trash-tab active" data-tab="trash-users">Users</span>
+        <span class="trash-tab" data-tab="trash-houses">Houses</span>
+        <span class="trash-tab" data-tab="trash-tenants">Tenants</span>
+      </div>
+      <div id="trash-users" class="trash-section active">
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Username</th><th>Role</th><th>Deleted At</th><th>Actions</th></tr></thead>
+            <tbody id="trashUsersTable"><tr><td colspan="4" class="text-muted" style="text-align:center;">No deleted users.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="trash-houses" class="trash-section">
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>House Name</th><th>Deleted At</th><th>Actions</th></tr></thead>
+            <tbody id="trashHousesTable"><tr><td colspan="3" class="text-muted" style="text-align:center;">No deleted houses.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="trash-tenants" class="trash-section">
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Tenant Name</th><th>House</th><th>Deleted At</th><th>Actions</th></tr></thead>
+            <tbody id="trashTenantsTable"><tr><td colspan="4" class="text-muted" style="text-align:center;">No deleted tenants.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== MODALS ===== -->
+  <!-- Create / Edit User Modal -->
+  <div class="modal-overlay" id="userModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="userModalTitle">Create User</h3>
+        <span class="modal-close" onclick="closeModal('userModal')">×</span>
+      </div>
+      <form id="userForm">
+        <input type="hidden" id="editUserId">
+        <div class="form-group">
+          <label>Full Name *</label>
+          <input type="text" id="userFullName" required>
+        </div>
+        <div class="form-group">
+          <label>Username *</label>
+          <input type="text" id="userUsername" required>
+        </div>
+        <div class="form-group">
+          <label>Password *</label>
+          <input type="text" id="userPassword" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="text" id="userPhone">
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="userEmail">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Address</label>
+          <input type="text" id="userAddress">
+        </div>
+        <div class="form-group">
+          <label>Notes</label>
+          <textarea id="userNotes" rows="2"></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-outline" onclick="closeModal('userModal')">Cancel</button>
+          <button type="submit" class="btn-success" id="userSubmitBtn">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Subscription Modal -->
+  <div class="modal-overlay" id="subscriptionModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>📅 Manage Subscription</h3>
+        <span class="modal-close" onclick="closeModal('subscriptionModal')">×</span>
+      </div>
+      <form id="subscriptionForm">
+        <input type="hidden" id="subUserId">
+        <div class="form-group">
+          <label>Action</label>
+          <select id="subAction">
+            <option value="activate">Activate</option>
+            <option value="deactivate">Deactivate</option>
+            <option value="cancel">Cancel</option>
+            <option value="extend">Extend (days)</option>
+          </select>
+        </div>
+        <div class="form-group" id="subDaysGroup" style="display:none;">
+          <label>Days to extend</label>
+          <input type="number" id="subDays" value="30" min="1">
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-outline" onclick="closeModal('subscriptionModal')">Cancel</button>
+          <button type="submit" class="btn-success">Apply</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Password Confirm Modal -->
+  <div class="modal-overlay" id="passwordModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>🔐 Confirm Password</h3>
+        <span class="modal-close" onclick="closeModal('passwordModal')">×</span>
+      </div>
+      <form id="passwordForm">
+        <div class="form-group">
+          <label>Enter your password</label>
+          <input type="password" id="confirmPassword" required>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-outline" onclick="closeModal('passwordModal')">Cancel</button>
+          <button type="submit" class="btn-danger">Confirm</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // AUTH & ROLE CHECK
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = '/login.html';
+    const userStr = localStorage.getItem('user');
+    let user = null;
+    try { user = JSON.parse(userStr); } catch(e) {}
+    if (!user || user.role !== 'superadmin') {
+      localStorage.removeItem('token'); localStorage.removeItem('user');
+      window.location.href = '/login.html';
+    }
+    const API_BASE = '/api';
+    let authToken = token;
+
+    document.getElementById('adminUserDisplay').textContent = user.username;
+
+    function logout() {
+      localStorage.removeItem('token'); localStorage.removeItem('user');
+      window.location.href = '/login.html';
+    }
+    document.getElementById('logoutBtn').addEventListener('click', logout);
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // API HELPER
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    async function api(method, url, data) {
+      const opts = {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        }
+      };
+      if (data) opts.body = JSON.stringify(data);
+      const res = await fetch(`${API_BASE}${url}`, opts);
+      if (!res.ok) {
+        if (res.status === 401) { logout(); throw new Error('Session expired'); }
+        const err = await res.text();
+        throw new Error(err || 'Request failed');
+      }
+      return res.json();
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // MODAL HELPERS
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    function openModal(id) {
+      document.getElementById(id).classList.add('active');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('active');
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // TOAST
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    let toastTimeout;
+
+    function showToast(msg, type = 'success') {
+      const existing = document.getElementById('toast');
+      if (existing) existing.remove();
+      const div = document.createElement('div');
+      div.id = 'toast';
+      div.className = 'toast ' + type;
+      div.innerHTML = `<span>${msg}</span>`;
+      document.body.appendChild(div);
+      setTimeout(() => div.classList.add('show'), 50);
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        div.classList.remove('show');
+        setTimeout(() => div.remove(), 400);
+      }, 3000);
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // PASSWORD CONFIRMATION
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    let pendingAction = null;
+
+    function requestPasswordConfirmation(action) {
+      pendingAction = action;
+      document.getElementById('confirmPassword').value = '';
+      openModal('passwordModal');
+    }
+
+    document.getElementById('passwordForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const password = document.getElementById('confirmPassword').value.trim();
+      if (!password) { showToast('Please enter your password.', 'error'); return; }
+      try {
+        await api('POST', '/auth/verify-password', { password });
+        closeModal('passwordModal');
+        if (pendingAction) {
+          await pendingAction();
+          pendingAction = null;
+        }
+      } catch (err) {
+        showToast('Incorrect password.', 'error');
+      }
+    });
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // DATA LOADING
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    let allUsers = [],
+      allHouses = [],
+      allTenants = [],
+      ownership = {};
+    let deletedUsers = [],
+      deletedHouses = [],
+      deletedTenants = [];
+
+    async function loadAll() {
+      try {
+        allUsers = await api('GET', '/admin/users');
+        allHouses = await api('GET', '/houses');
+        ownership = await api('GET', '/houses/ownership');
+        allTenants = [];
+        for (const house of allHouses) {
+          const tenants = await api('GET', `/tenants?houseId=${house}`);
+          tenants.forEach(t => allTenants.push({ ...t, houseName: house }));
+        }
+        deletedUsers = await api('GET', '/admin/trash/users');
+        deletedHouses = await api('GET', '/admin/trash/houses');
+        deletedTenants = await api('GET', '/admin/trash/tenants');
+        renderAll();
+      } catch (e) {
+        showToast('Failed to load data: ' + e.message, 'error');
+      }
+    }
+
+    function renderAll() {
+      renderUsers();
+      renderHouses();
+      renderStats();
+      renderTrash();
+    }
+
+    // ─── Users ──────────────────────────────────────────────────
+    function renderUsers() {
+      const search = document.getElementById('usersSearch').value.toLowerCase();
+      const roleFilter = document.getElementById('usersRoleFilter').value;
+      let filtered = allUsers.filter(u =>
+        (u.username.toLowerCase().includes(search) || (u.fullName || '').toLowerCase().includes(search)) &&
+        (roleFilter ? u.role === roleFilter : true)
+      );
+      document.getElementById('usersCount').textContent = filtered.length;
+      const tbody = document.getElementById('usersTable');
+      if (!filtered.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-muted" style="text-align:center;">No users found</td></tr>`;
+        return;
+      }
+      const badgeMap = {
+        admin: 'badge-admin',
+        owner: 'badge-owner',
+        tenant: 'badge-tenant',
+        superadmin: 'badge-superadmin'
+      };
+      tbody.innerHTML = filtered.map(u => `
+        <tr>
+          <td><strong>${u.username}</strong></td>
+          <td>${u.fullName || '—'}</td>
+          <td><span class="badge ${badgeMap[u.role] || ''}">${u.role}</span></td>
+          <td>${u.subscription_status || 'active'}</td>
+          <td>
+            <div class="actions">
+              <button class="btn-edit" onclick="editUser(${u.id})" title="Edit">✏️</button>
+              ${u.role === 'owner' ? `<button class="btn-reset" onclick="manageSubscription(${u.id})" title="Subscription">📅</button>` : ''}
+              ${u.role !== 'superadmin' ? `<button class="btn-reset" onclick="resetPassword(${u.id})" title="Reset Password">🔑</button>` : ''}
+              ${u.role !== 'superadmin' ? `<button class="btn-delete" onclick="deleteUser(${u.id})" title="Delete">🗑️</button>` : ''}
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // ─── Houses ──────────────────────────────────────────────────
+    function renderHouses() {
+      const search = document.getElementById('housesSearch').value.toLowerCase();
+      let filtered = allHouses.filter(h => h.toLowerCase().includes(search));
+      document.getElementById('housesCount').textContent = filtered.length;
+      const tbody = document.getElementById('housesTable');
+      if (!filtered.length) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-muted" style="text-align:center;">No houses found</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = filtered.map(h => {
+        const ownerId = ownership[h]?.owner_id;
+        const owner = allUsers.find(u => u.id === ownerId);
+        const tenantCount = allTenants.filter(t => t.houseName === h).length;
+        return `
+          <tr>
+            <td><strong>${h}</strong></td>
+            <td>${owner ? owner.username : '—'}</td>
+            <td>${tenantCount}</td>
+            <td>
+              <div class="actions">
+                <button class="btn-edit" onclick="editHouse('${h}')" title="Edit">✏️</button>
+                <button class="btn-delete" onclick="deleteHouse('${h}')" title="Delete">🗑️</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // ─── Stats ──────────────────────────────────────────────────
+    function renderStats() {
+      document.getElementById('totalOwners').textContent = allUsers.filter(u => u.role === 'owner').length;
+      document.getElementById('totalTenants').textContent = allUsers.filter(u => u.role === 'tenant').length;
+      document.getElementById('totalHouses').textContent = allHouses.length;
+      document.getElementById('totalAdmins').textContent = allUsers.filter(u => u.role === 'admin' || u.role === 'superadmin').length;
+    }
+
+    // ─── Trash ──────────────────────────────────────────────────
+    function renderTrash() {
+      // Users
+      const userTbody = document.getElementById('trashUsersTable');
+      if (!deletedUsers.length) {
+        userTbody.innerHTML = `<tr><td colspan="4" class="text-muted" style="text-align:center;">No deleted users.</td></tr>`;
+      } else {
+        userTbody.innerHTML = deletedUsers.map(u => `
+          <tr>
+            <td>${u.username}</td>
+            <td>${u.role}</td>
+            <td>${u.deleted_at ? new Date(u.deleted_at).toLocaleString() : '—'}</td>
+            <td>
+              <div class="actions">
+                <button class="btn-restore" onclick="restoreUser(${u.id})" title="Restore">↩️</button>
+                <button class="btn-delete" onclick="permanentDeleteUser(${u.id})" title="Permanent Delete">💀</button>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      // Houses
+      const houseTbody = document.getElementById('trashHousesTable');
+      if (!deletedHouses.length) {
+        houseTbody.innerHTML = `<tr><td colspan="3" class="text-muted" style="text-align:center;">No deleted houses.</td></tr>`;
+      } else {
+        houseTbody.innerHTML = deletedHouses.map(h => `
+          <tr>
+            <td>${h.name}</td>
+            <td>${h.deleted_at ? new Date(h.deleted_at).toLocaleString() : '—'}</td>
+            <td>
+              <div class="actions">
+                <button class="btn-restore" onclick="restoreHouse('${h.name}')" title="Restore">↩️</button>
+                <button class="btn-delete" onclick="permanentDeleteHouse('${h.name}')" title="Permanent Delete">💀</button>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      // Tenants
+      const tenantTbody = document.getElementById('trashTenantsTable');
+      if (!deletedTenants.length) {
+        tenantTbody.innerHTML = `<tr><td colspan="4" class="text-muted" style="text-align:center;">No deleted tenants.</td></tr>`;
+      } else {
+        tenantTbody.innerHTML = deletedTenants.map(t => `
+          <tr>
+            <td>${t.name}</td>
+            <td>${t.houseName}</td>
+            <td>${t.deleted_at ? new Date(t.deleted_at).toLocaleString() : '—'}</td>
+            <td>
+              <div class="actions">
+                <button class="btn-restore" onclick="restoreTenant(${t.id}, '${t.houseName}')" title="Restore">↩️</button>
+                <button class="btn-delete" onclick="permanentDeleteTenant(${t.id}, '${t.houseName}')" title="Permanent Delete">💀</button>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // CRUD OPERATIONS
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    // ─── Create / Edit User ──────────────────────────────────────
+    document.getElementById('createUserBtn').addEventListener('click', function() {
+      document.getElementById('editUserId').value = '';
+      document.getElementById('userFullName').value = '';
+      document.getElementById('userUsername').value = '';
+      document.getElementById('userPassword').value = '';
+      document.getElementById('userPhone').value = '';
+      document.getElementById('userEmail').value = '';
+      document.getElementById('userAddress').value = '';
+      document.getElementById('userNotes').value = '';
+      document.getElementById('userModalTitle').textContent = 'Create Owner';
+      document.getElementById('userSubmitBtn').textContent = 'Create';
+      openModal('userModal');
+    });
+
+    document.getElementById('createAdminBtn').addEventListener('click', function() {
+      document.getElementById('editUserId').value = '';
+      document.getElementById('userFullName').value = '';
+      document.getElementById('userUsername').value = '';
+      document.getElementById('userPassword').value = '';
+      document.getElementById('userPhone').value = '';
+      document.getElementById('userEmail').value = '';
+      document.getElementById('userAddress').value = '';
+      document.getElementById('userNotes').value = '';
+      document.getElementById('userModalTitle').textContent = 'Create Admin';
+      document.getElementById('userSubmitBtn').textContent = 'Create Admin';
+      openModal('userModal');
+    });
+
+    window.editUser = async (userId) => {
+      const u = allUsers.find(x => x.id === userId);
+      if (!u) return;
+      document.getElementById('editUserId').value = u.id;
+      document.getElementById('userFullName').value = u.fullName || '';
+      document.getElementById('userUsername').value = u.username;
+      document.getElementById('userPassword').value = ''; // leave empty
+      document.getElementById('userPhone').value = u.phone || '';
+      document.getElementById('userEmail').value = u.email || '';
+      document.getElementById('userAddress').value = u.address || '';
+      document.getElementById('userNotes').value = u.notes || '';
+      document.getElementById('userModalTitle').textContent = 'Edit User';
+      document.getElementById('userSubmitBtn').textContent = 'Update';
+      openModal('userModal');
+    };
+
+    document.getElementById('userForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const userId = document.getElementById('editUserId').value;
+      const fullName = document.getElementById('userFullName').value.trim();
+      const username = document.getElementById('userUsername').value.trim();
+      const password = document.getElementById('userPassword').value.trim();
+      const phone = document.getElementById('userPhone').value.trim();
+      const email = document.getElementById('userEmail').value.trim();
+      const address = document.getElementById('userAddress').value.trim();
+      const notes = document.getElementById('userNotes').value.trim();
+
+      if (!username || !fullName) {
+        showToast('Full Name and Username are required', 'error');
+        return;
+      }
+
+      // Determine role from modal title
+      const isAdmin = document.getElementById('userModalTitle').textContent.includes('Admin');
+      const role = isAdmin ? 'admin' : 'owner';
+
+      try {
+        if (userId) {
+          // Update – only allow updating non-critical fields
+          await api('PUT', `/users/${userId}`, { fullName, phone, email, address, notes });
+          showToast('User updated successfully');
+        } else {
+          // Create
+          if (!password) {
+            showToast('Password is required for new user', 'error');
+            return;
+          }
+          await api('POST', '/users', { username, password, role, fullName, phone, email, address, notes });
+          showToast(`User created as ${role}`);
+        }
+        closeModal('userModal');
+        loadAll();
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+      }
+    });
+
+    // ─── Reset Password ──────────────────────────────────────────
+    window.resetPassword = (userId) => {
+      const newPassword = prompt('Enter new password for this user:');
+      if (!newPassword || newPassword.length < 4) {
+        showToast('Password must be at least 4 characters.', 'error');
+        return;
+      }
+      requestPasswordConfirmation(async () => {
+        await api('POST', '/auth/reset-password', { userId, newPassword });
+        showToast('Password reset successfully');
+        loadAll();
+      });
+    };
+
+    // ─── Subscription ────────────────────────────────────────────
+    window.manageSubscription = (userId) => {
+      document.getElementById('subUserId').value = userId;
+      document.getElementById('subAction').value = 'activate';
+      document.getElementById('subDaysGroup').style.display = 'none';
+      openModal('subscriptionModal');
+    };
+
+    document.getElementById('subAction').addEventListener('change', function() {
+      document.getElementById('subDaysGroup').style.display = this.value === 'extend' ? 'block' : 'none';
+    });
+
+    document.getElementById('subscriptionForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const userId = document.getElementById('subUserId').value;
+      const action = document.getElementById('subAction').value;
+      const days = parseInt(document.getElementById('subDays').value) || 30;
+      try {
+        await api('PATCH', `/admin/subscription/${userId}`, { action, duration: days });
+        showToast('Subscription updated');
+        closeModal('subscriptionModal');
+        loadAll();
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+      }
+    });
+
+    // ─── Delete User (soft delete) ──────────────────────────────
+    window.deleteUser = async (userId) => {
+      const u = allUsers.find(x => x.id === userId);
+      if (!u) return;
+      if (u.id === user.id) {
+        showToast('You cannot delete your own account.', 'error');
+        return;
+      }
+      if (!confirm(`Move user "${u.username}" to trash?`)) return;
+      requestPasswordConfirmation(async () => {
+        await api('POST', `/admin/users/${userId}/delete`, {});
+        showToast('User moved to trash.');
+        loadAll();
+      });
+    };
+
+    // ─── Restore / Permanent Delete ─────────────────────────────
+    window.restoreUser = async (userId) => {
+      try {
+        await api('POST', `/admin/trash/users/restore/${userId}`, {});
+        showToast('User restored.');
+        loadAll();
+      } catch (e) { showToast(e.message, 'error'); }
+    };
+
+    window.permanentDeleteUser = async (userId) => {
+      if (!confirm('Permanently delete this user? This cannot be undone.')) return;
+      requestPasswordConfirmation(async () => {
+        await api('DELETE', `/admin/trash/users/permanent/${userId}`, {});
+        showToast('User permanently deleted.');
+        loadAll();
+      });
+    };
+
+    // ─── Houses ──────────────────────────────────────────────────
+    document.getElementById('createHouseBtn').addEventListener('click', async function() {
+      const name = prompt('Enter house name:');
+      if (!name) return;
+      const address = prompt('Enter address (optional):') || '';
+      const ownerInput = prompt('Enter owner username (optional):');
+      let ownerId = undefined;
+      if (ownerInput) {
+        const owner = allUsers.find(u => u.username === ownerInput && (u.role === 'owner' || u.role === 'admin'));
+        if (owner) ownerId = owner.id;
+        else showToast('Owner not found.', 'warning');
+      }
+      try {
+        await api('POST', '/houses', { name, address, owner_id: ownerId });
+        showToast(`House "${name}" created!`);
+        loadAll();
+      } catch (e) { showToast('Error: ' + e.message, 'error'); }
+    });
+
+    window.editHouse = async (houseId) => {
+      const newName = prompt('Enter new house name:', houseId);
+      if (!newName || newName === houseId) return;
+      const newAddress = prompt('Enter new address:', '');
+      try {
+        await api('PUT', `/houses/${houseId}`, { name: newName, address: newAddress });
+        showToast('House updated');
+        loadAll();
+      } catch (e) { showToast('Error: ' + e.message, 'error'); }
+    };
+
+    window.deleteHouse = async (houseId) => {
+      if (!confirm(`Delete house "${houseId}" and move to trash?`)) return;
+      requestPasswordConfirmation(async () => {
+        await api('POST', `/houses/${houseId}/delete`, {});
+        showToast('House moved to trash.');
+        loadAll();
+      });
+    };
+
+    window.restoreHouse = async (houseId) => {
+      try {
+        await api('POST', `/admin/trash/houses/restore/${houseId}`, {});
+        showToast('House restored.');
+        loadAll();
+      } catch (e) { showToast(e.message, 'error'); }
+    };
+
+    window.permanentDeleteHouse = async (houseId) => {
+      if (!confirm('Permanently delete this house and all its data?')) return;
+      requestPasswordConfirmation(async () => {
+        await api('DELETE', `/admin/trash/houses/permanent/${houseId}`, {});
+        showToast('House permanently deleted.');
+        loadAll();
+      });
+    };
+
+    // ─── Tenants ──────────────────────────────────────────────────
+    window.restoreTenant = async (tenantId, houseId) => {
+      try {
+        await api('POST', `/admin/trash/tenants/restore/${tenantId}?houseId=${houseId}`, {});
+        showToast('Tenant restored.');
+        loadAll();
+      } catch (e) { showToast(e.message, 'error'); }
+    };
+
+    window.permanentDeleteTenant = async (tenantId, houseId) => {
+      if (!confirm('Permanently delete this tenant?')) return;
+      requestPasswordConfirmation(async () => {
+        await api('DELETE', `/admin/trash/tenants/permanent/${tenantId}?houseId=${houseId}`, {});
+        showToast('Tenant permanently deleted.');
+        loadAll();
+      });
+    };
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // SEARCH / FILTERS
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    document.getElementById('usersSearch').addEventListener('input', renderUsers);
+    document.getElementById('usersRoleFilter').addEventListener('change', renderUsers);
+    document.getElementById('housesSearch').addEventListener('input', renderHouses);
+
+    // ─── Trash tab switching ──────────────────────────────────
+    document.querySelectorAll('.trash-tab').forEach(tab => {
+      tab.addEventListener('click', function() {
+        document.querySelectorAll('.trash-tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+        document.querySelectorAll('.trash-section').forEach(s => s.classList.remove('active'));
+        document.getElementById(this.dataset.tab).classList.add('active');
+      });
+    });
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // INIT
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    loadAll();
+  </script>
+</body>
+</html>

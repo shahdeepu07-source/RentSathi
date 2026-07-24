@@ -1,80 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RentSathi - Admin</title>
-    <style>
-        /* ─────────────── STYLES (same as before – kept compact) ─────────────── */
-        :root { --bg:#0b1120; --card:#111827; --text:#f8fafc; --text-muted:#94a3b8; --accent:#2563eb; --accent-hover:#1d4ed8; --success:#10b981; --warn:#f59e0b; --danger:#ef4444; --border:#1f2937; --radius:12px; --shadow:0 4px 24px rgba(0,0,0,0.3); --transition:0.2s ease; }
-        * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter',system-ui,-apple-system,sans-serif; }
-        body { background:var(--bg); color:var(--text); padding:20px; min-height:100vh; }
-        .container { max-width:1400px; margin:0 auto; }
-        header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding-bottom:16px; border-bottom:1px solid var(--border); margin-bottom:24px; }
-        header h1 { font-size:1.6rem; font-weight:700; display:flex; align-items:center; gap:10px; }
-        header h1 span { background:var(--accent); font-size:0.7rem; font-weight:600; padding:2px 12px; border-radius:20px; color:#fff; }
-        .btn-logout { background:var(--danger); color:#fff; border:none; padding:6px 18px; border-radius:6px; cursor:pointer; font-size:0.8rem; font-weight:600; transition:var(--transition); }
-        .btn-logout:hover { opacity:0.85; transform:translateY(-1px); }
-        .stats-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:16px; margin-bottom:28px; }
-        .stat-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; box-shadow:var(--shadow); }
-        .stat-card .label { font-size:0.7rem; text-transform:uppercase; color:var(--text-muted); }
-        .stat-card .value { font-size:2rem; font-weight:700; margin-top:4px; }
-        .stat-card .value.blue { color:var(--accent); }
-        .stat-card .value.green { color:var(--success); }
-        .stat-card .value.yellow { color:var(--warn); }
-        .stat-card .value.red { color:var(--danger); }
-        .section-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:24px; }
-        .section-header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
-        .section-header h3 { font-size:1.1rem; font-weight:600; }
-        .filter-bar { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
-        .filter-bar input, .filter-bar select { flex:1; min-width:150px; padding:10px 14px; background:#0f172a; border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:0.9rem; transition:var(--transition); }
-        .table-wrapper { overflow-x:auto; }
-        table { width:100%; border-collapse:collapse; font-size:0.9rem; }
-        th { text-align:left; padding:10px 12px; color:var(--text-muted); font-weight:600; font-size:0.7rem; text-transform:uppercase; border-bottom:1px solid var(--border); }
-        td { padding:10px 12px; border-bottom:1px solid var(--border); vertical-align:middle; }
-        .actions { display:flex; gap:6px; flex-wrap:wrap; }
-        .actions button { background:none; border:none; cursor:pointer; font-size:0.85rem; padding:4px 8px; border-radius:4px; transition:var(--transition); color:var(--text-muted); }
-        .actions button:hover { background:var(--bg); color:var(--text); }
-        .btn-primary { background:var(--accent); color:#fff; border:none; padding:8px 18px; border-radius:6px; font-weight:600; font-size:0.85rem; cursor:pointer; transition:var(--transition); }
-        .btn-primary:hover { background:var(--accent-hover); transform:translateY(-1px); }
-        .btn-success { background:var(--success); color:#fff; border:none; padding:8px 18px; border-radius:6px; font-weight:600; font-size:0.85rem; cursor:pointer; transition:var(--transition); }
-        .btn-success:hover { opacity:0.85; transform:translateY(-1px); }
-        .btn-danger { background:var(--danger); color:#fff; border:none; padding:8px 18px; border-radius:6px; font-weight:600; font-size:0.85rem; cursor:pointer; transition:var(--transition); }
-        .btn-outline { background:transparent; color:var(--text); border:1px solid var(--border); padding:8px 18px; border-radius:6px; font-weight:600; font-size:0.85rem; cursor:pointer; transition:var(--transition); }
-        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); z-index:1000; justify-content:center; align-items:center; padding:20px; }
-        .modal-overlay.active { display:flex; }
-        .modal { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); max-width:560px; width:100%; max-height:90vh; overflow-y:auto; padding:28px 32px; box-shadow:0 20px 60px rgba(0,0,0,0.5); }
-        .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
-        .modal-close { background:none; border:none; color:var(--text-muted); font-size:1.6rem; cursor:pointer; transition:var(--transition); line-height:1; }
-        .modal-close:hover { color:var(--danger); }
-        .modal .form-group { margin-bottom:16px; }
-        .modal .form-group label { display:block; font-size:0.7rem; font-weight:600; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.5px; margin-bottom:4px; }
-        .modal .form-group input, .modal .form-group select, .modal .form-group textarea { width:100%; padding:10px 12px; background:#0f172a; border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:0.9rem; transition:var(--transition); }
-        .modal .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-        .modal .form-actions { display:flex; gap:10px; margin-top:20px; justify-content:flex-end; }
-        .toast { position:fixed; bottom:24px; right:24px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px 24px; box-shadow:var(--shadow); z-index:2000; transform:translateY(120px); opacity:0; transition:all 0.4s ease; max-width:400px; }
-        .toast.show { transform:translateY(0); opacity:1; }
-        .toast.success { border-left:4px solid var(--success); }
-        .toast.error { border-left:4px solid var(--danger); }
-        .trash-tab { display:inline-block; padding:8px 16px; background:var(--bg); border-radius:20px; color:var(--text-muted); font-size:0.85rem; cursor:pointer; transition:var(--transition); margin-bottom:12px; }
-        .trash-tab:hover, .trash-tab.active { background:var(--accent); color:#fff; }
-        .trash-section { display:none; }
-        .trash-section.active { display:block; }
-        .badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:0.65rem; font-weight:600; text-transform:uppercase; }
-        .badge-admin { background:var(--accent); color:#fff; }
-        .badge-owner { background:var(--warn); color:#000; }
-        .badge-tenant { background:var(--success); color:#000; }
-        .badge-superadmin { background:var(--danger); color:#fff; }
-        .text-muted { color:var(--text-muted); }
-        .superadmin-only { display:none; }
-        .role-superadmin .superadmin-only { display:block; }
-        @media(max-width:768px){ .stats-grid { grid-template-columns:1fr 1fr; } .modal .form-row { grid-template-columns:1fr; } }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RentSathi - Admin</title>
+  <style>
+    /* ─────────────── STYLES (same as before) ─────────────── */
+    :root { --bg:#0b1120; --card:#111827; --text:#f8fafc; --text-muted:#94a3b8; --accent:#2563eb; --accent-hover:#1d4ed8; --success:#10b981; --warn:#f59e0b; --danger:#ef4444; --border:#1f2937; --radius:12px; --shadow:0 4px 24px rgba(0,0,0,0.3); --transition:0.2s ease; }
+    * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter',system-ui,-apple-system,sans-serif; }
+    body { background:var(--bg); color:var(--text); padding:20px; min-height:100vh; }
+    .container { max-width:1400px; margin:0 auto; }
+    header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding-bottom:16px; border-bottom:1px solid var(--border); margin-bottom:24px; }
+    header h1 { font-size:1.6rem; font-weight:700; display:flex; align-items:center; gap:10px; }
+    header h1 span { background:var(--accent); font-size:0.7rem; font-weight:600; padding:2px 12px; border-radius:20px; color:#fff; }
+    .btn-logout { background:var(--danger); color:#fff; border:none; padding:6px 18px; border-radius:6px; cursor:pointer; font-size:0.8rem; font-weight:600; transition:var(--transition); }
+    .btn-logout:hover { opacity:0.85; transform:translateY(-1px); }
+    .stats-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:16px; margin-bottom:28px; }
+    .stat-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; box-shadow:var(--shadow); }
+    .stat-card .label { font-size:0.7rem; text-transform:uppercase; color:var(--text-muted); }
+    .stat-card .value { font-size:2rem; font-weight:700; margin-top:4px; }
+    .stat-card .value.blue { color:var(--accent); }
+    .stat-card .value.green { color:var(--success); }
+    .stat-card .value.yellow { color:var(--warn); }
+    .stat-card .value.red { color:var(--danger); }
+    .section-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:24px; }
+    .section-header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
+    .section-header h3 { font-size:1.1rem; font-weight:600; }
+    .filter-bar { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+    .filter-bar input, .filter-bar select { flex:1; min-width:150px; padding:10px 14px; background:#0f172a; border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:0.9rem; transition:var(--transition); }
+    .table-wrapper { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:0.9rem; }
+    th { text-align:left; padding:10px 12px; color:var(--text-muted); font-weight:600; font-size:0.7rem; text-transform:uppercase; border-bottom:1px solid var(--border); }
+    td { padding:10px 12px; border-bottom:1px solid var(--border); vertical-align:middle; }
+    .actions { display:flex; gap:6px; flex-wrap:wrap; }
+    .actions button { background:none; border:none; cursor:pointer; font-size:0.85rem; padding:4px 8px; border-radius:4px; transition:var(--transition); color:var(--text-muted); }
+    .actions button:hover { background:var(--bg); color:var(--text); }
+    .btn-primary { background:var(--accent); color:#fff; border:none; padding:8px 18px; border-radius:6px; font-weight:600; font-size:0.85rem; cursor:pointer; transition:var(--transition); }
+    .btn-primary:hover { background:var(--accent-hover); transform:translateY(-1px); }
+    .btn-success { background:var(--success); color:#fff; border:none; padding:8px 18px; border-radius:6px; font-weight:600; font-size:0.85rem; cursor:pointer; transition:var(--transition); }
+    .btn-success:hover { opacity:0.85; transform:translateY(-1px); }
+    .btn-danger { background:var(--danger); color:#fff; border:none; padding:8px 18px; border-radius:6px; font-weight:600; font-size:0.85rem; cursor:pointer; transition:var(--transition); }
+    .btn-outline { background:transparent; color:var(--text); border:1px solid var(--border); padding:8px 18px; border-radius:6px; font-weight:600; font-size:0.85rem; cursor:pointer; transition:var(--transition); }
+    .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); z-index:1000; justify-content:center; align-items:center; padding:20px; }
+    .modal-overlay.active { display:flex; }
+    .modal { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); max-width:560px; width:100%; max-height:90vh; overflow-y:auto; padding:28px 32px; box-shadow:0 20px 60px rgba(0,0,0,0.5); }
+    .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+    .modal-close { background:none; border:none; color:var(--text-muted); font-size:1.6rem; cursor:pointer; transition:var(--transition); line-height:1; }
+    .modal-close:hover { color:var(--danger); }
+    .modal .form-group { margin-bottom:16px; }
+    .modal .form-group label { display:block; font-size:0.7rem; font-weight:600; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.5px; margin-bottom:4px; }
+    .modal .form-group input, .modal .form-group select, .modal .form-group textarea { width:100%; padding:10px 12px; background:#0f172a; border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:0.9rem; transition:var(--transition); }
+    .modal .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .modal .form-actions { display:flex; gap:10px; margin-top:20px; justify-content:flex-end; }
+    .toast { position:fixed; bottom:24px; right:24px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px 24px; box-shadow:var(--shadow); z-index:2000; transform:translateY(120px); opacity:0; transition:all 0.4s ease; max-width:400px; }
+    .toast.show { transform:translateY(0); opacity:1; }
+    .toast.success { border-left:4px solid var(--success); }
+    .toast.error { border-left:4px solid var(--danger); }
+    .trash-tab { display:inline-block; padding:8px 16px; background:var(--bg); border-radius:20px; color:var(--text-muted); font-size:0.85rem; cursor:pointer; transition:var(--transition); margin-bottom:12px; }
+    .trash-tab:hover, .trash-tab.active { background:var(--accent); color:#fff; }
+    .trash-section { display:none; }
+    .trash-section.active { display:block; }
+    .badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:0.65rem; font-weight:600; text-transform:uppercase; }
+    .badge-admin { background:var(--accent); color:#fff; }
+    .badge-owner { background:var(--warn); color:#000; }
+    .badge-tenant { background:var(--success); color:#000; }
+    .badge-superadmin { background:var(--danger); color:#fff; }
+    .text-muted { color:var(--text-muted); }
+    @media(max-width:768px){ .stats-grid { grid-template-columns:1fr 1fr; } .modal .form-row { grid-template-columns:1fr; } }
+  </style>
 </head>
 <body>
 
-<div class="container" id="adminContainer" data-role="">
-
+<div class="container">
     <!-- HEADER -->
     <header>
         <h1>🏢 RentSathi Business <span id="roleBadge">Admin</span></h1>
@@ -96,15 +93,11 @@
     <div class="section-card">
         <div class="section-header">
             <h3>👥 Users <span class="badge-count" id="usersCount">0</span></h3>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <button class="btn-primary" id="createUserBtn">➕ Create User</button>
-                <!-- Only SuperAdmin sees this button -->
-                <button class="btn-primary superadmin-only" id="createAdminBtn" style="background:var(--danger);">➕ Create Admin</button>
-            </div>
+            <button class="btn-primary" id="createUserBtn">➕ Create Owner</button>
         </div>
         <div class="filter-bar">
             <input type="text" id="usersSearch" placeholder="🔍 Search by username or name...">
-            <select id="usersRoleFilter"><option value="">All Roles</option><option value="owner">Owner</option><option value="admin">Admin</option><option value="superadmin">SuperAdmin</option></select>
+            <select id="usersRoleFilter"><option value="">All Roles</option><option value="owner">Owner</option><option value="admin">Admin</option></select>
         </div>
         <div class="table-wrapper">
             <table>
@@ -160,11 +153,82 @@
     </div>
 </div>
 
-<!-- MODALS -->
-<div class="modal-overlay" id="createUserModal">...</div>
-<div class="modal-overlay" id="editUserModal">...</div>
-<div class="modal-overlay" id="subscriptionModal">...</div>
-<div class="modal-overlay" id="passwordConfirmModal">...</div>
+<!-- ===== MODALS ===== -->
+<!-- Create / Edit User Modal -->
+<div class="modal-overlay" id="userModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="userModalTitle">Create Owner</h3>
+            <span class="modal-close" onclick="closeModal('userModal')">×</span>
+        </div>
+        <form id="userForm">
+            <input type="hidden" id="editUserId">
+            <div class="form-group"><label>Full Name *</label><input type="text" id="userFullName" required></div>
+            <div class="form-group"><label>Username *</label><input type="text" id="userUsername" required></div>
+            <div class="form-group"><label>Password *</label><input type="text" id="userPassword" required></div>
+            <div class="form-row">
+                <div class="form-group"><label>Phone</label><input type="text" id="userPhone"></div>
+                <div class="form-group"><label>Email</label><input type="email" id="userEmail"></div>
+            </div>
+            <div class="form-group"><label>Address</label><input type="text" id="userAddress"></div>
+            <div class="form-group"><label>Notes</label><textarea id="userNotes" rows="2"></textarea></div>
+            <div class="form-actions">
+                <button type="button" class="btn-outline" onclick="closeModal('userModal')">Cancel</button>
+                <button type="submit" class="btn-success" id="userSubmitBtn">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Subscription Modal -->
+<div class="modal-overlay" id="subscriptionModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Manage Subscription</h3>
+            <span class="modal-close" onclick="closeModal('subscriptionModal')">×</span>
+        </div>
+        <form id="subscriptionForm">
+            <input type="hidden" id="subUserId">
+            <div class="form-group">
+                <label>Action</label>
+                <select id="subAction">
+                    <option value="activate">Activate</option>
+                    <option value="deactivate">Deactivate</option>
+                    <option value="cancel">Cancel</option>
+                    <option value="extend">Extend (days)</option>
+                </select>
+            </div>
+            <div class="form-group" id="subDaysGroup" style="display:none;">
+                <label>Days to extend</label>
+                <input type="number" id="subDays" value="30" min="1">
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn-outline" onclick="closeModal('subscriptionModal')">Cancel</button>
+                <button type="submit" class="btn-success">Apply</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Password Confirm Modal -->
+<div class="modal-overlay" id="passwordModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>🔐 Confirm Password</h3>
+            <span class="modal-close" onclick="closeModal('passwordModal')">×</span>
+        </div>
+        <form id="passwordForm">
+            <div class="form-group">
+                <label>Enter your password</label>
+                <input type="password" id="confirmPassword" required>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn-outline" onclick="closeModal('passwordModal')">Cancel</button>
+                <button type="submit" class="btn-danger">Confirm</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <script>
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -181,15 +245,9 @@
     }
     const API_BASE = '/api';
     let authToken = token;
-
-    // Show/hide superadmin elements
-    const container = document.getElementById('adminContainer');
-    if (user.role === 'superadmin') {
-        container.classList.add('role-superadmin');
-        document.getElementById('roleBadge').textContent = 'SuperAdmin';
-    } else {
-        document.getElementById('roleBadge').textContent = 'Admin';
-    }
+    const isSuperAdmin = user.role === 'superadmin';
+    document.getElementById('roleBadge').textContent = isSuperAdmin ? 'SuperAdmin' : 'Admin';
+    document.getElementById('adminUserDisplay').textContent = user.username;
 
     function logout() {
         localStorage.removeItem('token'); localStorage.removeItem('user');
@@ -197,6 +255,9 @@
     }
     document.getElementById('logoutBtn').addEventListener('click', logout);
 
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // API HELPER
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     async function api(method, url, data) {
         const opts = { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` } };
         if (data) opts.body = JSON.stringify(data);
@@ -209,7 +270,19 @@
         return res.json();
     }
 
-    // ─── Toast ──────────────────────────────────────────────────
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // MODAL HELPERS (FIXED)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    function openModal(id) {
+        document.getElementById(id).classList.add('active');
+    }
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('active');
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // TOAST
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     function showToast(msg, type = 'success') {
         const existing = document.getElementById('toast');
         if (existing) existing.remove();
@@ -222,8 +295,11 @@
         setTimeout(() => { div.classList.remove('show'); setTimeout(() => div.remove(), 400); }, 3000);
     }
 
-    // ─── Load data ─────────────────────────────────────────────
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // DATA LOADING
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     let allUsers = [], allHouses = [], allTenants = [], ownership = {};
+    let deletedUsers = [], deletedHouses = [], deletedTenants = [];
 
     async function loadAll() {
         try {
@@ -235,6 +311,9 @@
                 const tenants = await api('GET', `/tenants?houseId=${house}`);
                 tenants.forEach(t => allTenants.push({ ...t, houseName: house }));
             }
+            deletedUsers = await api('GET', '/admin/trash/users');
+            deletedHouses = await api('GET', '/admin/trash/houses');
+            deletedTenants = await api('GET', '/admin/trash/tenants');
             renderAll();
         } catch (e) { showToast('Failed to load data: ' + e.message, 'error'); }
     }
@@ -246,6 +325,7 @@
         renderTrash();
     }
 
+    // ─── Users ──────────────────────────────────────────────────
     function renderUsers() {
         const search = document.getElementById('usersSearch').value.toLowerCase();
         const roleFilter = document.getElementById('usersRoleFilter').value;
@@ -260,23 +340,43 @@
             return;
         }
         const badgeMap = { admin:'badge-admin', owner:'badge-owner', tenant:'badge-tenant', superadmin:'badge-superadmin' };
-        tbody.innerHTML = filtered.map(u => `
+        tbody.innerHTML = filtered.map(u => {
+            // Determine action buttons based on role
+            let actionsHtml = '';
+            const canEdit = (isSuperAdmin) || (u.role !== 'admin' && u.role !== 'superadmin' && u.id !== user.id);
+            const canDelete = (isSuperAdmin) || (u.role !== 'admin' && u.role !== 'superadmin');
+            const canManageSub = (u.role === 'owner' && (isSuperAdmin || u.id !== user.id));
+
+            if (canEdit) {
+                actionsHtml += `<button onclick="editUser(${u.id})">✏️</button>`;
+            }
+            if (canManageSub) {
+                actionsHtml += `<button onclick="manageSubscription(${u.id})">📅</button>`;
+            }
+            if (canDelete) {
+                actionsHtml += `<button onclick="deleteUser(${u.id})">🗑️</button>`;
+            }
+
+            // Hide full name for superadmin if normal admin
+            let displayName = u.fullName || '—';
+            if (u.role === 'superadmin' && !isSuperAdmin) {
+                displayName = '***';
+            }
+
+            return `
             <tr>
                 <td><strong>${u.username}</strong></td>
-                <td>${u.fullName || '—'}</td>
+                <td>${displayName}</td>
                 <td><span class="badge ${badgeMap[u.role] || ''}">${u.role}</span></td>
                 <td>${u.subscription_status || 'active'}</td>
                 <td>
-                    <div class="actions">
-                        <button onclick="editUser(${u.id})">✏️</button>
-                        ${u.role !== 'superadmin' && u.role !== 'admin' ? `<button onclick="manageSubscription(${u.id})">📅</button>` : ''}
-                        ${u.role !== 'superadmin' ? `<button onclick="deleteUser(${u.id})">🗑️</button>` : ''}
-                    </div>
+                    <div class="actions">${actionsHtml}</div>
                 </td>
-            </tr>
-        `).join('');
+            </tr>`;
+        }).join('');
     }
 
+    // ─── Houses ──────────────────────────────────────────────────
     function renderHouses() {
         const search = document.getElementById('housesSearch').value.toLowerCase();
         let filtered = allHouses.filter(h => h.toLowerCase().includes(search));
@@ -304,6 +404,7 @@
         }).join('');
     }
 
+    // ─── Stats ──────────────────────────────────────────────────
     function renderStats() {
         document.getElementById('totalOwners').textContent = allUsers.filter(u => u.role === 'owner').length;
         document.getElementById('totalTenants').textContent = allUsers.filter(u => u.role === 'tenant').length;
@@ -311,16 +412,9 @@
         document.getElementById('totalAdmins').textContent = allUsers.filter(u => u.role === 'admin' || u.role === 'superadmin').length;
     }
 
-    // ─── Trash (same as before) ──────────────────────────────────
-    let deletedUsers = [], deletedHouses = [], deletedTenants = [];
-
-    async function renderTrash() {
-        try {
-            deletedUsers = await api('GET', '/admin/trash/users');
-            deletedHouses = await api('GET', '/admin/trash/houses');
-            deletedTenants = await api('GET', '/admin/trash/tenants');
-        } catch(e) {}
-        // render tables (same code as earlier)
+    // ─── Trash ──────────────────────────────────────────────────
+    function renderTrash() {
+        // Users
         const userTbody = document.getElementById('trashUsersTable');
         if (!deletedUsers.length) {
             userTbody.innerHTML = `<tr><td colspan="4" class="text-muted" style="text-align:center;">No deleted users.</td></tr>`;
@@ -339,19 +433,185 @@
                 </tr>
             `).join('');
         }
-        // similarly for houses and tenants – I'll keep it short, but the full code includes them.
-        // (You already have the full trash functions from earlier – they are the same.)
+        // Houses
+        const houseTbody = document.getElementById('trashHousesTable');
+        if (!deletedHouses.length) {
+            houseTbody.innerHTML = `<tr><td colspan="3" class="text-muted" style="text-align:center;">No deleted houses.</td></tr>`;
+        } else {
+            houseTbody.innerHTML = deletedHouses.map(h => `
+                <tr>
+                    <td>${h.name}</td>
+                    <td>${h.deleted_at ? new Date(h.deleted_at).toLocaleString() : '—'}</td>
+                    <td>
+                        <div class="actions">
+                            <button onclick="restoreHouse('${h.name}')">↩️ Restore</button>
+                            <button onclick="permanentDeleteHouse('${h.name}')">💀 Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        // Tenants
+        const tenantTbody = document.getElementById('trashTenantsTable');
+        if (!deletedTenants.length) {
+            tenantTbody.innerHTML = `<tr><td colspan="4" class="text-muted" style="text-align:center;">No deleted tenants.</td></tr>`;
+        } else {
+            tenantTbody.innerHTML = deletedTenants.map(t => `
+                <tr>
+                    <td>${t.name}</td>
+                    <td>${t.houseName}</td>
+                    <td>${t.deleted_at ? new Date(t.deleted_at).toLocaleString() : '—'}</td>
+                    <td>
+                        <div class="actions">
+                            <button onclick="restoreTenant(${t.id}, '${t.houseName}')">↩️ Restore</button>
+                            <button onclick="permanentDeleteTenant(${t.id}, '${t.houseName}')">💀 Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
     }
 
-    // ─── Delete / Restore / Permanent ──────────────────────────
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // CRUD OPERATIONS
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    // ─── Create / Edit User ──────────────────────────────────────
+    document.getElementById('createUserBtn').addEventListener('click', function() {
+        // Clear form
+        document.getElementById('editUserId').value = '';
+        document.getElementById('userFullName').value = '';
+        document.getElementById('userUsername').value = '';
+        document.getElementById('userPassword').value = '';
+        document.getElementById('userPhone').value = '';
+        document.getElementById('userEmail').value = '';
+        document.getElementById('userAddress').value = '';
+        document.getElementById('userNotes').value = '';
+        document.getElementById('userModalTitle').textContent = 'Create Owner';
+        document.getElementById('userSubmitBtn').textContent = 'Create';
+        openModal('userModal');
+    });
+
+    window.editUser = async (userId) => {
+        const u = allUsers.find(x => x.id === userId);
+        if (!u) return;
+        // Permission check: only superadmin can edit admin/superadmin; admin cannot edit self or other admin
+        if (u.role === 'admin' && !isSuperAdmin) {
+            showToast('You do not have permission to edit admin accounts.', 'error');
+            return;
+        }
+        if (u.role === 'superadmin' && !isSuperAdmin) {
+            showToast('You do not have permission to edit SuperAdmin.', 'error');
+            return;
+        }
+        if (u.id === user.id && !isSuperAdmin) {
+            showToast('You cannot edit your own account.', 'error');
+            return;
+        }
+        // If the target is an admin and current user is not superadmin, deny
+        if ((u.role === 'admin' || u.role === 'superadmin') && !isSuperAdmin) {
+            showToast('You do not have permission.', 'error');
+            return;
+        }
+
+        document.getElementById('editUserId').value = u.id;
+        document.getElementById('userFullName').value = u.fullName || '';
+        document.getElementById('userUsername').value = u.username;
+        document.getElementById('userPassword').value = ''; // leave empty
+        document.getElementById('userPhone').value = u.phone || '';
+        document.getElementById('userEmail').value = u.email || '';
+        document.getElementById('userAddress').value = u.address || '';
+        document.getElementById('userNotes').value = u.notes || '';
+        document.getElementById('userModalTitle').textContent = 'Edit User';
+        document.getElementById('userSubmitBtn').textContent = 'Update';
+        openModal('userModal');
+    };
+
+    document.getElementById('userForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const userId = document.getElementById('editUserId').value;
+        const fullName = document.getElementById('userFullName').value.trim();
+        const username = document.getElementById('userUsername').value.trim();
+        const password = document.getElementById('userPassword').value.trim();
+        const phone = document.getElementById('userPhone').value.trim();
+        const email = document.getElementById('userEmail').value.trim();
+        const address = document.getElementById('userAddress').value.trim();
+        const notes = document.getElementById('userNotes').value.trim();
+
+        if (!username || !fullName) {
+            showToast('Full Name and Username are required', 'error');
+            return;
+        }
+
+        try {
+            if (userId) {
+                // Update
+                await api('PUT', `/users/${userId}`, { fullName, phone, email, address, notes });
+                showToast('User updated successfully');
+            } else {
+                // Create
+                if (!password) {
+                    showToast('Password is required for new user', 'error');
+                    return;
+                }
+                await api('POST', '/users', { username, password, role: 'owner', fullName, phone, email, address, notes });
+                showToast('Owner created successfully');
+            }
+            closeModal('userModal');
+            loadAll();
+        } catch (err) {
+            showToast('Error: ' + err.message, 'error');
+        }
+    });
+
+    // ─── Subscription ────────────────────────────────────────────
+    window.manageSubscription = (userId) => {
+        document.getElementById('subUserId').value = userId;
+        document.getElementById('subAction').value = 'activate';
+        document.getElementById('subDaysGroup').style.display = 'none';
+        openModal('subscriptionModal');
+    };
+
+    document.getElementById('subAction').addEventListener('change', function() {
+        document.getElementById('subDaysGroup').style.display = this.value === 'extend' ? 'block' : 'none';
+    });
+
+    document.getElementById('subscriptionForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const userId = document.getElementById('subUserId').value;
+        const action = document.getElementById('subAction').value;
+        const days = parseInt(document.getElementById('subDays').value) || 30;
+        try {
+            await api('PATCH', `/admin/subscription/${userId}`, { action, duration: days });
+            showToast('Subscription updated');
+            closeModal('subscriptionModal');
+            loadAll();
+        } catch (err) {
+            showToast('Error: ' + err.message, 'error');
+        }
+    });
+
+    // ─── Delete User ─────────────────────────────────────────────
     window.deleteUser = async (userId) => {
-        if (!confirm('Move this user to trash?')) return;
+        const u = allUsers.find(x => x.id === userId);
+        if (!u) return;
+        if (u.id === user.id) {
+            showToast('You cannot delete your own account.', 'error');
+            return;
+        }
+        if ((u.role === 'admin' || u.role === 'superadmin') && !isSuperAdmin) {
+            showToast('You do not have permission to delete admin accounts.', 'error');
+            return;
+        }
+        if (!confirm(`Move user "${u.username}" to trash?`)) return;
         try {
             await api('POST', `/admin/users/${userId}/delete`, {});
             showToast('User moved to trash.');
             loadAll();
         } catch(e) { showToast(e.message, 'error'); }
     };
+
+    // ─── Restore / Permanent Delete ─────────────────────────────
     window.restoreUser = async (userId) => {
         try {
             await api('POST', `/admin/trash/users/restore/${userId}`, {});
@@ -367,29 +627,82 @@
             loadAll();
         } catch(e) { showToast(e.message, 'error'); }
     };
-    // ... (similar for houses and tenants – same as before)
 
-    // ─── Create User Modal (Role‑aware) ─────────────────────────
-    document.getElementById('createUserBtn').addEventListener('click', function() {
-        // Only show owner option for admin; superadmin gets admin option too.
-        const roleSelect = document.getElementById('newUserRole');
-        if (user.role === 'superadmin') {
-            roleSelect.innerHTML = `<option value="owner">Owner</option><option value="admin">Admin</option>`;
-        } else {
-            roleSelect.innerHTML = `<option value="owner">Owner</option>`;
+    // ─── Houses ──────────────────────────────────────────────────
+    document.getElementById('createHouseBtn').addEventListener('click', async function() {
+        const name = prompt('Enter house name:');
+        if (!name) return;
+        const address = prompt('Enter address (optional):') || '';
+        const ownerInput = prompt('Enter owner username (optional):');
+        let ownerId = undefined;
+        if (ownerInput) {
+            const owner = allUsers.find(u => u.username === ownerInput && (u.role === 'owner' || u.role === 'admin'));
+            if (owner) ownerId = owner.id;
+            else showToast('Owner not found.', 'warning');
         }
-        openModal('createUserModal');
+        try {
+            await api('POST', '/houses', { name, address, owner_id: ownerId });
+            showToast(`House "${name}" created!`);
+            loadAll();
+        } catch (e) { showToast('Error: ' + e.message, 'error'); }
     });
 
-    // ─── Create Admin (SuperAdmin only) ─────────────────────────
-    document.getElementById('createAdminBtn').addEventListener('click', function() {
-        // This button is only visible to superadmin.
-        // We'll open a modal with only admin role.
-        document.getElementById('newUserRole').innerHTML = `<option value="admin">Admin</option>`;
-        openModal('createUserModal');
-    });
+    window.editHouse = async (houseId) => {
+        const newName = prompt('Enter new house name (or leave blank):', houseId);
+        if (!newName || newName === houseId) return;
+        const newAddress = prompt('Enter new address (or leave blank):', '');
+        try {
+            await api('PUT', `/houses/${houseId}`, { name: newName, address: newAddress });
+            showToast('House updated');
+            loadAll();
+        } catch (e) { showToast('Error: ' + e.message, 'error'); }
+    };
 
-    // ─── Search/Filters ────────────────────────────────────────
+    window.deleteHouse = async (houseId) => {
+        if (!confirm(`Delete house "${houseId}" and move to trash?`)) return;
+        try {
+            await api('POST', `/houses/${houseId}/delete`, {});
+            showToast('House moved to trash.');
+            loadAll();
+        } catch(e) { showToast(e.message, 'error'); }
+    };
+
+    window.restoreHouse = async (houseId) => {
+        try {
+            await api('POST', `/admin/trash/houses/restore/${houseId}`, {});
+            showToast('House restored.');
+            loadAll();
+        } catch(e) { showToast(e.message, 'error'); }
+    };
+    window.permanentDeleteHouse = async (houseId) => {
+        if (!confirm('Permanently delete this house and all its data?')) return;
+        try {
+            await api('DELETE', `/admin/trash/houses/permanent/${houseId}`, {});
+            showToast('House permanently deleted.');
+            loadAll();
+        } catch(e) { showToast(e.message, 'error'); }
+    };
+
+    // ─── Tenants ──────────────────────────────────────────────────
+    window.restoreTenant = async (tenantId, houseId) => {
+        try {
+            await api('POST', `/admin/trash/tenants/restore/${tenantId}?houseId=${houseId}`, {});
+            showToast('Tenant restored.');
+            loadAll();
+        } catch(e) { showToast(e.message, 'error'); }
+    };
+    window.permanentDeleteTenant = async (tenantId, houseId) => {
+        if (!confirm('Permanently delete this tenant?')) return;
+        try {
+            await api('DELETE', `/admin/trash/tenants/permanent/${tenantId}?houseId=${houseId}`, {});
+            showToast('Tenant permanently deleted.');
+            loadAll();
+        } catch(e) { showToast(e.message, 'error'); }
+    };
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // SEARCH / FILTERS
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     document.getElementById('usersSearch').addEventListener('input', renderUsers);
     document.getElementById('usersRoleFilter').addEventListener('change', renderUsers);
     document.getElementById('housesSearch').addEventListener('input', renderHouses);
@@ -404,7 +717,9 @@
         });
     });
 
-    // ─── Init ──────────────────────────────────────────────────
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // INIT
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     loadAll();
 </script>
 </body>

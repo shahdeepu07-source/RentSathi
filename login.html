@@ -40,6 +40,7 @@
         <div class="role-selector">
             <button class="active" data-role="owner">Owner</button>
             <button data-role="tenant">Tenant</button>
+            <button data-role="admin">Admin</button>
         </div>
         <div id="loginError" class="error"></div>
         <form id="loginForm">
@@ -74,7 +75,9 @@
             this.classList.add('active');
             selectedRole = this.dataset.role;
             const field = document.getElementById('username');
-            field.placeholder = selectedRole === 'owner' ? 'Enter your username' : 'Enter your tenant username';
+            field.placeholder = selectedRole === 'owner' ? 'Enter your username' :
+                                 selectedRole === 'tenant' ? 'Enter your tenant username' :
+                                 'Enter your admin username';
         });
     });
 
@@ -109,7 +112,8 @@
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
             let redirect = '/index.html';
-            if (data.user.role === 'admin' || data.user.role === 'superadmin') redirect = '/admin.html';
+            if (data.user.role === 'admin') redirect = '/admin.html';
+            else if (data.user.role === 'superadmin') redirect = '/superadmin.html';
             else if (data.user.role === 'tenant') redirect = '/tenant.html';
             window.location.href = redirect;
         } catch (err) {
@@ -129,7 +133,8 @@
         .then(res => res.ok ? res.json() : Promise.reject())
         .then(user => {
             let redirect = '/index.html';
-            if (user.role === 'admin' || user.role === 'superadmin') redirect = '/admin.html';
+            if (user.role === 'admin') redirect = '/admin.html';
+            else if (user.role === 'superadmin') redirect = '/superadmin.html';
             else if (user.role === 'tenant') redirect = '/tenant.html';
             window.location.href = redirect;
         })
