@@ -18,7 +18,6 @@ async function ensureAdminsExist() {
     try {
         await fs.access(USERS_FILE);
         console.log('✅ Users file exists');
-        // Ensure SuperAdmin exists even if file already exists
         const data = await fs.readFile(USERS_FILE, 'utf8');
         const users = JSON.parse(data);
         const hasSuperAdmin = users.some(u => u.role === 'superadmin');
@@ -117,7 +116,6 @@ router.post('/register', async (req, res) => {
         if (users.find(u => u.username === username)) {
             return res.status(400).json({ error: 'Username already exists' });
         }
-        // 30-day trial
         const trialStart = new Date();
         const trialEnd = new Date(trialStart);
         trialEnd.setDate(trialEnd.getDate() + 30);
@@ -141,7 +139,6 @@ router.post('/register', async (req, res) => {
         };
         users.push(newUser);
         await saveUsers(users);
-        // Auto-login after registration
         const token = jwt.sign(
             { userId: newUser.id, username: newUser.username, role: newUser.role },
             process.env.JWT_SECRET || 'housebill_super_secret_key_2024',
@@ -173,12 +170,11 @@ router.post('/login', async (req, res) => {
         if (!username || !password) {
             return res.status(400).json({ error: 'Username and password required' });
         }
-        const users = await getUsers(false); // exclude deleted
+        const users = await getUsers(false);
         const user = users.find(u => u.username === username);
         if (!user) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
-        // Check if trial expired
         if (user.role === 'owner' && user.subscription_status === 'trial') {
             const now = new Date();
             const trialEnd = new Date(user.trial_end);
@@ -229,7 +225,6 @@ router.post('/users', async (req, res) => {
         } catch {
             return res.status(401).json({ error: 'Invalid token' });
         }
-        // Only admin or superadmin can create users
         if (!['admin', 'superadmin'].includes(decoded.role)) {
             return res.status(403).json({ error: 'Admin or SuperAdmin access required' });
         }
@@ -240,7 +235,6 @@ router.post('/users', async (req, res) => {
         if (!['owner', 'admin'].includes(role)) {
             return res.status(400).json({ error: 'Role must be "owner" or "admin"' });
         }
-        // Only superadmin can create admin
         if (role === 'admin' && decoded.role !== 'superadmin') {
             return res.status(403).json({ error: 'Only SuperAdmin can create Admin accounts' });
         }
@@ -304,11 +298,9 @@ router.put('/users/:userId', async (req, res) => {
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
-        // Only superadmin can edit admin or superadmin
         if ((user.role === 'admin' || user.role === 'superadmin') && decoded.role !== 'superadmin') {
             return res.status(403).json({ error: 'Only SuperAdmin can edit admin/superadmin accounts' });
         }
-        // Update fields
         if (fullName !== undefined) user.fullName = fullName;
         if (phone !== undefined) user.phone = phone;
         if (email !== undefined) user.email = email;
@@ -323,14 +315,6 @@ router.put('/users/:userId', async (req, res) => {
         console.error('💥 User update error:', err);
         res.status(500).json({ error: 'User update failed' });
     }
-});
-
-// ──────────────────────────────────────────────────────────────
-// ADMIN / SUPERADMIN: Delete user (soft delete)
-// ──────────────────────────────────────────────────────────────
-router.post('/admin/users/:userId/delete', async (req, res) => {
-    // (same as before, but allow only admin/superadmin)
-    // ...
 });
 
 // ──────────────────────────────────────────────────────────────
@@ -350,17 +334,195 @@ router.post('/superadmin/admins', async (req, res) => {
         if (decoded.role !== 'superadmin') {
             return res.status(403).json({ error: 'SuperAdmin access required' });
         }
-        // Similar to /users but only for admin role
-        // ...
+        const { username, password, fullName, phone, email, address, notes } = req.body;
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Username and password required' });
+        }
+        const users = await getUsers(true);
+        if (users.find(u => u.username === username)) {
+            return res.status(400).json({ error: 'Username already exists' });
+        }
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const newAdmin = {
+            id: Date.now(),
+            username,
+            password: hashedPassword,
+            role: 'admin',
+            fullName: fullName || '',
+            phone: phone || '',
+            email: email || '',
+            address: address || '',
+            notes: notes || '',
+            subscription_status: 'active',
+            trial_start: null,
+            trial_end: null,
+            deleted: false,
+            deleted_at: null,
+            created_at: new Date().toISOString()
+        };
+        users.push(newAdmin);
+        await saveUsers(users);
+        res.status(201).json({
+            id: newAdmin.id,
+            username: newAdmin.username,
+            role: newAdmin.role,
+            fullName: newAdmin.fullName
+        });
     } catch (err) {
         console.error('💥 SuperAdmin create admin error:', err);
         res.status(500).json({ error: 'Failed to create admin' });
     }
 });
 
-// ... (other endpoints remain the same: verify-password, reset-password, etc.)
-// We'll keep them unchanged.
+// ──────────────────────────────────────────────────────────────
+// ADMIN: Soft delete user
+// ──────────────────────────────────────────────────────────────
+router.post('/admin/users/:userId/delete', async (req, res) => {
+    if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
+    const userId = parseInt(req.params.userId);
+    try {
+        const usersData = await fs.readFile(USERS_FILE, 'utf8');
+        const users = JSON.parse(usersData);
+        const user = users.find(u => u.id === userId);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        if (user.role === 'superadmin') return res.status(403).json({ error: 'Cannot delete SuperAdmin' });
+        if (user.deleted) return res.status(400).json({ error: 'User already deleted' });
+        user.deleted = true;
+        user.deleted_at = new Date().toISOString();
+        await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
+        console.log(`🗑️ User "${user.username}" (${user.role}) moved to trash`);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error deleting user:', err);
+        res.status(500).json({ error: 'Failed to delete user' });
+    }
+});
 
+// ──────────────────────────────────────────────────────────────
+// ADMIN / SUPERADMIN: Verify password
+// ──────────────────────────────────────────────────────────────
+router.post('/verify-password', async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader) return res.status(401).json({ error: 'No token provided' });
+        const token = authHeader.split(' ')[1];
+        let decoded;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET || 'housebill_super_secret_key_2024');
+        } catch {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+        const { password } = req.body;
+        if (!password) return res.status(400).json({ error: 'Password required' });
+        const users = await getUsers(true);
+        const user = users.find(u => u.id === decoded.userId);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        const valid = await bcrypt.compare(password, user.password);
+        if (!valid) return res.status(401).json({ error: 'Invalid password' });
+        res.json({ success: true });
+    } catch (err) {
+        console.error('💥 Verify password error:', err);
+        res.status(500).json({ error: 'Verification failed' });
+    }
+});
+
+// ──────────────────────────────────────────────────────────────
+// ADMIN / SUPERADMIN: Reset password
+// ──────────────────────────────────────────────────────────────
+router.post('/reset-password', async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader) return res.status(401).json({ error: 'No token provided' });
+        const token = authHeader.split(' ')[1];
+        let decoded;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET || 'housebill_super_secret_key_2024');
+        } catch {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+        if (!['admin', 'superadmin'].includes(decoded.role)) {
+            return res.status(403).json({ error: 'Admin or SuperAdmin access required' });
+        }
+        const { userId, newPassword } = req.body;
+        if (!userId || !newPassword) return res.status(400).json({ error: 'UserId and newPassword required' });
+        const users = await getUsers(true);
+        const user = users.find(u => u.id === parseInt(userId));
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        if (user.role === 'superadmin') return res.status(403).json({ error: 'SuperAdmin passwords cannot be reset this way' });
+        user.password = await bcrypt.hash(newPassword, 10);
+        await saveUsers(users);
+        res.json({ success: true, message: `Password reset for ${user.username}` });
+    } catch (err) {
+        console.error('💥 Password reset error:', err);
+        res.status(500).json({ error: 'Password reset failed' });
+    }
+});
+
+// ──────────────────────────────────────────────────────────────
+// GET current user
+// ──────────────────────────────────────────────────────────────
+router.get('/me', async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader) return res.status(401).json({ error: 'No token provided' });
+        const token = authHeader.split(' ')[1];
+        let decoded;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET || 'housebill_super_secret_key_2024');
+        } catch {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+        const users = await getUsers(false);
+        const user = users.find(u => u.id === decoded.userId);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        res.json({
+            id: user.id,
+            username: user.username,
+            role: user.role,
+            fullName: user.fullName || '',
+            phone: user.phone || '',
+            email: user.email || '',
+            address: user.address || '',
+            subscription_status: user.subscription_status,
+            trial_end: user.trial_end
+        });
+    } catch (err) {
+        console.error('💥 Get user error:', err);
+        res.status(500).json({ error: 'Failed to get user' });
+    }
+});
+
+// ──────────────────────────────────────────────────────────────
+// EXPORT createUser helper
+// ──────────────────────────────────────────────────────────────
+export async function createUser(username, password, role = 'tenant', extra = {}) {
+    const users = await getUsers(true);
+    if (users.find(u => u.username === username)) {
+        throw new Error('Username already exists');
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = {
+        id: Date.now(),
+        username,
+        password: hashedPassword,
+        role: role,
+        fullName: extra.fullName || '',
+        phone: extra.phone || '',
+        email: extra.email || '',
+        address: extra.address || '',
+        notes: extra.notes || '',
+        deleted: false,
+        deleted_at: null,
+        created_at: new Date().toISOString()
+    };
+    users.push(newUser);
+    await saveUsers(users);
+    return newUser;
+}
+
+// ──────────────────────────────────────────────────────────────
+// INIT
+// ──────────────────────────────────────────────────────────────
 await ensureAdminsExist();
 
 export default router;
