@@ -1,0 +1,55 @@
+[
+  {
+    "id": 1,
+    "username": "admin",
+    "password": "$2b$10$kr1.qezmhqAHmiSo0yB.O.yYyVOWXfP6RVKow2PJcvGkL0t8.NueK",
+    "role": "admin",
+    "created_at": "2026-07-22T18:35:20.581Z"
+  },
+  {
+    "id": 1784745516900,
+    "username": "ram",
+    "password": "$2b$10$TNID8NqXt3fMSaOaVUZ32O42uJF79bdTbBsANmW6uAxkl1clYzwSa",
+    "role": "owner",
+    "created_at": "2026-07-22T18:38:36.900Z",
+    "deleted": true,
+    "deleted_at": "2026-07-24T02:46:39.291Z"
+  },
+  {
+    "id": 1784745539683,
+    "username": "harka",
+    "password": "$2b$10$C8h33va0z3C1.q28UzzrT.wywcquEZtnYMECKggbyH7yiHlvJIUTC",
+    "role": "tenant",
+    "created_at": "2026-07-22T18:38:59.683Z",
+    "deleted": true,
+    "deleted_at": "2026-07-24T02:29:21.596Z"
+  },
+  {
+    "id": 1784826228959,
+    "username": "ramesh",
+    "password": "$2b$10$egS0G4ODA8OJWj.voeflceu9cLE5gIdGkge7uD0vggYFcNSeMyE4q",
+    "role": "owner",
+    "fullName": "Ramesh Sharma",
+    "phone": "9812345678",
+    "email": "ramesh@example.com",
+    "address": "Kathmandu,Nepal",
+    "notes": "example 2",
+    "created_at": "2026-07-23T17:03:48.959Z",
+    "deleted": true,
+    "deleted_at": "2026-07-24T02:28:56.989Z"
+  },
+  {
+    "id": 1784826833980,
+    "username": "hari",
+    "password": "$2b$10$TIDb7OIRdhQd.ga5YSGcKOaDRNRRADRl6pBoIayr7HPaPH5ua8K2C",
+    "role": "tenant",
+    "fullName": "hari",
+    "phone": "",
+    "email": "",
+    "address": "",
+    "notes": "",
+    "created_at": "2026-07-23T17:13:53.980Z",
+    "deleted": true,
+    "deleted_at": "2026-07-24T02:28:42.412Z"
+  }
+]
