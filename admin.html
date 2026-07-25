@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RentSathi - Admin</title>
   <style>
-    /* ─────────────── STYLES (same as before) ─────────────── */
     :root { --bg:#0b1120; --card:#111827; --text:#f8fafc; --text-muted:#94a3b8; --accent:#2563eb; --accent-hover:#1d4ed8; --success:#10b981; --warn:#f59e0b; --danger:#ef4444; --border:#1f2937; --radius:12px; --shadow:0 4px 24px rgba(0,0,0,0.3); --transition:0.2s ease; }
     * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter',system-ui,-apple-system,sans-serif; }
     body { background:var(--bg); color:var(--text); padding:20px; min-height:100vh; }
@@ -77,6 +76,7 @@
         <h1>🏢 RentSathi Business <span id="roleBadge">Admin</span></h1>
         <div>
             <span class="text-muted" id="adminUserDisplay">admin</span>
+            <a href="/index.html" style="color:var(--accent); margin-right:12px;">🏠 Owner View</a>
             <button class="btn-logout" id="logoutBtn">Logout</button>
         </div>
     </header>
@@ -271,7 +271,7 @@
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // MODAL HELPERS (FIXED)
+    // MODAL HELPERS
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     function openModal(id) {
         document.getElementById(id).classList.add('active');
@@ -341,7 +341,6 @@
         }
         const badgeMap = { admin:'badge-admin', owner:'badge-owner', tenant:'badge-tenant', superadmin:'badge-superadmin' };
         tbody.innerHTML = filtered.map(u => {
-            // Determine action buttons based on role
             let actionsHtml = '';
             const canEdit = (isSuperAdmin) || (u.role !== 'admin' && u.role !== 'superadmin' && u.id !== user.id);
             const canDelete = (isSuperAdmin) || (u.role !== 'admin' && u.role !== 'superadmin');
@@ -357,7 +356,6 @@
                 actionsHtml += `<button onclick="deleteUser(${u.id})">🗑️</button>`;
             }
 
-            // Hide full name for superadmin if normal admin
             let displayName = u.fullName || '—';
             if (u.role === 'superadmin' && !isSuperAdmin) {
                 displayName = '***';
@@ -478,7 +476,6 @@
 
     // ─── Create / Edit User ──────────────────────────────────────
     document.getElementById('createUserBtn').addEventListener('click', function() {
-        // Clear form
         document.getElementById('editUserId').value = '';
         document.getElementById('userFullName').value = '';
         document.getElementById('userUsername').value = '';
@@ -495,7 +492,6 @@
     window.editUser = async (userId) => {
         const u = allUsers.find(x => x.id === userId);
         if (!u) return;
-        // Permission check: only superadmin can edit admin/superadmin; admin cannot edit self or other admin
         if (u.role === 'admin' && !isSuperAdmin) {
             showToast('You do not have permission to edit admin accounts.', 'error');
             return;
@@ -508,7 +504,6 @@
             showToast('You cannot edit your own account.', 'error');
             return;
         }
-        // If the target is an admin and current user is not superadmin, deny
         if ((u.role === 'admin' || u.role === 'superadmin') && !isSuperAdmin) {
             showToast('You do not have permission.', 'error');
             return;
@@ -517,7 +512,7 @@
         document.getElementById('editUserId').value = u.id;
         document.getElementById('userFullName').value = u.fullName || '';
         document.getElementById('userUsername').value = u.username;
-        document.getElementById('userPassword').value = ''; // leave empty
+        document.getElementById('userPassword').value = '';
         document.getElementById('userPhone').value = u.phone || '';
         document.getElementById('userEmail').value = u.email || '';
         document.getElementById('userAddress').value = u.address || '';
@@ -545,16 +540,15 @@
 
         try {
             if (userId) {
-                // Update
-                await api('PUT', `/users/${userId}`, { fullName, phone, email, address, notes });
+                // ✅ FIX: use /auth/users for PUT
+                await api('PUT', `/auth/users/${userId}`, { fullName, phone, email, address, notes });
                 showToast('User updated successfully');
             } else {
-                // Create
                 if (!password) {
                     showToast('Password is required for new user', 'error');
                     return;
                 }
-                await api('POST', '/users', { username, password, role: 'owner', fullName, phone, email, address, notes });
+                await api('POST', '/auth/users', { username, password, role: 'owner', fullName, phone, email, address, notes });
                 showToast('Owner created successfully');
             }
             closeModal('userModal');
@@ -716,6 +710,10 @@
             document.getElementById(this.dataset.tab).classList.add('active');
         });
     });
+
+    // ─── Password confirmation for delete actions ─────────────
+    // (For normal admin, delete actions don't require password confirmation on frontend – backend handles it)
+    // But we keep the password modal for consistency if needed.
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // INIT

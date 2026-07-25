@@ -212,7 +212,7 @@ router.post('/login', async (req, res) => {
 });
 
 // ──────────────────────────────────────────────────────────────
-// ADMIN / SUPERADMIN: Create user (Admin only)
+// ADMIN / SUPERADMIN: Create user (Owner or Admin)
 // ──────────────────────────────────────────────────────────────
 router.post('/users', async (req, res) => {
     try {
@@ -399,7 +399,7 @@ router.post('/admin/users/:userId/delete', async (req, res) => {
 });
 
 // ──────────────────────────────────────────────────────────────
-// ADMIN / SUPERADMIN: Verify password
+// VERIFY PASSWORD (with debug logs)
 // ──────────────────────────────────────────────────────────────
 router.post('/verify-password', async (req, res) => {
     try {
@@ -416,8 +416,13 @@ router.post('/verify-password', async (req, res) => {
         if (!password) return res.status(400).json({ error: 'Password required' });
         const users = await getUsers(true);
         const user = users.find(u => u.id === decoded.userId);
-        if (!user) return res.status(404).json({ error: 'User not found' });
+        if (!user) {
+            console.log('❌ verify-password: User not found for userId:', decoded.userId);
+            return res.status(404).json({ error: 'User not found' });
+        }
+        console.log(`🔍 verify-password: Found user ${user.username}, checking password...`);
         const valid = await bcrypt.compare(password, user.password);
+        console.log(`🔍 verify-password: Password match = ${valid}`);
         if (!valid) return res.status(401).json({ error: 'Invalid password' });
         res.json({ success: true });
     } catch (err) {

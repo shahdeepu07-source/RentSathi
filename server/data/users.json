@@ -2,7 +2,7 @@
   {
     "id": 1,
     "username": "admin",
-    "password": "$2b$10$F8zrnD3dFN5q4pazYR5F/.Dn0m7e4.aTMK7s2MIi1A30z0wQTvbXi",
+    "password": "$2b$10$E/zfEBweVzpXP0ig8SwebeGr/c.4RDleDXZEpxPleadHI9.zpULiG",
     "role": "admin",
     "fullName": "Administrator",
     "phone": "",
@@ -14,12 +14,12 @@
     "trial_end": null,
     "deleted": false,
     "deleted_at": null,
-    "created_at": "2026-07-24T19:25:06.665Z"
+    "created_at": "2026-07-25T17:17:43.421Z"
   },
   {
     "id": 2,
     "username": "Super_Admin",
-    "password": "$2b$10$u/c1vSjbQ.gn5pqp5tiaX.r7QIJGNUgvBZcY/bX66OVtR6yJa4d3W",
+    "password": "$2b$10$uRlPZekK9fmHd.KF58zpwehv/hhHToh83jKiGJz5REiIogWW2ygSq",
     "role": "superadmin",
     "fullName": "Kali",
     "phone": "",
@@ -31,6 +31,68 @@
     "trial_end": null,
     "deleted": false,
     "deleted_at": null,
-    "created_at": "2026-07-24T19:25:06.665Z"
+    "created_at": "2026-07-25T17:17:43.421Z"
+  },
+  {
+    "id": 1784999937082,
+    "username": "Arman",
+    "password": "$2b$10$ubAEoVqE5KMuMsYFWz1H4OKbIMercbOolCgaW09d3O4hWMQdlwAe2",
+    "role": "admin",
+    "fullName": "Arman Mikarani",
+    "phone": "976-7819810",
+    "email": "amikrani780@gmail.com",
+    "address": "Sarlahi",
+    "notes": "",
+    "subscription_status": "active",
+    "trial_start": null,
+    "trial_end": null,
+    "deleted": false,
+    "deleted_at": null,
+    "created_at": "2026-07-25T17:18:57.082Z"
+  },
+  {
+    "id": 1784999999036,
+    "username": "Kaish",
+    "password": "$2b$10$mfoTtGvRj5OxLvcbaT8nIO5sXiBF3..jBsltd.3zHX.U5hty8yCk6",
+    "role": "owner",
+    "fullName": "Kaish Ansari",
+    "phone": "982-7651571",
+    "email": "ansarikaish423@gmail.com",
+    "address": "Hariwon,Sarlahi",
+    "notes": "",
+    "subscription_status": "active",
+    "trial_start": null,
+    "trial_end": null,
+    "deleted": false,
+    "deleted_at": null,
+    "created_at": "2026-07-25T17:19:59.036Z"
+  },
+  {
+    "id": 1785004181097,
+    "username": "assish",
+    "password": "$2b$10$THjTsU8HllRydUax6UAI6..y8TOPFFNZGr1HlOHXrf8jxi2doyF9O",
+    "role": "tenant",
+    "fullName": "Aashish",
+    "phone": "981111111",
+    "email": "aashishrandwa@myexample.com",
+    "address": "",
+    "notes": "",
+    "deleted": false,
+    "deleted_at": null,
+    "created_at": "2026-07-25T18:29:41.097Z"
+  },
+  {
+    "id": 1785004994398,
+    "username": "hari",
+    "password": "$2b$10$Agxh13UEuRIHA.vuSHOHke4EgzmdcHtl1B.zkqFSUKLpwWxidPp1a",
+    "role": "tenant",
+    "fullName": "Hari",
+    "phone": "",
+    "email": "",
+    "address": "",
+    "notes": "",
+    "deleted": false,
+    "deleted_at": null,
+    "created_at": "2026-07-25T18:43:14.398Z"
   }
 ]

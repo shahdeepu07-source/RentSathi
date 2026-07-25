@@ -26,7 +26,6 @@ app.use('/api', verifyToken);
 
 await fs.mkdir(DATA_DIR, { recursive: true });
 
-// ─── Ownership helpers ──────────────────────────────────────────
 async function getOwnership() {
     try {
         const data = await fs.readFile(OWNERSHIP_FILE, 'utf8');
@@ -62,7 +61,6 @@ async function checkOwnership(houseId, userId, userRole) {
     return owner && owner.owner_id == userId && !owner.deleted;
 }
 
-// ─── M_House access control ─────────────────────────────────────
 function canAccessMHouse(user) {
     if (!user) return false;
     if (user.role === 'superadmin') return true;
@@ -70,7 +68,6 @@ function canAccessMHouse(user) {
     return false;
 }
 
-// ─── Initialize ownership file ──────────────────────────────────
 async function initOwnership() {
     try {
         await fs.access(OWNERSHIP_FILE);
@@ -96,25 +93,21 @@ app.get('/api/houses', async (req, res) => {
     try {
         const userId = req.user.userId;
         const userRole = req.user.role;
-        const user = req.user; // contains username
+        const user = req.user;
         const files = await fs.readdir(DATA_DIR);
         const allHouses = files.filter(f => f.endsWith('.json')).map(f => f.replace('.json', ''));
         const ownership = await getOwnership();
         const activeHouses = allHouses.filter(h => !ownership[h]?.deleted);
         let visibleHouses = activeHouses;
         if (userRole !== 'admin' && userRole !== 'superadmin') {
-            // Owners and tenants: filter by ownership
             visibleHouses = activeHouses.filter(houseId => {
                 const owner = ownership[houseId];
                 return owner && owner.owner_id == userId;
             });
         } else {
-            // Admin or SuperAdmin: apply M_House filter
             if (userRole === 'admin' && user.username !== 'admin') {
-                // Normal admin: remove M_House
                 visibleHouses = activeHouses.filter(h => h !== 'M_house');
             }
-            // SuperAdmin or special admin (username 'admin'): keep all
         }
         res.json(visibleHouses);
     } catch (err) {
@@ -129,7 +122,6 @@ app.get('/api/houses/ownership', async (req, res) => {
         const active = {};
         for (const [key, val] of Object.entries(ownership)) {
             if (!val.deleted) {
-                // If user is normal admin, exclude M_house from ownership mapping
                 if (req.user.role === 'admin' && req.user.username !== 'admin' && key === 'M_house') {
                     continue;
                 }
@@ -192,7 +184,6 @@ app.put('/api/houses/:id', async (req, res) => {
         if (!ownership[houseId]) {
             return res.status(404).json({ error: 'House not found' });
         }
-        // Optionally rename the file if name changed
         if (name && name !== houseId) {
             const newPath = getFilePath(name);
             try {
@@ -203,7 +194,7 @@ app.put('/api/houses/:id', async (req, res) => {
             const oldEntry = ownership[houseId];
             delete ownership[houseId];
             ownership[name] = oldEntry;
-            houseId = name; // update for further use
+            houseId = name;
         }
         if (address !== undefined) ownership[houseId].address = address;
         if (owner_id !== undefined) ownership[houseId].owner_id = owner_id;
@@ -244,7 +235,6 @@ app.post('/api/houses/:id/delete', async (req, res) => {
     }
 });
 
-// ─── Trash endpoints for Houses ────────────────────────────
 app.get('/api/admin/trash/houses', async (req, res) => {
     if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
     const user = req.user;
@@ -293,30 +283,118 @@ app.delete('/api/admin/trash/houses/permanent/:houseId', async (req, res) => {
     res.json({ success: true });
 });
 
-// ─── Trash endpoints for Users ─────────────────────────────
 app.get('/api/admin/trash/users', async (req, res) => {
-    // (unchanged)
+    if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
+    try {
+        const usersData = await fs.readFile(path.join(__dirname, 'data', 'users.json'), 'utf8');
+        const users = JSON.parse(usersData);
+        const deleted = users.filter(u => u.deleted === true);
+        res.json(deleted);
+    } catch (err) {
+        console.error('Error fetching deleted users:', err);
+        res.status(500).json({ error: 'Failed to fetch deleted users' });
+    }
 });
 
 app.post('/api/admin/trash/users/restore/:userId', async (req, res) => {
-    // (unchanged)
+    if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
+    const userId = parseInt(req.params.userId);
+    try {
+        const usersData = await fs.readFile(path.join(__dirname, 'data', 'users.json'), 'utf8');
+        const users = JSON.parse(usersData);
+        const user = users.find(u => u.id === userId);
+        if (!user || !user.deleted) {
+            return res.status(404).json({ error: 'Deleted user not found' });
+        }
+        user.deleted = false;
+        user.deleted_at = null;
+        await fs.writeFile(path.join(__dirname, 'data', 'users.json'), JSON.stringify(users, null, 2));
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error restoring user:', err);
+        res.status(500).json({ error: 'Failed to restore user' });
+    }
 });
 
 app.delete('/api/admin/trash/users/permanent/:userId', async (req, res) => {
-    // (unchanged)
+    if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
+    const userId = parseInt(req.params.userId);
+    try {
+        const usersData = await fs.readFile(path.join(__dirname, 'data', 'users.json'), 'utf8');
+        let users = JSON.parse(usersData);
+        const idx = users.findIndex(u => u.id === userId);
+        if (idx === -1 || !users[idx].deleted) {
+            return res.status(404).json({ error: 'Deleted user not found' });
+        }
+        users.splice(idx, 1);
+        await fs.writeFile(path.join(__dirname, 'data', 'users.json'), JSON.stringify(users, null, 2));
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error permanently deleting user:', err);
+        res.status(500).json({ error: 'Failed to permanently delete user' });
+    }
 });
 
-// ─── Soft delete user ────────────────────────────────────────
 app.post('/api/admin/users/:userId/delete', async (req, res) => {
-    // (unchanged)
+    if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
+    const userId = parseInt(req.params.userId);
+    try {
+        const usersData = await fs.readFile(path.join(__dirname, 'data', 'users.json'), 'utf8');
+        const users = JSON.parse(usersData);
+        const user = users.find(u => u.id === userId);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        if (user.role === 'superadmin') return res.status(403).json({ error: 'Cannot delete SuperAdmin' });
+        if (user.deleted) return res.status(400).json({ error: 'User already deleted' });
+        user.deleted = true;
+        user.deleted_at = new Date().toISOString();
+        await fs.writeFile(path.join(__dirname, 'data', 'users.json'), JSON.stringify(users, null, 2));
+        console.log(`🗑️ User "${user.username}" (${user.role}) moved to trash`);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error deleting user:', err);
+        res.status(500).json({ error: 'Failed to delete user' });
+    }
 });
 
-// ─── Subscription management ─────────────────────────────────
 app.patch('/api/admin/subscription/:userId', async (req, res) => {
-    // (unchanged)
+    if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
+    const userId = parseInt(req.params.userId);
+    const { action, duration } = req.body;
+    try {
+        const usersData = await fs.readFile(path.join(__dirname, 'data', 'users.json'), 'utf8');
+        const users = JSON.parse(usersData);
+        const user = users.find(u => u.id === userId);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        if (user.role !== 'owner') return res.status(400).json({ error: 'Subscription only for owners' });
+        switch (action) {
+            case 'activate':
+                user.subscription_status = 'active';
+                break;
+            case 'deactivate':
+                user.subscription_status = 'inactive';
+                break;
+            case 'cancel':
+                user.subscription_status = 'cancelled';
+                break;
+            case 'extend':
+                if (!duration) return res.status(400).json({ error: 'Duration in days required for extend' });
+                const currentEnd = user.trial_end ? new Date(user.trial_end) : new Date();
+                const newEnd = new Date(currentEnd);
+                newEnd.setDate(newEnd.getDate() + parseInt(duration));
+                user.trial_end = newEnd.toISOString();
+                user.subscription_status = 'active';
+                break;
+            default:
+                return res.status(400).json({ error: 'Invalid action' });
+        }
+        await fs.writeFile(path.join(__dirname, 'data', 'users.json'), JSON.stringify(users, null, 2));
+        res.json({ success: true, user });
+    } catch (err) {
+        console.error('Error managing subscription:', err);
+        res.status(500).json({ error: 'Failed to manage subscription' });
+    }
 });
 
-// ─── Tenants ──────────────────────────────────────────────────
 app.get('/api/tenants', async (req, res) => {
     const { houseId } = req.query;
     if (!houseId) return res.status(400).json({ error: 'Missing houseId' });
@@ -451,7 +529,43 @@ app.post('/api/calculate', async (req, res) => {
     try {
         const hasAccess = await checkOwnership(houseId, req.user.userId, req.user.role);
         if (!hasAccess) return res.status(403).json({ error: 'Access denied' });
-        // ... rest of bill generation
+        const { id, curr, water, waste, due, ded, month, dedReason, note } = req.body;
+        if (!id || curr == null) return res.status(400).json({ error: 'Tenant ID and current reading required' });
+        let tenants = await readTenants(houseId);
+        const tenant = tenants.find(t => t.id == id);
+        if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
+        if (tenant.deleted) return res.status(400).json({ error: 'Cannot generate bill for deleted tenant' });
+        const prev = tenant.last_reading || 0;
+        const units = Number(curr) - Number(prev);
+        if (units < 0) return res.status(400).json({ error: 'Current reading cannot be less than previous' });
+        const electricity = units * RATE;
+        const total = electricity + Number(tenant.rent_amount) + Number(water || 0) + 
+                      Number(waste || 0) + Number(due || 0) - Number(ded || 0);
+        const bill = {
+            id: Date.now(),
+            name: tenant.name,
+            month: month || new Date().toLocaleString('default', { month: 'long', year: 'numeric' }),
+            prev,
+            curr: Number(curr),
+            units,
+            electricity,
+            rent: tenant.rent_amount,
+            water: Number(water || 0),
+            waste: Number(waste || 0),
+            due: Number(due || 0),
+            ded: Number(ded || 0),
+            dedReason: dedReason || '',
+            note: note || '',
+            total,
+            paid_status: false,
+            createdAt: new Date().toISOString()
+        };
+        tenant.last_reading = Number(curr);
+        if (!tenant.history) tenant.history = [];
+        tenant.history.push(bill);
+        tenant.balance = (tenant.balance || 0) + total;
+        await writeTenants(houseId, tenants);
+        res.json(bill);
     } catch (err) {
         console.error('Error calculating bill:', err);
         res.status(500).json({ error: 'Calculation failed' });
@@ -460,14 +574,108 @@ app.post('/api/calculate', async (req, res) => {
 
 app.patch('/api/bills/pay', async (req, res) => {
     const houseId = req.body.houseId || req.query.houseId;
+    const tenantId = req.body.tenantId || req.query.tenantId;
+    const billId = req.body.billId || req.query.billId;
+    const { paymentType, amount, reason } = req.body;
+    if (!houseId || !tenantId || !billId) {
+        return res.status(400).json({ error: 'houseId, tenantId, billId required' });
+    }
     if (houseId === 'M_house' && !canAccessMHouse(req.user)) {
         return res.status(403).json({ error: 'Access denied to M_house' });
     }
-    // ... rest
+    if (!paymentType || !['equal', 'due', 'advance'].includes(paymentType)) {
+        return res.status(400).json({ error: 'paymentType must be equal, due, or advance' });
+    }
+    try {
+        const hasAccess = await checkOwnership(houseId, req.user.userId, req.user.role);
+        if (!hasAccess) return res.status(403).json({ error: 'Access denied' });
+        let tenants = await readTenants(houseId);
+        const tenant = tenants.find(t => t.id === parseInt(tenantId));
+        if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
+        const bill = tenant.history.find(b => b.id === parseInt(billId));
+        if (!bill) return res.status(404).json({ error: 'Bill not found' });
+        if (bill.paid_status) return res.status(400).json({ error: 'Bill already paid' });
+
+        let paidAmount = 0;
+        if (paymentType === 'equal') {
+            paidAmount = bill.total;
+        } else if (paymentType === 'due' || paymentType === 'advance') {
+            if (!amount || isNaN(amount) || Number(amount) <= 0) {
+                return res.status(400).json({ error: 'Valid amount required for due/advance payment' });
+            }
+            paidAmount = Number(amount);
+        }
+
+        tenant.balance = (tenant.balance || 0) - paidAmount;
+        bill.paid_status = true;
+        bill.payment_type = paymentType;
+        bill.payment_amount = paidAmount;
+        bill.payment_reason = reason || '';
+        bill.paid_at = new Date().toISOString();
+        await writeTenants(houseId, tenants);
+        console.log(`✅ Bill ${billId} marked ${paymentType} with amount ${paidAmount}, new balance: ${tenant.balance}`);
+        res.json({ success: true, balance: tenant.balance });
+    } catch (err) {
+        console.error('Error toggling paid status:', err);
+        res.status(500).json({ error: 'Failed to update bill' });
+    }
 });
 
+// ─── DELETE bill – reverse bill and payment ──────────────────
 app.delete('/api/tenants/:id/history/:index', async (req, res) => {
-    // ... similar
+    const { houseId } = req.query;
+    if (!houseId) return res.status(400).json({ error: 'Missing houseId' });
+    if (houseId === 'M_house' && !canAccessMHouse(req.user)) {
+        return res.status(403).json({ error: 'Access denied to M_house' });
+    }
+    try {
+        const hasAccess = await checkOwnership(houseId, req.user.userId, req.user.role);
+        if (!hasAccess) return res.status(403).json({ error: 'Access denied' });
+        const id = parseInt(req.params.id);
+        const idx = parseInt(req.params.index);
+        let tenants = await readTenants(houseId);
+        const t = tenants.find(t => t.id === id);
+        if (!t || !t.history || idx >= t.history.length) return res.status(404).json({ error: 'History entry not found' });
+        const bill = t.history[idx];
+        const billTotal = bill.total || 0;
+        const paymentAmount = bill.paid_status ? (bill.payment_amount || 0) : 0;
+        t.balance = (t.balance || 0) - billTotal + paymentAmount;
+        if (idx === t.history.length - 1) {
+            const prevBill = t.history[idx - 1];
+            t.last_reading = prevBill ? prevBill.curr : (t.last_reading - bill.units);
+        }
+        t.history.splice(idx, 1);
+        await writeTenants(houseId, tenants);
+        console.log(`🗑️ Bill deleted, new balance: ${t.balance}`);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error deleting bill:', err);
+        res.status(500).json({ error: 'Delete failed' });
+    }
+});
+
+// ─── Manually update tenant balance ────────────────────────────
+app.put('/api/tenants/:id/balance', async (req, res) => {
+    const { houseId } = req.query;
+    const newBalance = parseFloat(req.body.balance);
+    if (!houseId) return res.status(400).json({ error: 'Missing houseId' });
+    if (isNaN(newBalance)) return res.status(400).json({ error: 'Invalid balance value' });
+
+    try {
+        const hasAccess = await checkOwnership(houseId, req.user.userId, req.user.role);
+        if (!hasAccess) return res.status(403).json({ error: 'Access denied' });
+
+        let tenants = await readTenants(houseId);
+        const tenant = tenants.find(t => t.id === parseInt(req.params.id));
+        if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
+
+        tenant.balance = newBalance;
+        await writeTenants(houseId, tenants);
+        res.json({ success: true, balance: tenant.balance });
+    } catch (err) {
+        console.error('Error updating tenant balance:', err);
+        res.status(500).json({ error: 'Failed to update balance' });
+    }
 });
 
 // ─── Admin: get all users ──────────────────────────────────────
@@ -485,17 +693,93 @@ app.get('/api/admin/users', async (req, res) => {
     }
 });
 
-// ─── Admin: link tenant to user ──────────────────────────────
 app.post('/api/admin/link-tenant', async (req, res) => {
-    // ... (unchanged)
+    if (req.user.role !== 'admin' && req.user.role !== 'superadmin') return res.status(403).json({ error: 'Admin access required' });
+    const { houseId, tenantId, userId } = req.body;
+    if (!houseId || !tenantId || !userId) {
+        return res.status(400).json({ error: 'houseId, tenantId, and userId required' });
+    }
+    if (houseId === 'M_house' && !canAccessMHouse(req.user)) {
+        return res.status(403).json({ error: 'Access denied to M_house' });
+    }
+    try {
+        let tenants = await readTenants(houseId);
+        const idx = tenants.findIndex(t => t.id === parseInt(tenantId));
+        if (idx === -1) return res.status(404).json({ error: 'Tenant not found' });
+        tenants[idx].tenant_user_id = parseInt(userId);
+        await writeTenants(houseId, tenants);
+        res.json({ success: true, tenant: tenants[idx] });
+    } catch (err) {
+        console.error('Error linking tenant:', err);
+        res.status(500).json({ error: 'Failed to link tenant' });
+    }
 });
 
-// ─── Tenant bills endpoint ────────────────────────────────────
 app.get('/api/tenant/bills', async (req, res) => {
-    // ... (unchanged)
+    if (req.user.role !== 'tenant') {
+        return res.status(403).json({ error: 'Tenant access required' });
+    }
+    const userId = req.user.userId;
+    try {
+        const files = await fs.readdir(DATA_DIR);
+        const allHouses = files.filter(f => f.endsWith('.json')).map(f => f.replace('.json', ''));
+        let foundTenant = null;
+        let foundHouse = null;
+        let bills = [];
+
+        for (const house of allHouses) {
+            const ownership = await getOwnership();
+            if (ownership[house]?.deleted) continue;
+            const tenants = await readTenants(house);
+            const activeTenants = tenants.filter(t => !t.deleted);
+            const tenant = activeTenants.find(t => t.tenant_user_id === userId);
+            if (tenant) {
+                foundTenant = tenant;
+                foundHouse = house;
+                bills = (tenant.history || []).map(b => ({
+                    ...b,
+                    house: house,
+                    tenantName: tenant.name,
+                    tenantId: tenant.id
+                }));
+                break;
+            }
+        }
+
+        if (!foundTenant) {
+            const username = req.user.username;
+            for (const house of allHouses) {
+                const ownership = await getOwnership();
+                if (ownership[house]?.deleted) continue;
+                const tenants = await readTenants(house);
+                const activeTenants = tenants.filter(t => !t.deleted);
+                const tenant = activeTenants.find(t => t.name.toLowerCase() === username.toLowerCase());
+                if (tenant) {
+                    foundTenant = tenant;
+                    foundHouse = house;
+                    bills = (tenant.history || []).map(b => ({
+                        ...b,
+                        house: house,
+                        tenantName: tenant.name,
+                        tenantId: tenant.id
+                    }));
+                    break;
+                }
+            }
+        }
+
+        if (!foundTenant) {
+            return res.json({ bills: [], message: 'No tenant linked to this user' });
+        }
+
+        bills.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        res.json({ bills, tenant: foundTenant, house: foundHouse });
+    } catch (err) {
+        console.error('Error fetching tenant bills:', err);
+        res.status(500).json({ error: 'Failed to fetch bills' });
+    }
 });
 
-// ─── Trash for tenants ────────────────────────────────────────
 app.get('/api/admin/trash/tenants', async (req, res) => {
     if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
     const user = req.user;
@@ -518,21 +802,50 @@ app.get('/api/admin/trash/tenants', async (req, res) => {
 });
 
 app.post('/api/admin/trash/tenants/restore/:tenantId', async (req, res) => {
+    if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
     const { houseId } = req.query;
     if (!houseId) return res.status(400).json({ error: 'houseId required' });
     if (houseId === 'M_house' && !canAccessMHouse(req.user)) {
         return res.status(403).json({ error: 'Access denied to M_house' });
     }
-    // ... rest
+    const tenantId = parseInt(req.params.tenantId);
+    try {
+        let tenants = await readTenants(houseId);
+        const idx = tenants.findIndex(t => t.id === tenantId);
+        if (idx === -1 || !tenants[idx].deleted) {
+            return res.status(404).json({ error: 'Deleted tenant not found' });
+        }
+        tenants[idx].deleted = false;
+        tenants[idx].deleted_at = null;
+        await writeTenants(houseId, tenants);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error restoring tenant:', err);
+        res.status(500).json({ error: 'Failed to restore tenant' });
+    }
 });
 
 app.delete('/api/admin/trash/tenants/permanent/:tenantId', async (req, res) => {
+    if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
     const { houseId } = req.query;
     if (!houseId) return res.status(400).json({ error: 'houseId required' });
     if (houseId === 'M_house' && !canAccessMHouse(req.user)) {
         return res.status(403).json({ error: 'Access denied to M_house' });
     }
-    // ... rest
+    const tenantId = parseInt(req.params.tenantId);
+    try {
+        let tenants = await readTenants(houseId);
+        const idx = tenants.findIndex(t => t.id === tenantId);
+        if (idx === -1 || !tenants[idx].deleted) {
+            return res.status(404).json({ error: 'Deleted tenant not found' });
+        }
+        tenants.splice(idx, 1);
+        await writeTenants(houseId, tenants);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error permanently deleting tenant:', err);
+        res.status(500).json({ error: 'Failed to permanently delete tenant' });
+    }
 });
 
 // ─── Static ────────────────────────────────────────────────────

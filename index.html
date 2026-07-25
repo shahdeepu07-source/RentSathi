@@ -13,9 +13,12 @@
     .container { max-width:1150px; margin:0 auto; }
     header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid var(--border); }
     header h1 { font-size:1.4rem; font-weight:700; letter-spacing:0.5px; }
-    .user-email { color:var(--text-muted); font-size:0.85rem; margin-right:15px; }
+    .header-right { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+    .user-email { color:var(--text-muted); font-size:0.85rem; }
     .btn-logout { background:var(--danger); color:#fff; border:none; padding:5px 15px; border-radius:6px; cursor:pointer; font-size:0.8rem; font-weight:600; transition:var(--transition); }
     .btn-logout:hover { opacity:0.85; transform:translateY(-1px); }
+    .help-link { color:var(--accent); text-decoration:none; font-size:0.85rem; font-weight:500; display:flex; align-items:center; gap:4px; transition:var(--transition); }
+    .help-link:hover { color:var(--accent-hover); text-decoration:underline; }
     .tabs { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
     .tab { padding:10px 18px; background:var(--card); border:1px solid var(--border); border-radius:8px; cursor:pointer; transition:var(--transition); font-weight:500; font-size:0.9rem; }
     .tab:hover, .tab.active { background:var(--accent); border-color:var(--accent); color:#fff; }
@@ -98,13 +101,14 @@
     <!-- HEADER -->
     <header>
       <h1>🏠 RentSathi</h1>
-      <div>
+      <div class="header-right">
         <span class="user-email" id="userDisplay"></span>
+        <a href="https://chat.whatsapp.com/GGdhMRIhTFUH9AxnUfap2b" target="_blank" class="help-link">💬 Help</a>
         <button class="btn-logout" id="logoutBtn">Logout</button>
       </div>
     </header>
 
-    <!-- TRIAL BANNER (shown only for trial owners) -->
+    <!-- TRIAL BANNER -->
     <div id="trialBanner" class="trial-banner hidden">
       <span>⏳ Free Trial</span>
       <span><span id="trialDaysLeft">30</span> days remaining</span>
@@ -277,6 +281,29 @@
       <button type="button" class="btn-outline" onclick="closePasswordModal()">Cancel</button>
       <button type="button" class="btn-del" id="confirmDeleteBtn">Delete</button>
     </div>
+  </div>
+</div>
+
+<!-- BALANCE EDIT MODAL -->
+<div id="balanceModal" class="modal">
+  <div class="modal-content" style="max-width:400px;">
+    <div class="modal-header">
+      <h3>💰 Edit Tenant Balance</h3>
+      <span class="close" onclick="closeBalanceModal()">×</span>
+    </div>
+    <form id="balanceForm">
+      <div class="form-group">
+        <label>New Balance (Rs.)</label>
+        <input type="number" id="balanceAmount" step="0.01" placeholder="Enter new balance">
+        <p style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">
+          Positive = Due, Negative = Advance, Zero = Settled
+        </p>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn-outline" onclick="closeBalanceModal()">Cancel</button>
+        <button type="submit" class="btn-success">Update Balance</button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -475,6 +502,7 @@ function renderTenants() {
         <td><span class="${balanceClass}">${balanceLabel} (Rs. ${Math.abs(balance).toLocaleString()})</span></td>
         <td>
           <button class="btn-fix" onclick="editTenant(${t.id})">Edit</button>
+          <button class="btn-fix" onclick="openBalanceModal(${t.id}, ${balance})">💰 Balance</button>
           <button class="btn-del" onclick="deleteTenant(${t.id})">🗑️</button>
         </td>
       </tr>
@@ -482,7 +510,7 @@ function renderTenants() {
   }).join('');
 }
 
-// ─── Save Tenant (with phone, email, address) ──────────────
+// ─── Save Tenant ──────────────────────────────────────────────
 window.saveTenant = async () => {
   if (!currentHouseId) {
     alert('No house selected. Please select a house first.');
@@ -589,6 +617,39 @@ window.toggleTenantUserFields = function() {
     document.getElementById('tPassword').value = '';
   }
 };
+
+// ─── Balance Edit ──────────────────────────────────────────────
+let balanceTenantId = null;
+
+function openBalanceModal(tenantId, currentBalance) {
+  balanceTenantId = tenantId;
+  document.getElementById('balanceAmount').value = currentBalance;
+  document.getElementById('balanceModal').style.display = 'flex';
+}
+
+function closeBalanceModal() {
+  document.getElementById('balanceModal').style.display = 'none';
+  balanceTenantId = null;
+}
+
+document.getElementById('balanceForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const newBalance = parseFloat(document.getElementById('balanceAmount').value);
+  if (isNaN(newBalance)) {
+    alert('Please enter a valid number.');
+    return;
+  }
+  if (balanceTenantId === null) return;
+
+  try {
+    await api('PUT', `/tenants/${balanceTenantId}/balance?houseId=${currentHouseId}`, { balance: newBalance });
+    showToast('Balance updated successfully!');
+    closeBalanceModal();
+    await loadTenants(); // refresh the list
+  } catch (err) {
+    alert('Error: ' + err.message);
+  }
+});
 
 // ─── Bill Preview ──────────────────────────────────────────────
 function updatePreview() {
