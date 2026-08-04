@@ -14,21 +14,19 @@ const __dirname = path.dirname(__filename);
 dotenv.config();
 
 const DATA_DIR = path.join(__dirname, '..', 'data', 'clients');
-const OWNERSHIP_FILE = path.join(__dirname, 'data', 'ownership.json');
-const NOTIF_FILE = path.join(__dirname, 'data', 'notifications.json');
+const OWNERSHIP_FILE = path.join(__dirname, '..', 'data', 'ownership.json');
+const NOTIF_FILE = path.join(__dirname, '..', 'data', 'notifications.json');
 const RATE = 15;
 const app = express();
 
 app.use(express.json());
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, '..')));
 
 app.use('/api/auth', authRoutes);
 app.use('/api', verifyToken);
 app.use('/api', notificationRoutes);
 
 await fs.mkdir(DATA_DIR, { recursive: true });
-await fs.mkdir(path.join(__dirname, 'data'), { recursive: true });
 
 async function getOwnership() {
     try {
@@ -75,7 +73,7 @@ function canAccessMHouse(user) {
 async function initOwnership() {
     try {
         await fs.access(OWNERSHIP_FILE);
-        console.log('✅ Ownership file loaded');
+        console.log('Ownership file loaded');
     } catch {
         await fs.mkdir(path.dirname(OWNERSHIP_FILE), { recursive: true });
         await fs.writeFile(OWNERSHIP_FILE, JSON.stringify({
@@ -87,7 +85,7 @@ async function initOwnership() {
                 deleted_at: null
             }
         }, null, 2));
-        console.log('✅ Ownership file created with default M_house (owner: admin)');
+        console.log('Ownership file created with default M_house (owner: admin)');
     }
 }
 await initOwnership();
@@ -232,7 +230,7 @@ app.post('/api/houses/:id/delete', async (req, res) => {
         ownership[houseId].deleted = true;
         ownership[houseId].deleted_at = new Date().toISOString();
         await saveOwnership(ownership);
-        console.log(`🗑️ House "${houseId}" moved to trash`);
+        console.log(`House "${houseId}" moved to trash`);
         res.json({ success: true });
     } catch (err) {
         console.error('Error deleting house:', err);
@@ -291,7 +289,7 @@ app.delete('/api/admin/trash/houses/permanent/:houseId', async (req, res) => {
 app.get('/api/admin/trash/users', async (req, res) => {
     if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
     try {
-        const usersData = await fs.readFile(path.join(__dirname, 'data', 'users.json'), 'utf8');
+        const usersData = await fs.readFile(path.join(__dirname, '..', 'data', 'users.json'), 'utf8');
         const users = JSON.parse(usersData);
         const deleted = users.filter(u => u.deleted === true);
         res.json(deleted);
@@ -305,7 +303,7 @@ app.post('/api/admin/trash/users/restore/:userId', async (req, res) => {
     if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
     const userId = parseInt(req.params.userId);
     try {
-        const usersData = await fs.readFile(path.join(__dirname, 'data', 'users.json'), 'utf8');
+        const usersData = await fs.readFile(path.join(__dirname, '..', 'data', 'users.json'), 'utf8');
         const users = JSON.parse(usersData);
         const user = users.find(u => u.id === userId);
         if (!user || !user.deleted) {
@@ -313,7 +311,7 @@ app.post('/api/admin/trash/users/restore/:userId', async (req, res) => {
         }
         user.deleted = false;
         user.deleted_at = null;
-        await fs.writeFile(path.join(__dirname, 'data', 'users.json'), JSON.stringify(users, null, 2));
+        await fs.writeFile(path.join(__dirname, '..', 'data', 'users.json'), JSON.stringify(users, null, 2));
         res.json({ success: true });
     } catch (err) {
         console.error('Error restoring user:', err);
@@ -325,14 +323,14 @@ app.delete('/api/admin/trash/users/permanent/:userId', async (req, res) => {
     if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
     const userId = parseInt(req.params.userId);
     try {
-        const usersData = await fs.readFile(path.join(__dirname, 'data', 'users.json'), 'utf8');
+        const usersData = await fs.readFile(path.join(__dirname, '..', 'data', 'users.json'), 'utf8');
         let users = JSON.parse(usersData);
         const idx = users.findIndex(u => u.id === userId);
         if (idx === -1 || !users[idx].deleted) {
             return res.status(404).json({ error: 'Deleted user not found' });
         }
         users.splice(idx, 1);
-        await fs.writeFile(path.join(__dirname, 'data', 'users.json'), JSON.stringify(users, null, 2));
+        await fs.writeFile(path.join(__dirname, '..', 'data', 'users.json'), JSON.stringify(users, null, 2));
         res.json({ success: true });
     } catch (err) {
         console.error('Error permanently deleting user:', err);
@@ -344,7 +342,7 @@ app.post('/api/admin/users/:userId/delete', async (req, res) => {
     if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
     const userId = parseInt(req.params.userId);
     try {
-        const usersData = await fs.readFile(path.join(__dirname, 'data', 'users.json'), 'utf8');
+        const usersData = await fs.readFile(path.join(__dirname, '..', 'data', 'users.json'), 'utf8');
         const users = JSON.parse(usersData);
         const user = users.find(u => u.id === userId);
         if (!user) return res.status(404).json({ error: 'User not found' });
@@ -352,8 +350,8 @@ app.post('/api/admin/users/:userId/delete', async (req, res) => {
         if (user.deleted) return res.status(400).json({ error: 'User already deleted' });
         user.deleted = true;
         user.deleted_at = new Date().toISOString();
-        await fs.writeFile(path.join(__dirname, 'data', 'users.json'), JSON.stringify(users, null, 2));
-        console.log(`🗑️ User "${user.username}" (${user.role}) moved to trash`);
+        await fs.writeFile(path.join(__dirname, '..', 'data', 'users.json'), JSON.stringify(users, null, 2));
+        console.log(`User "${user.username}" (${user.role}) moved to trash`);
         res.json({ success: true });
     } catch (err) {
         console.error('Error deleting user:', err);
@@ -366,7 +364,7 @@ app.patch('/api/admin/subscription/:userId', async (req, res) => {
     const userId = parseInt(req.params.userId);
     const { action, duration } = req.body;
     try {
-        const usersData = await fs.readFile(path.join(__dirname, 'data', 'users.json'), 'utf8');
+        const usersData = await fs.readFile(path.join(__dirname, '..', 'data', 'users.json'), 'utf8');
         const users = JSON.parse(usersData);
         const user = users.find(u => u.id === userId);
         if (!user) return res.status(404).json({ error: 'User not found' });
@@ -392,7 +390,7 @@ app.patch('/api/admin/subscription/:userId', async (req, res) => {
             default:
                 return res.status(400).json({ error: 'Invalid action' });
         }
-        await fs.writeFile(path.join(__dirname, 'data', 'users.json'), JSON.stringify(users, null, 2));
+        await fs.writeFile(path.join(__dirname, '..', 'data', 'users.json'), JSON.stringify(users, null, 2));
         res.json({ success: true, user });
     } catch (err) {
         console.error('Error managing subscription:', err);
@@ -440,7 +438,7 @@ app.post('/api/tenants', async (req, res) => {
                     address: tenant_address || ''
                 });
                 tenant_user_id = newUser.id;
-                console.log(`✅ Tenant user "${tenant_username}" created with ID ${newUser.id}`);
+                console.log(`Tenant user "${tenant_username}" created with ID ${newUser.id}`);
             } catch (err) {
                 return res.status(400).json({ error: 'Failed to create tenant user: ' + err.message });
             }
@@ -618,7 +616,7 @@ app.patch('/api/bills/pay', async (req, res) => {
         bill.payment_reason = reason || '';
         bill.paid_at = new Date().toISOString();
         await writeTenants(houseId, tenants);
-        console.log(`✅ Bill ${billId} marked ${paymentType} with amount ${paidAmount}, new balance: ${tenant.balance}`);
+        console.log(`Bill ${billId} marked ${paymentType} with amount ${paidAmount}, new balance: ${tenant.balance}`);
         res.json({ success: true, balance: tenant.balance });
     } catch (err) {
         console.error('Error toggling paid status:', err);
@@ -651,7 +649,7 @@ app.delete('/api/tenants/:id/history/:index', async (req, res) => {
         }
         t.history.splice(idx, 1);
         await writeTenants(houseId, tenants);
-        console.log(`🗑️ Bill deleted, new balance: ${t.balance}`);
+        console.log(`Bill deleted, new balance: ${t.balance}`);
         res.json({ success: true });
     } catch (err) {
         console.error('Error deleting bill:', err);
@@ -687,7 +685,7 @@ app.put('/api/tenants/:id/balance', async (req, res) => {
 app.get('/api/admin/users', async (req, res) => {
     if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
     try {
-        const usersData = await fs.readFile(path.join(__dirname, 'data', 'users.json'), 'utf8');
+        const usersData = await fs.readFile(path.join(__dirname, '..', 'data', 'users.json'), 'utf8');
         const users = JSON.parse(usersData);
         const activeUsers = users.filter(u => !u.deleted);
         const safeUsers = activeUsers.map(({ password, ...rest }) => rest);
@@ -853,28 +851,39 @@ app.delete('/api/admin/trash/tenants/permanent/:tenantId', async (req, res) => {
     }
 });
 
-// ─── Static ────────────────────────────────────────────────────
-app.use(express.static(path.join(__dirname, '..')));
+// ─── Pages (explicit allowlist only — data/server folders stay private) ──
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'login.html'));
+    res.sendFile(path.join(__dirname, '..', 'public', 'login.html'));
 });
 app.get('/login.html', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'login.html'));
+    res.sendFile(path.join(__dirname, '..', 'public', 'login.html'));
 });
 app.get('/register.html', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'register.html'));
+    res.sendFile(path.join(__dirname, '..', 'public', 'register.html'));
 });
 app.get('/admin.html', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'admin.html'));
+    res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
 });
 app.get('/superadmin.html', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'superadmin.html'));
+    res.sendFile(path.join(__dirname, '..', 'public', 'superadmin.html'));
 });
 app.get('/index.html', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'index.html'));
+    res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
 app.get('/tenant.html', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'tenant.html'));
+    res.sendFile(path.join(__dirname, '..', 'public', 'tenant.html'));
+});
+app.get('/logo.svg', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'public', 'assets', 'logo.svg'));
+});
+app.get('/assets/:file', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'public', 'assets', req.params.file));
+});
+app.get('/apple-touch-icon.png', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'public', 'assets', 'icon-192.png'));
+});
+app.get('/sw.js', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'public', 'sw.js'));
 });
 
 // ─── Init notifications file ────────────────────────────────
@@ -883,15 +892,13 @@ async function initNotifFile() {
         await fs.access(NOTIF_FILE);
     } catch {
         await fs.writeFile(NOTIF_FILE, JSON.stringify([], null, 2));
-        console.log('📢 Notifications file created');
+        console.log('Notifications file created');
     }
 }
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-    console.log(`✅ SajiloRent API running: http://localhost:${PORT}`);
-    console.log(`📁 Data directory: ${DATA_DIR}`);
-    console.log(`🔐 Default login: admin / 5545`);
-    console.log(`🔑 SuperAdmin: Super_Admin / Kali_5545`);
-    console.log(`📊 Rate per unit: Rs. ${RATE}`);
+    console.log(`SajiloRent API running: http://localhost:${PORT}`);
+    console.log(`Data directory: ${DATA_DIR}`);
+    console.log(`Rate per unit: Rs. ${RATE}`);
 });

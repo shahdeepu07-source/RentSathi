@@ -4,12 +4,13 @@ import jwt from 'jsonwebtoken';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import 'dotenv/config';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const router = express.Router();
 
-const USERS_FILE = path.join(__dirname, 'data', 'users.json');
+const USERS_FILE = path.join(__dirname, '..', 'data', 'users.json');
 
 // ──────────────────────────────────────────────────────────────
 // INIT – Seed Admin & SuperAdmin
@@ -17,7 +18,7 @@ const USERS_FILE = path.join(__dirname, 'data', 'users.json');
 async function ensureAdminsExist() {
     try {
         await fs.access(USERS_FILE);
-        console.log('✅ Users file exists');
+        console.log('Users file exists');
         const data = await fs.readFile(USERS_FILE, 'utf8');
         const users = JSON.parse(data);
         const hasSuperAdmin = users.some(u => u.role === 'superadmin');
@@ -41,10 +42,10 @@ async function ensureAdminsExist() {
                 created_at: new Date().toISOString()
             });
             await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
-            console.log('✅ SuperAdmin created: Super_Admin / Kali_5545');
+console.log('SuperAdmin created');
         }
     } catch {
-        console.log('📝 Creating users file with admin and superadmin...');
+        console.log('Creating users file with admin and superadmin...');
         const adminHash = await bcrypt.hash('5545', 10);
         const superHash = await bcrypt.hash('Kali_5545', 10);
         const initialUsers = [
@@ -85,8 +86,8 @@ async function ensureAdminsExist() {
         ];
         await fs.mkdir(path.dirname(USERS_FILE), { recursive: true });
         await fs.writeFile(USERS_FILE, JSON.stringify(initialUsers, null, 2));
-        console.log('✅ Admin created: admin / 5545');
-        console.log('✅ SuperAdmin created: Super_Admin / Kali_5545');
+        console.log('✅ Admin created');
+        console.log('✅ SuperAdmin created');
     }
 }
 
@@ -141,7 +142,7 @@ router.post('/register', async (req, res) => {
         await saveUsers(users);
         const token = jwt.sign(
             { userId: newUser.id, username: newUser.username, role: newUser.role },
-            process.env.JWT_SECRET || 'housebill_super_secret_key_2024',
+            process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );
         res.status(201).json({
@@ -166,7 +167,7 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
     try {
         const { username, password } = req.body;
-        console.log('📧 Login attempt for:', username);
+        console.log('Login attempt for:', username);
         if (!username || !password) {
             return res.status(400).json({ error: 'Username and password required' });
         }
@@ -185,13 +186,13 @@ router.post('/login', async (req, res) => {
             }
         }
         const validPassword = await bcrypt.compare(password, user.password);
-        console.log('🔑 Password match:', validPassword);
+        console.log('Password check completed');
         if (!validPassword) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
         const token = jwt.sign(
             { userId: user.id, username: user.username, role: user.role },
-            process.env.JWT_SECRET || 'housebill_super_secret_key_2024',
+            process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );
         res.json({
@@ -221,7 +222,7 @@ router.post('/users', async (req, res) => {
         const token = authHeader.split(' ')[1];
         let decoded;
         try {
-            decoded = jwt.verify(token, process.env.JWT_SECRET || 'housebill_super_secret_key_2024');
+            decoded = jwt.verify(token, process.env.JWT_SECRET);
         } catch {
             return res.status(401).json({ error: 'Invalid token' });
         }
@@ -284,7 +285,7 @@ router.put('/users/:userId', async (req, res) => {
         const token = authHeader.split(' ')[1];
         let decoded;
         try {
-            decoded = jwt.verify(token, process.env.JWT_SECRET || 'housebill_super_secret_key_2024');
+            decoded = jwt.verify(token, process.env.JWT_SECRET);
         } catch {
             return res.status(401).json({ error: 'Invalid token' });
         }
@@ -327,7 +328,7 @@ router.post('/superadmin/admins', async (req, res) => {
         const token = authHeader.split(' ')[1];
         let decoded;
         try {
-            decoded = jwt.verify(token, process.env.JWT_SECRET || 'housebill_super_secret_key_2024');
+            decoded = jwt.verify(token, process.env.JWT_SECRET);
         } catch {
             return res.status(401).json({ error: 'Invalid token' });
         }
@@ -390,7 +391,7 @@ router.post('/admin/users/:userId/delete', async (req, res) => {
         user.deleted = true;
         user.deleted_at = new Date().toISOString();
         await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
-        console.log(`🗑️ User "${user.username}" (${user.role}) moved to trash`);
+        console.log(`User "${user.username}" (${user.role}) moved to trash`);
         res.json({ success: true });
     } catch (err) {
         console.error('Error deleting user:', err);
@@ -408,7 +409,7 @@ router.post('/verify-password', async (req, res) => {
         const token = authHeader.split(' ')[1];
         let decoded;
         try {
-            decoded = jwt.verify(token, process.env.JWT_SECRET || 'housebill_super_secret_key_2024');
+            decoded = jwt.verify(token, process.env.JWT_SECRET);
         } catch {
             return res.status(401).json({ error: 'Invalid token' });
         }
@@ -417,12 +418,12 @@ router.post('/verify-password', async (req, res) => {
         const users = await getUsers(true);
         const user = users.find(u => u.id === decoded.userId);
         if (!user) {
-            console.log('❌ verify-password: User not found for userId:', decoded.userId);
+            console.log('verify-password: User not found for userId:', decoded.userId);
             return res.status(404).json({ error: 'User not found' });
         }
-        console.log(`🔍 verify-password: Found user ${user.username}, checking password...`);
+        console.log(`verify-password: Found user ${user.username}, checking password...`);
         const valid = await bcrypt.compare(password, user.password);
-        console.log(`🔍 verify-password: Password match = ${valid}`);
+        console.log(`verify-password: Password match = ${valid}`);
         if (!valid) return res.status(401).json({ error: 'Invalid password' });
         res.json({ success: true });
     } catch (err) {
@@ -441,7 +442,7 @@ router.post('/reset-password', async (req, res) => {
         const token = authHeader.split(' ')[1];
         let decoded;
         try {
-            decoded = jwt.verify(token, process.env.JWT_SECRET || 'housebill_super_secret_key_2024');
+            decoded = jwt.verify(token, process.env.JWT_SECRET);
         } catch {
             return res.status(401).json({ error: 'Invalid token' });
         }
@@ -473,7 +474,7 @@ router.get('/me', async (req, res) => {
         const token = authHeader.split(' ')[1];
         let decoded;
         try {
-            decoded = jwt.verify(token, process.env.JWT_SECRET || 'housebill_super_secret_key_2024');
+            decoded = jwt.verify(token, process.env.JWT_SECRET);
         } catch {
             return res.status(401).json({ error: 'Invalid token' });
         }

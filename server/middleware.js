@@ -1,6 +1,11 @@
+import 'dotenv/config';
 import jwt from 'jsonwebtoken';
 
-const SECRET = process.env.JWT_SECRET || 'housebill_super_secret_key_2024';
+if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is missing. Create a .env file with JWT_SECRET=<strong random value>');
+}
+
+const SECRET = process.env.JWT_SECRET;
 
 export function verifyToken(req, res, next) {
     const authHeader = req.headers.authorization;
@@ -15,25 +20,4 @@ export function verifyToken(req, res, next) {
     } catch (err) {
         return res.status(401).json({ error: 'Invalid or expired token' });
     }
-}
-
-export function requireAdmin(req, res, next) {
-    if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
-        return res.status(403).json({ error: 'Admin access required' });
-    }
-    next();
-}
-
-/**
- * requireRole('admin', 'superadmin') => only those roles pass
- */
-export function requireRole(...roles) {
-    return (req, res, next) => {
-        if (!req.user || !roles.includes(req.user.role)) {
-            return res.status(403).json({
-                error: `Access restricted to: ${roles.join(', ')}`
-            });
-        }
-        next();
-    };
 }

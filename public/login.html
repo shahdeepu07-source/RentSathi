@@ -3,8 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1120">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SajiloRent">
+  
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+    <link rel="manifest" href="/assets/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/assets/icon-192.png">
     <title>SajiloRent - Login</title>
     <style>
+        html { -webkit-text-size-adjust:100%; }
         :root { --bg:#0b1120; --card:#111827; --text:#f8fafc; --accent:#2563eb; --border:#1f2937; }
         * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter',system-ui,sans-serif; }
         body { background:var(--bg); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
@@ -31,7 +40,7 @@
         .role-selector button:hover { border-color:var(--accent); }
         .made-by-kali { position:fixed; bottom:12px; right:16px; z-index:999; display:flex; align-items:center; gap:6px; color:#6b7280; font-size:0.7rem; font-family:'SF Mono','Fira Code','Cascadia Code',monospace; letter-spacing:0.8px; opacity:0.5; transition:opacity 0.3s; pointer-events:none; }
         .made-by-kali span { color:var(--accent); font-weight:600; opacity:0.85; }
-        @media(max-width:480px){ .login-card { padding:28px 20px; } }
+        @media(max-width:480px){ .login-card { padding:28px 20px; } .role-selector button { padding:10px 16px; min-height:44px; } .login-card .role-selector button { flex:1; } }
     </style>
 </head>
 <body>
@@ -51,11 +60,11 @@
         <form id="loginForm">
             <div class="form-group">
                 <label>Username</label>
-                <input type="text" id="username" placeholder="Enter your username" autofocus>
+                <input type="text" id="username" placeholder="Enter your username" autocomplete="username" autofocus>
             </div>
             <div class="form-group">
                 <label>Password</label>
-                <input type="password" id="password" placeholder="Enter your password">
+                <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password">
             </div>
             <button type="submit" id="loginBtn">
                 <span class="btn-text">Sign In</span>
@@ -150,5 +159,8 @@
     }
 </script>
 <div class="made-by-kali">made by <span>kali</span></div>
+<script>
+if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => {}); }); }
+</script>
 </body>
 </html>

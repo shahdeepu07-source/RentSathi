@@ -7,9 +7,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const router = Router();
 
-const NOTIF_FILE = path.join(__dirname, 'data', 'notifications.json');
+const NOTIF_FILE = path.join(__dirname, '..', 'data', 'notifications.json');
 const DATA_DIR = path.join(__dirname, '..', 'data', 'clients');
-const OWNERSHIP_FILE = path.join(__dirname, 'data', 'ownership.json');
+const OWNERSHIP_FILE = path.join(__dirname, '..', 'data', 'ownership.json');
 
 // ─── Helpers ──────────────────────────────────────────────────
 async function getNotifs() {
@@ -34,30 +34,68 @@ function getFilePath(houseId) {
     return path.join(DATA_DIR, `${houseId}.json`);
 }
 
+const VALID_ROLES = ['superadmin', 'admin', 'owner', 'tenant'];
+const VALID_PRIORITIES = ['low', 'normal', 'high', 'urgent'];
+
+// Old notices store a single target_role; new ones store a target_roles array.
+function targetRoles(notice) {
+    if (Array.isArray(notice.target_roles) && notice.target_roles.length) return notice.target_roles;
+    return notice.target_role ? [notice.target_role] : [];
+}
+
+function isTargetedAt(notice, role) {
+    const roles = targetRoles(notice);
+    if (role === 'superadmin') {
+        // Superadmins also see admin-targeted notices (legacy behavior)
+        return roles.includes('superadmin') || roles.includes('admin');
+    }
+    return roles.includes(role);
+}
+
 // ──────────────────────────────────────────────────────────────
 // POST /api/notifications  —  Create a notice
 // ──────────────────────────────────────────────────────────────
 router.post('/notifications', async (req, res) => {
     try {
         const { role, userId, username } = req.user;
-        const { title, message, priority, target_role, house_id } = req.body;
+        const { title, message, priority, target_roles, house_id } = req.body;
 
-        if (!title || !message) {
-            return res.status(400).json({ error: 'Title and message are required' });
+        if (!title || !title.trim()) {
+            return res.status(400).json({ error: 'Title is required' });
+        }
+        if (!message || !message.trim()) {
+            return res.status(400).json({ error: 'Message is required' });
+        }
+        if (title.length > 100) {
+            return res.status(400).json({ error: 'Title must be 100 characters or less' });
+        }
+        if (message.length > 500) {
+            return res.status(400).json({ error: 'Message must be 500 characters or less' });
+        }
+        if (priority && !VALID_PRIORITIES.includes(priority)) {
+            return res.status(400).json({ error: 'Invalid priority' });
         }
 
         // --- Role-gated targeting ---
-        let resolvedTarget = target_role;
+        let resolvedTargets;
 
         if (role === 'superadmin') {
-            // Superadmin → Admin panel only
-            resolvedTarget = 'admin';
+            // Superadmin can target any combination of roles (default: everyone)
+            if (Array.isArray(target_roles) && target_roles.length) {
+                const invalid = target_roles.filter(r => !VALID_ROLES.includes(r));
+                if (invalid.length) {
+                    return res.status(400).json({ error: `Invalid target role(s): ${invalid.join(', ')}` });
+                }
+                resolvedTargets = [...new Set(target_roles)];
+            } else {
+                resolvedTargets = [...VALID_ROLES];
+            }
         } else if (role === 'admin') {
             // Admin → Owner dashboards only
-            resolvedTarget = 'owner';
+            resolvedTargets = ['owner'];
         } else if (role === 'owner') {
             // Owner → Their assigned Tenants only
-            resolvedTarget = 'tenant';
+            resolvedTargets = ['tenant'];
             if (!house_id) {
                 return res.status(400).json({ error: 'Owner notices require a house_id' });
             }
@@ -77,10 +115,11 @@ router.post('/notifications', async (req, res) => {
             sender_id: userId,
             sender_name: username,
             sender_role: role,
-            target_role: resolvedTarget,
+            target_role: resolvedTargets.length === 1 ? resolvedTargets[0] : null,
+            target_roles: resolvedTargets,
             house_id: house_id || null,
-            title,
-            message,
+            title: title.trim(),
+            message: message.trim(),
             priority: priority || 'normal',
             is_active: true,
             created_at: new Date().toISOString(),
@@ -89,7 +128,7 @@ router.post('/notifications', async (req, res) => {
 
         notifs.push(notice);
         await saveNotifs(notifs);
-        console.log(`📢 ${role} created notice for ${resolvedTarget}: "${title}"`);
+        console.log(`${role} created notice for ${resolvedTargets.join(', ')}: "${notice.title}"`);
         res.status(201).json(notice);
     } catch (err) {
         console.error('Error creating notice:', err);
@@ -109,14 +148,14 @@ router.get('/notifications', async (req, res) => {
         let visible = [];
 
         if (role === 'superadmin') {
-            // Superadmins see notices targeted at 'admin' (from other superadmins/admins)
-            visible = active.filter(n => n.target_role === 'admin');
+            // Superadmins see notices aimed at superadmins or admins (legacy behavior)
+            visible = active.filter(n => isTargetedAt(n, 'superadmin'));
         } else if (role === 'admin') {
             // Admins see notices targeted at 'admin'
-            visible = active.filter(n => n.target_role === 'admin');
+            visible = active.filter(n => isTargetedAt(n, 'admin'));
         } else if (role === 'owner') {
             // Owners see notices targeted at 'owner'
-            visible = active.filter(n => n.target_role === 'owner');
+            visible = active.filter(n => isTargetedAt(n, 'owner'));
         } else if (role === 'tenant') {
             // Tenants see notices their owner posted (target_role=tenant, matching their house)
             // Find which house(s) this tenant belongs to
@@ -139,9 +178,9 @@ router.get('/notifications', async (req, res) => {
                 } catch { continue; }
             }
 
-            // Filter: target_role=tenant AND (house_id is null OR matches tenant's house)
+            // Filter: target includes tenant AND (house_id is null OR matches tenant's house)
             visible = active.filter(n =>
-                n.target_role === 'tenant' &&
+                isTargetedAt(n, 'tenant') &&
                 (!n.house_id || myHouses.includes(n.house_id))
             );
         }
@@ -191,10 +230,10 @@ router.patch('/notifications/:id/dismiss', async (req, res) => {
 
         // Only the target audience can dismiss (or the sender)
         const isTarget = (
-            (role === 'superadmin' && notice.target_role === 'admin') ||
-            (role === 'admin' && notice.target_role === 'admin') ||
-            (role === 'owner' && notice.target_role === 'owner') ||
-            (role === 'tenant' && notice.target_role === 'tenant')
+            (role === 'superadmin' && isTargetedAt(notice, 'superadmin')) ||
+            (role === 'admin' && isTargetedAt(notice, 'admin')) ||
+            (role === 'owner' && isTargetedAt(notice, 'owner')) ||
+            (role === 'tenant' && isTargetedAt(notice, 'tenant'))
         );
         const isSender = notice.sender_id === userId;
 
@@ -251,9 +290,14 @@ router.put('/notifications/:id', async (req, res) => {
             return res.status(403).json({ error: 'Only the sender can edit this notice' });
         }
 
-        if (title) notifs[idx].title = title;
-        if (message) notifs[idx].message = message;
-        if (priority) notifs[idx].priority = priority;
+        if (title) notifs[idx].title = title.trim();
+        if (message) notifs[idx].message = message.trim();
+        if (priority) {
+            if (!VALID_PRIORITIES.includes(priority)) {
+                return res.status(400).json({ error: 'Invalid priority' });
+            }
+            notifs[idx].priority = priority;
+        }
         notifs[idx].updated_at = new Date().toISOString();
 
         await saveNotifs(notifs);
@@ -276,7 +320,7 @@ router.get('/admin/notifications', async (req, res) => {
         // Superadmins see all
         let filtered = active;
         if (req.user.role === 'admin') {
-            filtered = active.filter(n => n.target_role === 'admin');
+            filtered = active.filter(n => isTargetedAt(n, 'admin'));
         }
         res.json(filtered);
     } catch (err) {
