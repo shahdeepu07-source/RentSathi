@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RentSathi - Login</title>
+    <title>SajiloRent - Login</title>
     <style>
         :root { --bg:#0b1120; --card:#111827; --text:#f8fafc; --accent:#2563eb; --border:#1f2937; }
         * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter',system-ui,sans-serif; }
@@ -29,13 +29,18 @@
         .role-selector button { background:transparent; border:1px solid var(--border); border-radius:20px; padding:6px 16px; color:var(--text-muted); font-size:0.8rem; cursor:pointer; transition:0.2s; }
         .role-selector button.active { background:var(--accent); border-color:var(--accent); color:#fff; }
         .role-selector button:hover { border-color:var(--accent); }
+        .made-by-kali { position:fixed; bottom:12px; right:16px; z-index:999; display:flex; align-items:center; gap:6px; color:#6b7280; font-size:0.7rem; font-family:'SF Mono','Fira Code','Cascadia Code',monospace; letter-spacing:0.8px; opacity:0.5; transition:opacity 0.3s; pointer-events:none; }
+        .made-by-kali span { color:var(--accent); font-weight:600; opacity:0.85; }
         @media(max-width:480px){ .login-card { padding:28px 20px; } }
     </style>
 </head>
 <body>
 <div class="login-container">
     <div class="login-card">
-        <h1>🏠 RentSathi</h1>
+        <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px;">
+          <img src="/logo.svg" alt="SajiloRent" style="height:36px;width:auto;">
+          <h1 style="font-size:2rem;font-weight:700;color:var(--text);margin:0;">SajiloRent</h1>
+        </div>
         <p class="subtitle">Sign in to your dashboard</p>
         <div class="role-selector">
             <button class="active" data-role="owner">Owner</button>
@@ -144,5 +149,6 @@
         });
     }
 </script>
+<div class="made-by-kali">made by <span>kali</span></div>
 </body>
 </html>

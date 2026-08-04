@@ -376,26 +376,8 @@
     "id": 1777734952832,
     "name": "Xyz",
     "rent_amount": 10000,
-    "last_reading": 150,
-    "history": [
-      {
-        "name": "Xyz",
-        "month": "Ashadh 2023",
-        "prev": 100,
-        "curr": 150,
-        "units": 50,
-        "electricity": 750,
-        "rent": 10000,
-        "water": 350,
-        "waste": 100,
-        "due": 110,
-        "ded": 50,
-        "dedReason": "Leftover",
-        "note": "Pay till 5th of ashadh",
-        "total": 11260,
-        "createdAt": "2026-07-18T18:26:33.594Z",
-        "id": 1784744172260
-      }
-    ]
+    "last_reading": 100,
+    "history": [],
+    "balance": -11260
   }
 ]

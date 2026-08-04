@@ -1,0 +1,288 @@
+import { Router } from 'express';
+import { promises as fs } from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const router = Router();
+
+const NOTIF_FILE = path.join(__dirname, 'data', 'notifications.json');
+const DATA_DIR = path.join(__dirname, '..', 'data', 'clients');
+const OWNERSHIP_FILE = path.join(__dirname, 'data', 'ownership.json');
+
+// ─── Helpers ──────────────────────────────────────────────────
+async function getNotifs() {
+    try {
+        const raw = await fs.readFile(NOTIF_FILE, 'utf8');
+        return JSON.parse(raw);
+    } catch { return []; }
+}
+
+async function saveNotifs(arr) {
+    await fs.writeFile(NOTIF_FILE, JSON.stringify(arr, null, 2));
+}
+
+async function getOwnership() {
+    try {
+        const raw = await fs.readFile(OWNERSHIP_FILE, 'utf8');
+        return JSON.parse(raw);
+    } catch { return {}; }
+}
+
+function getFilePath(houseId) {
+    return path.join(DATA_DIR, `${houseId}.json`);
+}
+
+// ──────────────────────────────────────────────────────────────
+// POST /api/notifications  —  Create a notice
+// ──────────────────────────────────────────────────────────────
+router.post('/notifications', async (req, res) => {
+    try {
+        const { role, userId, username } = req.user;
+        const { title, message, priority, target_role, house_id } = req.body;
+
+        if (!title || !message) {
+            return res.status(400).json({ error: 'Title and message are required' });
+        }
+
+        // --- Role-gated targeting ---
+        let resolvedTarget = target_role;
+
+        if (role === 'superadmin') {
+            // Superadmin → Admin panel only
+            resolvedTarget = 'admin';
+        } else if (role === 'admin') {
+            // Admin → Owner dashboards only
+            resolvedTarget = 'owner';
+        } else if (role === 'owner') {
+            // Owner → Their assigned Tenants only
+            resolvedTarget = 'tenant';
+            if (!house_id) {
+                return res.status(400).json({ error: 'Owner notices require a house_id' });
+            }
+            // Verify ownership of the specified house
+            const ownership = await getOwnership();
+            const house = ownership[house_id];
+            if (!house || house.owner_id !== userId || house.deleted) {
+                return res.status(403).json({ error: 'You do not own this house' });
+            }
+        } else {
+            return res.status(403).json({ error: 'You are not allowed to create notices' });
+        }
+
+        const notifs = await getNotifs();
+        const notice = {
+            id: Date.now(),
+            sender_id: userId,
+            sender_name: username,
+            sender_role: role,
+            target_role: resolvedTarget,
+            house_id: house_id || null,
+            title,
+            message,
+            priority: priority || 'normal',
+            is_active: true,
+            created_at: new Date().toISOString(),
+            expires_at: null
+        };
+
+        notifs.push(notice);
+        await saveNotifs(notifs);
+        console.log(`📢 ${role} created notice for ${resolvedTarget}: "${title}"`);
+        res.status(201).json(notice);
+    } catch (err) {
+        console.error('Error creating notice:', err);
+        res.status(500).json({ error: 'Failed to create notice' });
+    }
+});
+
+// ──────────────────────────────────────────────────────────────
+// GET /api/notifications  —  Fetch notices visible to current user
+// ──────────────────────────────────────────────────────────────
+router.get('/notifications', async (req, res) => {
+    try {
+        const { role, userId } = req.user;
+        const notifs = await getNotifs();
+        const active = notifs.filter(n => n.is_active);
+
+        let visible = [];
+
+        if (role === 'superadmin') {
+            // Superadmins see notices targeted at 'admin' (from other superadmins/admins)
+            visible = active.filter(n => n.target_role === 'admin');
+        } else if (role === 'admin') {
+            // Admins see notices targeted at 'admin'
+            visible = active.filter(n => n.target_role === 'admin');
+        } else if (role === 'owner') {
+            // Owners see notices targeted at 'owner'
+            visible = active.filter(n => n.target_role === 'owner');
+        } else if (role === 'tenant') {
+            // Tenants see notices their owner posted (target_role=tenant, matching their house)
+            // Find which house(s) this tenant belongs to
+            const files = await fs.readdir(DATA_DIR);
+            const houses = files.filter(f => f.endsWith('.json')).map(f => f.replace('.json', ''));
+            const ownership = await getOwnership();
+            const activeHouses = houses.filter(h => !ownership[h]?.deleted);
+
+            let myHouses = [];
+            for (const house of activeHouses) {
+                try {
+                    const tenants = JSON.parse(await fs.readFile(getFilePath(house), 'utf8'));
+                    const match = tenants.find(t =>
+                        !t.deleted && (t.tenant_user_id === userId ||
+                        t.name.toLowerCase() === (req.user.username || '').toLowerCase())
+                    );
+                    if (match) {
+                        myHouses.push(house);
+                    }
+                } catch { continue; }
+            }
+
+            // Filter: target_role=tenant AND (house_id is null OR matches tenant's house)
+            visible = active.filter(n =>
+                n.target_role === 'tenant' &&
+                (!n.house_id || myHouses.includes(n.house_id))
+            );
+        }
+
+        // Enrich with sender display info
+        const enriched = visible.map(n => ({
+            ...n,
+            // Strip internal fields not needed by client
+        }));
+
+        res.json(enriched);
+    } catch (err) {
+        console.error('Error fetching notices:', err);
+        res.status(500).json({ error: 'Failed to fetch notices' });
+    }
+});
+
+// ──────────────────────────────────────────────────────────────
+// GET /api/notifications/sent  —  All notices by this sender (active or not)
+// ──────────────────────────────────────────────────────────────
+router.get('/notifications/sent', async (req, res) => {
+    try {
+        const { userId } = req.user;
+        const uid = Number(userId);
+        const notifs = await getNotifs();
+        const mine = notifs.filter(n => Number(n.sender_id) === uid);
+        res.json(mine);
+    } catch (err) {
+        console.error('Error fetching sent notices:', err);
+        res.status(500).json({ error: 'Failed to fetch sent notices' });
+    }
+});
+
+// ──────────────────────────────────────────────────────────────
+// PATCH /api/notifications/:id/dismiss  —  Acknowledge / dismiss
+// ──────────────────────────────────────────────────────────────
+router.patch('/notifications/:id/dismiss', async (req, res) => {
+    try {
+        const notifId = parseInt(req.params.id);
+        const { role, userId } = req.user;
+        const notifs = await getNotifs();
+        const idx = notifs.findIndex(n => n.id === notifId);
+
+        if (idx === -1) return res.status(404).json({ error: 'Notice not found' });
+
+        const notice = notifs[idx];
+
+        // Only the target audience can dismiss (or the sender)
+        const isTarget = (
+            (role === 'superadmin' && notice.target_role === 'admin') ||
+            (role === 'admin' && notice.target_role === 'admin') ||
+            (role === 'owner' && notice.target_role === 'owner') ||
+            (role === 'tenant' && notice.target_role === 'tenant')
+        );
+        const isSender = notice.sender_id === userId;
+
+        if (!isTarget && !isSender) {
+            return res.status(403).json({ error: 'Not allowed to dismiss this notice' });
+        }
+
+        notifs[idx].is_active = false;
+        await saveNotifs(notifs);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error dismissing notice:', err);
+        res.status(500).json({ error: 'Failed to dismiss notice' });
+    }
+});
+
+// ──────────────────────────────────────────────────────────────
+// DELETE /api/notifications/:id  —  Delete (sender only)
+// ──────────────────────────────────────────────────────────────
+router.delete('/notifications/:id', async (req, res) => {
+    try {
+        const notifId = parseInt(req.params.id);
+        const { userId } = req.user;
+        let notifs = await getNotifs();
+        const idx = notifs.findIndex(n => n.id === notifId);
+
+        if (idx === -1) return res.status(404).json({ error: 'Notice not found' });
+        if (notifs[idx].sender_id !== userId) {
+            return res.status(403).json({ error: 'Only the sender can delete this notice' });
+        }
+
+        notifs.splice(idx, 1);
+        await saveNotifs(notifs);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error deleting notice:', err);
+        res.status(500).json({ error: 'Failed to delete notice' });
+    }
+});
+
+// ──────────────────────────────────────────────────────────────
+// PUT /api/notifications/:id  —  Edit a notice (sender only)
+// ──────────────────────────────────────────────────────────────
+router.put('/notifications/:id', async (req, res) => {
+    try {
+        const notifId = parseInt(req.params.id);
+        const { userId } = req.user;
+        const { title, message, priority } = req.body;
+        const notifs = await getNotifs();
+        const idx = notifs.findIndex(n => n.id === notifId);
+
+        if (idx === -1) return res.status(404).json({ error: 'Notice not found' });
+        if (notifs[idx].sender_id !== userId) {
+            return res.status(403).json({ error: 'Only the sender can edit this notice' });
+        }
+
+        if (title) notifs[idx].title = title;
+        if (message) notifs[idx].message = message;
+        if (priority) notifs[idx].priority = priority;
+        notifs[idx].updated_at = new Date().toISOString();
+
+        await saveNotifs(notifs);
+        res.json(notifs[idx]);
+    } catch (err) {
+        console.error('Error editing notice:', err);
+        res.status(500).json({ error: 'Failed to edit notice' });
+    }
+});
+
+// ─── Admin: get all active notices (for management panel) ─────
+router.get('/admin/notifications', async (req, res) => {
+    if (!['admin', 'superadmin'].includes(req.user.role)) {
+        return res.status(403).json({ error: 'Admin access required' });
+    }
+    try {
+        const notifs = await getNotifs();
+        const active = notifs.filter(n => n.is_active);
+        // Admins see notices targeted at admin
+        // Superadmins see all
+        let filtered = active;
+        if (req.user.role === 'admin') {
+            filtered = active.filter(n => n.target_role === 'admin');
+        }
+        res.json(filtered);
+    } catch (err) {
+        console.error('Error fetching admin notices:', err);
+        res.status(500).json({ error: 'Failed to fetch notices' });
+    }
+});
+
+export default router;

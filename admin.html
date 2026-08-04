@@ -3,43 +3,125 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RentSathi - Admin</title>
+  <title>SajiloRent - Admin</title>
   <style>
-    :root { --bg:#0b1120; --card:#111827; --text:#f8fafc; --text-muted:#94a3b8; --accent:#2563eb; --accent-hover:#1d4ed8; --success:#10b981; --warn:#f59e0b; --danger:#ef4444; --border:#1f2937; --radius:12px; --shadow:0 4px 24px rgba(0,0,0,0.3); --transition:0.2s ease; }
+    :root { --bg:#0b1120; --card:#111827; --text:#f8fafc; --text-2:#cbd5e1; --text-muted:#94a3b8; --accent:#2563eb; --accent-hover:#1d4ed8; --success:#10b981; --warn:#f59e0b; --danger:#ef4444; --info:#06b6d4; --border:#1f2937; --radius:12px; --shadow:0 4px 24px rgba(0,0,0,0.3); --transition:0.2s ease; --danger-bg:rgba(239,68,68,0.12); --warn-bg:rgba(245,158,11,0.12); --info-bg:rgba(6,182,212,0.12); --sidebar-w:220px; }
     * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter',system-ui,-apple-system,sans-serif; }
-    body { background:var(--bg); color:var(--text); padding:20px; min-height:100vh; }
-    .container { max-width:1400px; margin:0 auto; }
-    header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding-bottom:16px; border-bottom:1px solid var(--border); margin-bottom:24px; }
-    header h1 { font-size:1.6rem; font-weight:700; display:flex; align-items:center; gap:10px; }
-    header h1 span { background:var(--accent); font-size:0.7rem; font-weight:600; padding:2px 12px; border-radius:20px; color:#fff; }
-    .btn-logout { background:var(--danger); color:#fff; border:none; padding:6px 18px; border-radius:6px; cursor:pointer; font-size:0.8rem; font-weight:600; transition:var(--transition); }
-    .btn-logout:hover { opacity:0.85; transform:translateY(-1px); }
+    body { background:var(--bg); color:var(--text); min-height:100vh; display:flex; }
+    ::-webkit-scrollbar { width:6px; }
+    ::-webkit-scrollbar-track { background:var(--bg); }
+    ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+
+    /* ─── SIDEBAR ─── */
+    .sidebar { width:var(--sidebar-w); background:var(--card); border-right:1px solid var(--border); display:flex; flex-direction:column; position:fixed; top:0; left:0; height:100vh; z-index:100; padding:20px 0; }
+    .sidebar-brand { display:flex; align-items:center; gap:10px; padding:0 20px 20px; border-bottom:1px solid var(--border); margin-bottom:12px; }
+    .sidebar-brand img { height:28px; width:auto; }
+    .sidebar-brand span { font-size:1.1rem; font-weight:700; }
+    .sidebar-nav { flex:1; display:flex; flex-direction:column; gap:2px; padding:0 10px; }
+    .sidebar-nav a { display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:8px; color:var(--text-muted); text-decoration:none; font-size:0.85rem; font-weight:500; transition:var(--transition); cursor:pointer; }
+    .sidebar-nav a:hover { background:var(--bg); color:var(--text); }
+    .sidebar-nav a.active { background:var(--accent); color:#fff; }
+    .sidebar-footer { padding:16px 20px 0; border-top:1px solid var(--border); margin-top:auto; }
+    .sidebar-footer .user-name { font-size:0.8rem; color:var(--text); }
+    .sidebar-footer .user-role { font-size:0.68rem; color:var(--text-muted); }
+    .sidebar-footer .logout-link { display:block; margin-top:8px; font-size:0.78rem; color:var(--danger); cursor:pointer; }
+
+    /* ─── MAIN ─── */
+    .main { margin-left:var(--sidebar-w); flex:1; padding:24px 32px; min-height:100vh; }
+    .main-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
+    .main-header h1 { font-size:1.4rem; font-weight:700; }
+    .main-header .sub { font-size:0.78rem; color:var(--text-muted); }
+
+    /* ─── TABBED CONTENT ─── */
+    .tab-panel { display:none; animation: fadeIn 0.25s ease; }
+    .tab-panel.active { display:block; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+    /* ─── STATS CARDS ─── */
     .stats-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:16px; margin-bottom:28px; }
     .stat-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; box-shadow:var(--shadow); }
-    .stat-card .label { font-size:0.7rem; text-transform:uppercase; color:var(--text-muted); }
+    .stat-card .label { font-size:0.7rem; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.5px; }
     .stat-card .value { font-size:2rem; font-weight:700; margin-top:4px; }
     .stat-card .value.blue { color:var(--accent); }
     .stat-card .value.green { color:var(--success); }
     .stat-card .value.yellow { color:var(--warn); }
     .stat-card .value.red { color:var(--danger); }
+
+    /* ─── SECTION CARDS ─── */
     .section-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:24px; }
     .section-header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
     .section-header h3 { font-size:1.1rem; font-weight:600; }
+    .badge-count { font-size:0.7rem; color:var(--text-muted); font-weight:400; margin-left:6px; }
+
+    /* ─── FILTER BAR ─── */
     .filter-bar { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
-    .filter-bar input, .filter-bar select { flex:1; min-width:150px; padding:10px 14px; background:#0f172a; border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:0.9rem; transition:var(--transition); }
-    .table-wrapper { overflow-x:auto; }
+    .filter-bar input, .filter-bar select { flex:1; min-width:150px; padding:10px 14px; background:#0f172a; border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:0.9rem; transition:var(--transition); outline:none; }
+    .filter-bar input:focus, .filter-bar select:focus { border-color:var(--accent); }
+
+    /* ─── TABLES ─── */
+    .table-wrapper { overflow-x:auto; border:1px solid var(--border); border-radius:8px; }
     table { width:100%; border-collapse:collapse; font-size:0.9rem; }
-    th { text-align:left; padding:10px 12px; color:var(--text-muted); font-weight:600; font-size:0.7rem; text-transform:uppercase; border-bottom:1px solid var(--border); }
-    td { padding:10px 12px; border-bottom:1px solid var(--border); vertical-align:middle; }
+    th { text-align:left; padding:10px 14px; color:var(--text-muted); font-weight:600; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid var(--border); background:#0f172a; }
+    td { padding:10px 14px; border-bottom:1px solid var(--border); vertical-align:middle; }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:rgba(37,99,235,0.03); }
     .actions { display:flex; gap:6px; flex-wrap:wrap; }
     .actions button { background:none; border:none; cursor:pointer; font-size:0.85rem; padding:4px 8px; border-radius:4px; transition:var(--transition); color:var(--text-muted); }
     .actions button:hover { background:var(--bg); color:var(--text); }
+
+    /* ─── BADGES ─── */
+    .badge { display:inline-block; padding:3px 12px; border-radius:20px; font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:0.3px; }
+    .badge-admin { background:var(--accent); color:#fff; }
+    .badge-owner { background:var(--warn); color:#000; }
+    .badge-tenant { background:var(--success); color:#000; }
+    .badge-superadmin { background:var(--danger); color:#fff; }
+    .badge-sub-active { background:var(--success); color:#000; }
+    .badge-sub-inactive { background:var(--text-muted); color:#fff; }
+    .badge-sub-cancelled { background:var(--danger); color:#fff; }
+
+    /* ─── BUTTONS ─── */
     .btn-primary { background:var(--accent); color:#fff; border:none; padding:8px 18px; border-radius:6px; font-weight:600; font-size:0.85rem; cursor:pointer; transition:var(--transition); }
     .btn-primary:hover { background:var(--accent-hover); transform:translateY(-1px); }
     .btn-success { background:var(--success); color:#fff; border:none; padding:8px 18px; border-radius:6px; font-weight:600; font-size:0.85rem; cursor:pointer; transition:var(--transition); }
     .btn-success:hover { opacity:0.85; transform:translateY(-1px); }
     .btn-danger { background:var(--danger); color:#fff; border:none; padding:8px 18px; border-radius:6px; font-weight:600; font-size:0.85rem; cursor:pointer; transition:var(--transition); }
+    .btn-danger:hover { opacity:0.85; transform:translateY(-1px); }
     .btn-outline { background:transparent; color:var(--text); border:1px solid var(--border); padding:8px 18px; border-radius:6px; font-weight:600; font-size:0.85rem; cursor:pointer; transition:var(--transition); }
+    .btn-outline:hover { border-color:var(--text-muted); }
+    .btn-sm { padding:5px 12px; font-size:0.75rem; }
+
+    /* ─── TRASH TABS ─── */
+    .trash-tab { display:inline-block; padding:8px 16px; background:var(--bg); border-radius:20px; color:var(--text-muted); font-size:0.82rem; cursor:pointer; transition:var(--transition); margin-bottom:12px; margin-right:4px; }
+    .trash-tab:hover, .trash-tab.active { background:var(--accent); color:#fff; }
+    .trash-section { display:none; }
+    .trash-section.active { display:block; }
+
+    /* ─── NOTIFICATION BANNERS ─── */
+    .notif-strip { display:flex; flex-direction:column; gap:8px; margin-bottom:20px; }
+    .notif-banner { display:flex; align-items:flex-start; gap:12px; padding:10px 14px; border-radius:8px; border-left:4px solid var(--info); background:#1a2332; font-size:0.85rem; animation: notifIn 0.3s ease; }
+    .notif-banner.urgent { border-left-color:var(--danger); background:var(--danger-bg); }
+    .notif-banner.high   { border-left-color:var(--warn);   background:var(--warn-bg); }
+    .notif-banner.normal { border-left-color:var(--info);   background:var(--info-bg); }
+    .notif-banner.low    { border-left-color:var(--text-muted); background:rgba(100,116,139,0.08); }
+    .notif-banner .nf-icon { font-size:1.1rem; flex-shrink:0; margin-top:1px; }
+    .notif-banner .nf-body { flex:1; min-width:0; }
+    .notif-banner .nf-title { font-weight:600; font-size:0.88rem; }
+    .notif-banner .nf-msg   { color:var(--text-2); margin-top:2px; font-size:0.82rem; }
+    .notif-banner .nf-meta  { font-size:0.68rem; color:var(--text-muted); margin-top:4px; }
+    .notif-banner .nf-dismiss { background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1rem; padding:2px; line-height:1; transition:color 0.2s; }
+    .notif-banner .nf-dismiss:hover { color:var(--text); }
+    @keyframes notifIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+
+    /* ─── NOTICE FORM ─── */
+    .notice-form { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .notice-form .full-width { grid-column:1 / -1; }
+    .notice-item { background:#0f172a; border-radius:6px; padding:10px 14px; margin-bottom:8px; border-left:3px solid var(--info); }
+    .notice-item.urgent { border-left-color:var(--danger); }
+    .notice-item.high   { border-left-color:var(--warn); }
+    .notice-edit-btn { background:none; border:none; color:var(--accent); cursor:pointer; font-size:0.78rem; padding:2px 6px; border-radius:4px; transition:var(--transition); }
+    .notice-edit-btn:hover { background:rgba(37,99,235,0.15); }
+
+    /* ─── MODAL ─── */
     .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); z-index:1000; justify-content:center; align-items:center; padding:20px; }
     .modal-overlay.active { display:flex; }
     .modal { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); max-width:560px; width:100%; max-height:90vh; overflow-y:auto; padding:28px 32px; box-shadow:0 20px 60px rgba(0,0,0,0.5); }
@@ -48,186 +130,310 @@
     .modal-close:hover { color:var(--danger); }
     .modal .form-group { margin-bottom:16px; }
     .modal .form-group label { display:block; font-size:0.7rem; font-weight:600; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.5px; margin-bottom:4px; }
-    .modal .form-group input, .modal .form-group select, .modal .form-group textarea { width:100%; padding:10px 12px; background:#0f172a; border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:0.9rem; transition:var(--transition); }
+    .modal .form-group input, .modal .form-group select, .modal .form-group textarea { width:100%; padding:10px 12px; background:#0f172a; border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:0.9rem; transition:var(--transition); outline:none; }
+    .modal .form-group input:focus, .modal .form-group select:focus, .modal .form-group textarea:focus { border-color:var(--accent); }
     .modal .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
     .modal .form-actions { display:flex; gap:10px; margin-top:20px; justify-content:flex-end; }
+
+    /* ─── TOAST ─── */
     .toast { position:fixed; bottom:24px; right:24px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px 24px; box-shadow:var(--shadow); z-index:2000; transform:translateY(120px); opacity:0; transition:all 0.4s ease; max-width:400px; }
     .toast.show { transform:translateY(0); opacity:1; }
     .toast.success { border-left:4px solid var(--success); }
     .toast.error { border-left:4px solid var(--danger); }
-    .trash-tab { display:inline-block; padding:8px 16px; background:var(--bg); border-radius:20px; color:var(--text-muted); font-size:0.85rem; cursor:pointer; transition:var(--transition); margin-bottom:12px; }
-    .trash-tab:hover, .trash-tab.active { background:var(--accent); color:#fff; }
-    .trash-section { display:none; }
-    .trash-section.active { display:block; }
-    .badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:0.65rem; font-weight:600; text-transform:uppercase; }
-    .badge-admin { background:var(--accent); color:#fff; }
-    .badge-owner { background:var(--warn); color:#000; }
-    .badge-tenant { background:var(--success); color:#000; }
-    .badge-superadmin { background:var(--danger); color:#fff; }
-    .text-muted { color:var(--text-muted); }
-    @media(max-width:768px){ .stats-grid { grid-template-columns:1fr 1fr; } .modal .form-row { grid-template-columns:1fr; } }
+
+    /* ─── MADE BY KALI ─── */
+    .made-by-kali { position:fixed; bottom:12px; right:16px; z-index:999; display:flex; align-items:center; gap:6px; color:#6b7280; font-size:0.7rem; font-family:'SF Mono','Fira Code','Cascadia Code',monospace; letter-spacing:0.8px; opacity:0.5; transition:opacity 0.3s; pointer-events:none; }
+    .made-by-kali span { color:var(--accent); font-weight:600; opacity:0.85; }
+
+    /* ─── RESPONSIVE ─── */
+    @media(max-width:768px){ .sidebar { width:60px; } .sidebar-brand span, .sidebar-nav a span, .sidebar-footer .user-name, .sidebar-footer .user-role { display:none; } .sidebar-brand { padding:0 10px 16px; justify-content:center; } .sidebar-nav { padding:0 6px; } .sidebar-nav a { justify-content:center; padding:10px; } .main { margin-left:60px; padding:16px; } .stats-grid { grid-template-columns:1fr 1fr; } .modal .form-row { grid-template-columns:1fr; } .notice-form { grid-template-columns:1fr; } .notice-form .full-width { grid-column:1; } }
   </style>
 </head>
 <body>
 
-<div class="container">
-    <!-- HEADER -->
-    <header>
-        <h1>🏢 RentSathi Business <span id="roleBadge">Admin</span></h1>
-        <div>
-            <span class="text-muted" id="adminUserDisplay">admin</span>
-            <a href="/index.html" style="color:var(--accent); margin-right:12px;">🏠 Owner View</a>
-            <button class="btn-logout" id="logoutBtn">Logout</button>
-        </div>
-    </header>
+<!-- ═══ SIDEBAR ═══ -->
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <img src="/logo.svg" alt="">
+    <span>SajiloRent</span>
+  </div>
+  <div class="sidebar-nav">
+    <a class="active" data-tab="tab-dashboard">📊 <span>Dashboard</span></a>
+    <a data-tab="tab-users">👥 <span>Users</span></a>
+    <a data-tab="tab-houses">🏠 <span>Houses</span></a>
+    <a data-tab="tab-trash">🗑️ <span>Trash</span></a>
+    <a data-tab="tab-notices">📢 <span>Notices</span></a>
+  </div>
+  <div class="sidebar-footer">
+    <div class="user-name" id="sidebarUser"></div>
+    <div class="user-role" id="sidebarRole">Admin</div>
+    <a class="logout-link" id="sidebarLogout">🚪 Sign out</a>
+  </div>
+</nav>
 
-    <!-- STATS -->
+<!-- ═══ MAIN ═══ -->
+<div class="main">
+
+  <!-- NOTIFICATION BANNERS (appear on all tabs) -->
+  <div class="notif-strip" id="notifStrip"></div>
+
+  <!-- ─── TAB: Dashboard ─── -->
+  <div class="tab-panel active" id="tab-dashboard">
+    <div class="main-header">
+      <div>
+        <h1>Dashboard</h1>
+        <div class="sub" id="dashSub">Overview</div>
+      </div>
+    </div>
     <div class="stats-grid">
-        <div class="stat-card"><div class="label">Owners</div><div class="value yellow" id="totalOwners">0</div></div>
-        <div class="stat-card"><div class="label">Tenants</div><div class="value green" id="totalTenants">0</div></div>
-        <div class="stat-card"><div class="label">Houses</div><div class="value blue" id="totalHouses">0</div></div>
-        <div class="stat-card"><div class="label">Admins</div><div class="value red" id="totalAdmins">0</div></div>
+      <div class="stat-card"><div class="label">Owners</div><div class="value yellow" id="totalOwners">0</div></div>
+      <div class="stat-card"><div class="label">Tenants</div><div class="value green" id="totalTenants">0</div></div>
+      <div class="stat-card"><div class="label">Houses</div><div class="value blue" id="totalHouses">0</div></div>
+      <div class="stat-card"><div class="label">Admins</div><div class="value red" id="totalAdmins">0</div></div>
     </div>
+  </div>
 
-    <!-- USERS -->
+  <!-- ─── TAB: Users ─── -->
+  <div class="tab-panel" id="tab-users">
+    <div class="main-header">
+      <div>
+        <h1>Users</h1>
+        <div class="sub">Manage owners and admins</div>
+      </div>
+      <button class="btn-primary" id="createUserBtn">➕ Create Owner</button>
+    </div>
     <div class="section-card">
-        <div class="section-header">
-            <h3>👥 Users <span class="badge-count" id="usersCount">0</span></h3>
-            <button class="btn-primary" id="createUserBtn">➕ Create Owner</button>
-        </div>
-        <div class="filter-bar">
-            <input type="text" id="usersSearch" placeholder="🔍 Search by username or name...">
-            <select id="usersRoleFilter"><option value="">All Roles</option><option value="owner">Owner</option><option value="admin">Admin</option></select>
-        </div>
+      <div class="filter-bar">
+        <input type="text" id="usersSearch" placeholder="🔍 Search by username or name...">
+        <select id="usersRoleFilter"><option value="">All Roles</option><option value="owner">Owner</option><option value="admin">Admin</option></select>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Username</th><th>Full Name</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="usersTable"><tr><td colspan="5" class="text-muted" style="text-align:center;">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── TAB: Houses ─── -->
+  <div class="tab-panel" id="tab-houses">
+    <div class="main-header">
+      <div>
+        <h1>Houses</h1>
+        <div class="sub">Manage properties</div>
+      </div>
+      <button class="btn-primary" id="createHouseBtn">➕ Create House</button>
+    </div>
+    <div class="section-card">
+      <div class="filter-bar">
+        <input type="text" id="housesSearch" placeholder="🔍 Search by name...">
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Name</th><th>Owner</th><th>Tenants</th><th>Actions</th></tr></thead>
+          <tbody id="housesTable"><tr><td colspan="4" class="text-muted" style="text-align:center;">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── TAB: Trash ─── -->
+  <div class="tab-panel" id="tab-trash">
+    <div class="main-header">
+      <div>
+        <h1>Trash</h1>
+        <div class="sub">Deleted items</div>
+      </div>
+    </div>
+    <div class="section-card">
+      <div>
+        <span class="trash-tab active" data-tab="trash-users">Users</span>
+        <span class="trash-tab" data-tab="trash-houses">Houses</span>
+        <span class="trash-tab" data-tab="trash-tenants">Tenants</span>
+      </div>
+      <div id="trash-users" class="trash-section active">
         <div class="table-wrapper">
-            <table>
-                <thead><tr><th>Username</th><th>Full Name</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
-                <tbody id="usersTable"><tr><td colspan="5" class="text-muted" style="text-align:center;">Loading...</td></tr></tbody>
-            </table>
+          <table><thead><tr><th>Username</th><th>Role</th><th>Deleted At</th><th>Actions</th></tr></thead>
+          <tbody id="trashUsersTable"><tr><td colspan="4" class="text-muted" style="text-align:center;">No deleted users.</td></tr></tbody></table>
         </div>
-    </div>
-
-    <!-- HOUSES -->
-    <div class="section-card">
-        <div class="section-header">
-            <h3>🏠 Houses <span class="badge-count" id="housesCount">0</span></h3>
-            <button class="btn-primary" id="createHouseBtn">➕ Create House</button>
-        </div>
-        <div class="filter-bar">
-            <input type="text" id="housesSearch" placeholder="🔍 Search by name...">
-        </div>
+      </div>
+      <div id="trash-houses" class="trash-section">
         <div class="table-wrapper">
-            <table>
-                <thead><tr><th>Name</th><th>Owner</th><th>Tenants</th><th>Actions</th></tr></thead>
-                <tbody id="housesTable"><tr><td colspan="4" class="text-muted" style="text-align:center;">Loading...</td></tr></tbody>
-            </table>
+          <table><thead><tr><th>House Name</th><th>Deleted At</th><th>Actions</th></tr></thead>
+          <tbody id="trashHousesTable"><tr><td colspan="3" class="text-muted" style="text-align:center;">No deleted houses.</td></tr></tbody></table>
         </div>
+      </div>
+      <div id="trash-tenants" class="trash-section">
+        <div class="table-wrapper">
+          <table><thead><tr><th>Tenant Name</th><th>House</th><th>Deleted At</th><th>Actions</th></tr></thead>
+          <tbody id="trashTenantsTable"><tr><td colspan="4" class="text-muted" style="text-align:center;">No deleted tenants.</td></tr></tbody></table>
+        </div>
+      </div>
     </div>
+  </div>
 
-    <!-- TRASH -->
-    <div class="section-card">
-        <div class="section-header"><h3>🗑️ Trash</h3></div>
-        <div>
-            <span class="trash-tab active" data-tab="trash-users">Users</span>
-            <span class="trash-tab" data-tab="trash-houses">Houses</span>
-            <span class="trash-tab" data-tab="trash-tenants">Tenants</span>
-        </div>
-        <div id="trash-users" class="trash-section active">
-            <div class="table-wrapper">
-                <table><thead><tr><th>Username</th><th>Role</th><th>Deleted At</th><th>Actions</th></tr></thead>
-                <tbody id="trashUsersTable"><tr><td colspan="4" class="text-muted" style="text-align:center;">No deleted users.</td></tr></tbody></table>
-            </div>
-        </div>
-        <div id="trash-houses" class="trash-section">
-            <div class="table-wrapper">
-                <table><thead><tr><th>House Name</th><th>Deleted At</th><th>Actions</th></tr></thead>
-                <tbody id="trashHousesTable"><tr><td colspan="3" class="text-muted" style="text-align:center;">No deleted houses.</td></tr></tbody></table>
-            </div>
-        </div>
-        <div id="trash-tenants" class="trash-section">
-            <div class="table-wrapper">
-                <table><thead><tr><th>Tenant Name</th><th>House</th><th>Deleted At</th><th>Actions</th></tr></thead>
-                <tbody id="trashTenantsTable"><tr><td colspan="4" class="text-muted" style="text-align:center;">No deleted tenants.</td></tr></tbody></table>
-            </div>
-        </div>
+  <!-- ─── TAB: Notices ─── -->
+  <div class="tab-panel" id="tab-notices">
+    <div class="main-header">
+      <div>
+        <h1>Notices</h1>
+        <div class="sub">Broadcast to owners</div>
+      </div>
     </div>
+    <div class="section-card">
+      <h3 style="margin-bottom:12px;">✏️ Create Notice</h3>
+      <form id="noticeForm" onsubmit="event.preventDefault(); createNotice();">
+        <div class="notice-form">
+          <div class="form-group">
+            <label>Title *</label>
+            <input type="text" id="noticeTitle" placeholder="Notice title" required maxlength="100">
+          </div>
+          <div class="form-group">
+            <label>Priority</label>
+            <select id="noticePriority">
+              <option value="normal">🟢 Normal</option>
+              <option value="high">🟡 High</option>
+              <option value="urgent">🔴 Urgent</option>
+              <option value="low">🔵 Low</option>
+            </select>
+          </div>
+          <div class="form-group full-width">
+            <label>Message *</label>
+            <textarea id="noticeMessage" rows="3" placeholder="Write your notice..." required maxlength="500"></textarea>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:8px;">
+          <button type="submit" class="btn-primary">📢 Broadcast Notice</button>
+          <span id="noticeStatus" style="font-size:0.82rem;color:var(--text-muted);"></span>
+        </div>
+      </form>
+    </div>
+    <div class="section-card">
+      <h3 style="margin-bottom:12px;">📋 Sent Notices</h3>
+      <div id="sentNoticesList">
+        <p class="text-muted" style="font-size:0.82rem;">No notices sent yet.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER SPACER -->
+  <div style="height:40px;"></div>
 </div>
 
-<!-- ===== MODALS ===== -->
+<!-- ═══ MADE BY KALI ═══ -->
+<div class="made-by-kali">made by <span>kali</span></div>
+
+<!-- ═══ MODALS ═══ -->
+
 <!-- Create / Edit User Modal -->
 <div class="modal-overlay" id="userModal">
-    <div class="modal">
-        <div class="modal-header">
-            <h3 id="userModalTitle">Create Owner</h3>
-            <span class="modal-close" onclick="closeModal('userModal')">×</span>
-        </div>
-        <form id="userForm">
-            <input type="hidden" id="editUserId">
-            <div class="form-group"><label>Full Name *</label><input type="text" id="userFullName" required></div>
-            <div class="form-group"><label>Username *</label><input type="text" id="userUsername" required></div>
-            <div class="form-group"><label>Password *</label><input type="text" id="userPassword" required></div>
-            <div class="form-row">
-                <div class="form-group"><label>Phone</label><input type="text" id="userPhone"></div>
-                <div class="form-group"><label>Email</label><input type="email" id="userEmail"></div>
-            </div>
-            <div class="form-group"><label>Address</label><input type="text" id="userAddress"></div>
-            <div class="form-group"><label>Notes</label><textarea id="userNotes" rows="2"></textarea></div>
-            <div class="form-actions">
-                <button type="button" class="btn-outline" onclick="closeModal('userModal')">Cancel</button>
-                <button type="submit" class="btn-success" id="userSubmitBtn">Save</button>
-            </div>
-        </form>
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="userModalTitle">Create Owner</h3>
+      <span class="modal-close" onclick="closeModal('userModal')">×</span>
     </div>
+    <form id="userForm">
+      <input type="hidden" id="editUserId">
+      <div class="form-group"><label>Full Name *</label><input type="text" id="userFullName" required></div>
+      <div class="form-group"><label>Username *</label><input type="text" id="userUsername" required></div>
+      <div class="form-group"><label>Password *</label><input type="text" id="userPassword" required></div>
+      <div class="form-row">
+        <div class="form-group"><label>Phone</label><input type="text" id="userPhone"></div>
+        <div class="form-group"><label>Email</label><input type="email" id="userEmail"></div>
+      </div>
+      <div class="form-group"><label>Address</label><input type="text" id="userAddress"></div>
+      <div class="form-group"><label>Notes</label><textarea id="userNotes" rows="2"></textarea></div>
+      <div class="form-actions">
+        <button type="button" class="btn-outline" onclick="closeModal('userModal')">Cancel</button>
+        <button type="submit" class="btn-success" id="userSubmitBtn">Save</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <!-- Subscription Modal -->
 <div class="modal-overlay" id="subscriptionModal">
-    <div class="modal">
-        <div class="modal-header">
-            <h3>Manage Subscription</h3>
-            <span class="modal-close" onclick="closeModal('subscriptionModal')">×</span>
-        </div>
-        <form id="subscriptionForm">
-            <input type="hidden" id="subUserId">
-            <div class="form-group">
-                <label>Action</label>
-                <select id="subAction">
-                    <option value="activate">Activate</option>
-                    <option value="deactivate">Deactivate</option>
-                    <option value="cancel">Cancel</option>
-                    <option value="extend">Extend (days)</option>
-                </select>
-            </div>
-            <div class="form-group" id="subDaysGroup" style="display:none;">
-                <label>Days to extend</label>
-                <input type="number" id="subDays" value="30" min="1">
-            </div>
-            <div class="form-actions">
-                <button type="button" class="btn-outline" onclick="closeModal('subscriptionModal')">Cancel</button>
-                <button type="submit" class="btn-success">Apply</button>
-            </div>
-        </form>
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Manage Subscription</h3>
+      <span class="modal-close" onclick="closeModal('subscriptionModal')">×</span>
     </div>
+    <form id="subscriptionForm">
+      <input type="hidden" id="subUserId">
+      <div class="form-group">
+        <label>Action</label>
+        <select id="subAction">
+          <option value="activate">Activate</option>
+          <option value="deactivate">Deactivate</option>
+          <option value="cancel">Cancel</option>
+          <option value="extend">Extend (days)</option>
+        </select>
+      </div>
+      <div class="form-group" id="subDaysGroup" style="display:none;">
+        <label>Days to extend</label>
+        <input type="number" id="subDays" value="30" min="1">
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn-outline" onclick="closeModal('subscriptionModal')">Cancel</button>
+        <button type="submit" class="btn-success">Apply</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <!-- Password Confirm Modal -->
 <div class="modal-overlay" id="passwordModal">
-    <div class="modal">
-        <div class="modal-header">
-            <h3>🔐 Confirm Password</h3>
-            <span class="modal-close" onclick="closeModal('passwordModal')">×</span>
-        </div>
-        <form id="passwordForm">
-            <div class="form-group">
-                <label>Enter your password</label>
-                <input type="password" id="confirmPassword" required>
-            </div>
-            <div class="form-actions">
-                <button type="button" class="btn-outline" onclick="closeModal('passwordModal')">Cancel</button>
-                <button type="submit" class="btn-danger">Confirm</button>
-            </div>
-        </form>
+  <div class="modal">
+    <div class="modal-header">
+      <h3>🔐 Confirm Password</h3>
+      <span class="modal-close" onclick="closeModal('passwordModal')">×</span>
     </div>
+    <form id="passwordForm">
+      <div class="form-group">
+        <label>Enter your password</label>
+        <input type="password" id="confirmPassword" required>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn-outline" onclick="closeModal('passwordModal')">Cancel</button>
+        <button type="submit" class="btn-danger">Confirm</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Notice Modal -->
+<div class="modal-overlay" id="editNoticeModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>✏️ Edit Notice</h3>
+      <span class="modal-close" onclick="closeModal('editNoticeModal')">×</span>
+    </div>
+    <form id="editNoticeForm">
+      <input type="hidden" id="editNoticeId">
+      <div class="form-group">
+        <label>Title</label>
+        <input type="text" id="editNoticeTitle" required maxlength="100">
+      </div>
+      <div class="form-group">
+        <label>Priority</label>
+        <select id="editNoticePriority">
+          <option value="normal">🟢 Normal</option>
+          <option value="high">🟡 High</option>
+          <option value="urgent">🔴 Urgent</option>
+          <option value="low">🔵 Low</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Message</label>
+        <textarea id="editNoticeMessage" rows="3" required maxlength="500"></textarea>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn-outline" onclick="closeModal('editNoticeModal')">Cancel</button>
+        <button type="submit" class="btn-success">Save Changes</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <script>
@@ -246,14 +452,28 @@
     const API_BASE = '/api';
     let authToken = token;
     const isSuperAdmin = user.role === 'superadmin';
-    document.getElementById('roleBadge').textContent = isSuperAdmin ? 'SuperAdmin' : 'Admin';
-    document.getElementById('adminUserDisplay').textContent = user.username;
+    document.getElementById('sidebarUser').textContent = user.username;
+    document.getElementById('sidebarRole').textContent = isSuperAdmin ? 'SuperAdmin' : 'Admin';
+    document.getElementById('dashSub').textContent = 'Welcome, ' + user.username;
 
     function logout() {
         localStorage.removeItem('token'); localStorage.removeItem('user');
         window.location.href = '/login.html';
     }
-    document.getElementById('logoutBtn').addEventListener('click', logout);
+    document.getElementById('sidebarLogout').addEventListener('click', logout);
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // TAB NAVIGATION
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    document.querySelectorAll('.sidebar-nav a').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.querySelectorAll('.sidebar-nav a').forEach(l => l.classList.remove('active'));
+            this.classList.add('active');
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.getElementById(this.dataset.tab).classList.add('active');
+        });
+    });
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // API HELPER
@@ -273,12 +493,8 @@
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // MODAL HELPERS
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    function openModal(id) {
-        document.getElementById(id).classList.add('active');
-    }
-    function closeModal(id) {
-        document.getElementById(id).classList.remove('active');
-    }
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // TOAST
@@ -325,60 +541,53 @@
         renderTrash();
     }
 
-    // ─── Users ──────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════
+    // USERS
+    // ═══════════════════════════════════════════════════════════
     function renderUsers() {
         const search = document.getElementById('usersSearch').value.toLowerCase();
         const roleFilter = document.getElementById('usersRoleFilter').value;
-        let filtered = allUsers.filter(u => 
+        let filtered = allUsers.filter(u =>
             (u.username.toLowerCase().includes(search) || (u.fullName||'').toLowerCase().includes(search)) &&
             (roleFilter ? u.role === roleFilter : true)
         );
-        document.getElementById('usersCount').textContent = filtered.length;
         const tbody = document.getElementById('usersTable');
         if (!filtered.length) {
             tbody.innerHTML = `<tr><td colspan="5" class="text-muted" style="text-align:center;">No users found</td></tr>`;
             return;
         }
         const badgeMap = { admin:'badge-admin', owner:'badge-owner', tenant:'badge-tenant', superadmin:'badge-superadmin' };
+        const subBadge = { active:'badge-sub-active', inactive:'badge-sub-inactive', cancelled:'badge-sub-cancelled' };
         tbody.innerHTML = filtered.map(u => {
             let actionsHtml = '';
             const canEdit = (isSuperAdmin) || (u.role !== 'admin' && u.role !== 'superadmin' && u.id !== user.id);
             const canDelete = (isSuperAdmin) || (u.role !== 'admin' && u.role !== 'superadmin');
             const canManageSub = (u.role === 'owner' && (isSuperAdmin || u.id !== user.id));
 
-            if (canEdit) {
-                actionsHtml += `<button onclick="editUser(${u.id})">✏️</button>`;
-            }
-            if (canManageSub) {
-                actionsHtml += `<button onclick="manageSubscription(${u.id})">📅</button>`;
-            }
-            if (canDelete) {
-                actionsHtml += `<button onclick="deleteUser(${u.id})">🗑️</button>`;
-            }
+            if (canEdit) actionsHtml += `<button onclick="editUser(${u.id})" title="Edit">✏️</button>`;
+            if (canManageSub) actionsHtml += `<button onclick="manageSubscription(${u.id})" title="Subscription">📅</button>`;
+            if (canDelete) actionsHtml += `<button onclick="deleteUser(${u.id})" title="Delete">🗑️</button>`;
 
             let displayName = u.fullName || '—';
-            if (u.role === 'superadmin' && !isSuperAdmin) {
-                displayName = '***';
-            }
+            if (u.role === 'superadmin' && !isSuperAdmin) displayName = '***';
+            const subStatus = u.subscription_status || 'active';
 
-            return `
-            <tr>
+            return `<tr>
                 <td><strong>${u.username}</strong></td>
                 <td>${displayName}</td>
                 <td><span class="badge ${badgeMap[u.role] || ''}">${u.role}</span></td>
-                <td>${u.subscription_status || 'active'}</td>
-                <td>
-                    <div class="actions">${actionsHtml}</div>
-                </td>
+                <td><span class="badge ${subBadge[subStatus] || 'badge-sub-active'}">${subStatus}</span></td>
+                <td><div class="actions">${actionsHtml}</div></td>
             </tr>`;
         }).join('');
     }
 
-    // ─── Houses ──────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════
+    // HOUSES
+    // ═══════════════════════════════════════════════════════════
     function renderHouses() {
         const search = document.getElementById('housesSearch').value.toLowerCase();
         let filtered = allHouses.filter(h => h.toLowerCase().includes(search));
-        document.getElementById('housesCount').textContent = filtered.length;
         const tbody = document.getElementById('housesTable');
         if (!filtered.length) {
             tbody.innerHTML = `<tr><td colspan="4" class="text-muted" style="text-align:center;">No houses found</td></tr>`;
@@ -390,19 +599,21 @@
             const tenantCount = allTenants.filter(t => t.houseName === h).length;
             return `<tr>
                 <td><strong>${h}</strong></td>
-                <td>${owner ? owner.username : '—'}</td>
-                <td>${tenantCount}</td>
+                <td>${owner ? owner.username : '<span class="text-muted">—</span>'}</td>
+                <td><span class="badge badge-tenant">${tenantCount}</span></td>
                 <td>
                     <div class="actions">
-                        <button onclick="editHouse('${h}')">✏️</button>
-                        <button onclick="deleteHouse('${h}')">🗑️</button>
+                        <button onclick="editHouse('${h}')" title="Edit">✏️</button>
+                        <button onclick="deleteHouse('${h}')" title="Delete">🗑️</button>
                     </div>
                 </td>
             </tr>`;
         }).join('');
     }
 
-    // ─── Stats ──────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════
+    // STATS
+    // ═══════════════════════════════════════════════════════════
     function renderStats() {
         document.getElementById('totalOwners').textContent = allUsers.filter(u => u.role === 'owner').length;
         document.getElementById('totalTenants').textContent = allUsers.filter(u => u.role === 'tenant').length;
@@ -410,69 +621,62 @@
         document.getElementById('totalAdmins').textContent = allUsers.filter(u => u.role === 'admin' || u.role === 'superadmin').length;
     }
 
-    // ─── Trash ──────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════
+    // TRASH
+    // ═══════════════════════════════════════════════════════════
     function renderTrash() {
-        // Users
         const userTbody = document.getElementById('trashUsersTable');
         if (!deletedUsers.length) {
             userTbody.innerHTML = `<tr><td colspan="4" class="text-muted" style="text-align:center;">No deleted users.</td></tr>`;
         } else {
-            userTbody.innerHTML = deletedUsers.map(u => `
-                <tr>
-                    <td>${u.username}</td>
-                    <td>${u.role}</td>
-                    <td>${u.deleted_at ? new Date(u.deleted_at).toLocaleString() : '—'}</td>
-                    <td>
-                        <div class="actions">
-                            <button onclick="restoreUser(${u.id})">↩️ Restore</button>
-                            <button onclick="permanentDeleteUser(${u.id})">💀 Delete</button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
+            userTbody.innerHTML = deletedUsers.map(u => `<tr>
+                <td>${u.username}</td>
+                <td>${u.role}</td>
+                <td>${u.deleted_at ? new Date(u.deleted_at).toLocaleString() : '—'}</td>
+                <td>
+                    <div class="actions">
+                        <button onclick="restoreUser(${u.id})" class="btn-success btn-sm">↩️ Restore</button>
+                        <button onclick="permanentDeleteUser(${u.id})" class="btn-danger btn-sm">💀 Delete</button>
+                    </div>
+                </td>
+            </tr>`).join('');
         }
-        // Houses
         const houseTbody = document.getElementById('trashHousesTable');
         if (!deletedHouses.length) {
             houseTbody.innerHTML = `<tr><td colspan="3" class="text-muted" style="text-align:center;">No deleted houses.</td></tr>`;
         } else {
-            houseTbody.innerHTML = deletedHouses.map(h => `
-                <tr>
-                    <td>${h.name}</td>
-                    <td>${h.deleted_at ? new Date(h.deleted_at).toLocaleString() : '—'}</td>
-                    <td>
-                        <div class="actions">
-                            <button onclick="restoreHouse('${h.name}')">↩️ Restore</button>
-                            <button onclick="permanentDeleteHouse('${h.name}')">💀 Delete</button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
+            houseTbody.innerHTML = deletedHouses.map(h => `<tr>
+                <td>${h.name}</td>
+                <td>${h.deleted_at ? new Date(h.deleted_at).toLocaleString() : '—'}</td>
+                <td>
+                    <div class="actions">
+                        <button onclick="restoreHouse('${h.name}')" class="btn-success btn-sm">↩️ Restore</button>
+                        <button onclick="permanentDeleteHouse('${h.name}')" class="btn-danger btn-sm">💀 Delete</button>
+                    </div>
+                </td>
+            </tr>`).join('');
         }
-        // Tenants
         const tenantTbody = document.getElementById('trashTenantsTable');
         if (!deletedTenants.length) {
             tenantTbody.innerHTML = `<tr><td colspan="4" class="text-muted" style="text-align:center;">No deleted tenants.</td></tr>`;
         } else {
-            tenantTbody.innerHTML = deletedTenants.map(t => `
-                <tr>
-                    <td>${t.name}</td>
-                    <td>${t.houseName}</td>
-                    <td>${t.deleted_at ? new Date(t.deleted_at).toLocaleString() : '—'}</td>
-                    <td>
-                        <div class="actions">
-                            <button onclick="restoreTenant(${t.id}, '${t.houseName}')">↩️ Restore</button>
-                            <button onclick="permanentDeleteTenant(${t.id}, '${t.houseName}')">💀 Delete</button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
+            tenantTbody.innerHTML = deletedTenants.map(t => `<tr>
+                <td>${t.name}</td>
+                <td>${t.houseName}</td>
+                <td>${t.deleted_at ? new Date(t.deleted_at).toLocaleString() : '—'}</td>
+                <td>
+                    <div class="actions">
+                        <button onclick="restoreTenant(${t.id}, '${t.houseName}')" class="btn-success btn-sm">↩️ Restore</button>
+                        <button onclick="permanentDeleteTenant(${t.id}, '${t.houseName}')" class="btn-danger btn-sm">💀 Delete</button>
+                    </div>
+                </td>
+            </tr>`).join('');
         }
     }
 
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // ═══════════════════════════════════════════════════════════
     // CRUD OPERATIONS
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // ═══════════════════════════════════════════════════════════
 
     // ─── Create / Edit User ──────────────────────────────────────
     document.getElementById('createUserBtn').addEventListener('click', function() {
@@ -492,23 +696,9 @@
     window.editUser = async (userId) => {
         const u = allUsers.find(x => x.id === userId);
         if (!u) return;
-        if (u.role === 'admin' && !isSuperAdmin) {
-            showToast('You do not have permission to edit admin accounts.', 'error');
-            return;
-        }
-        if (u.role === 'superadmin' && !isSuperAdmin) {
-            showToast('You do not have permission to edit SuperAdmin.', 'error');
-            return;
-        }
-        if (u.id === user.id && !isSuperAdmin) {
-            showToast('You cannot edit your own account.', 'error');
-            return;
-        }
-        if ((u.role === 'admin' || u.role === 'superadmin') && !isSuperAdmin) {
-            showToast('You do not have permission.', 'error');
-            return;
-        }
-
+        if (u.role === 'admin' && !isSuperAdmin) { showToast('You do not have permission to edit admin accounts.', 'error'); return; }
+        if (u.role === 'superadmin' && !isSuperAdmin) { showToast('You do not have permission to edit SuperAdmin.', 'error'); return; }
+        if (u.id === user.id && !isSuperAdmin) { showToast('You cannot edit your own account.', 'error'); return; }
         document.getElementById('editUserId').value = u.id;
         document.getElementById('userFullName').value = u.fullName || '';
         document.getElementById('userUsername').value = u.username;
@@ -532,30 +722,19 @@
         const email = document.getElementById('userEmail').value.trim();
         const address = document.getElementById('userAddress').value.trim();
         const notes = document.getElementById('userNotes').value.trim();
-
-        if (!username || !fullName) {
-            showToast('Full Name and Username are required', 'error');
-            return;
-        }
-
+        if (!username || !fullName) { showToast('Full Name and Username are required', 'error'); return; }
         try {
             if (userId) {
-                // ✅ FIX: use /auth/users for PUT
                 await api('PUT', `/auth/users/${userId}`, { fullName, phone, email, address, notes });
                 showToast('User updated successfully');
             } else {
-                if (!password) {
-                    showToast('Password is required for new user', 'error');
-                    return;
-                }
+                if (!password) { showToast('Password is required for new user', 'error'); return; }
                 await api('POST', '/auth/users', { username, password, role: 'owner', fullName, phone, email, address, notes });
                 showToast('Owner created successfully');
             }
             closeModal('userModal');
             loadAll();
-        } catch (err) {
-            showToast('Error: ' + err.message, 'error');
-        }
+        } catch (err) { showToast('Error: ' + err.message, 'error'); }
     });
 
     // ─── Subscription ────────────────────────────────────────────
@@ -565,11 +744,9 @@
         document.getElementById('subDaysGroup').style.display = 'none';
         openModal('subscriptionModal');
     };
-
     document.getElementById('subAction').addEventListener('change', function() {
         document.getElementById('subDaysGroup').style.display = this.value === 'extend' ? 'block' : 'none';
     });
-
     document.getElementById('subscriptionForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const userId = document.getElementById('subUserId').value;
@@ -580,23 +757,15 @@
             showToast('Subscription updated');
             closeModal('subscriptionModal');
             loadAll();
-        } catch (err) {
-            showToast('Error: ' + err.message, 'error');
-        }
+        } catch (err) { showToast('Error: ' + err.message, 'error'); }
     });
 
     // ─── Delete User ─────────────────────────────────────────────
     window.deleteUser = async (userId) => {
         const u = allUsers.find(x => x.id === userId);
         if (!u) return;
-        if (u.id === user.id) {
-            showToast('You cannot delete your own account.', 'error');
-            return;
-        }
-        if ((u.role === 'admin' || u.role === 'superadmin') && !isSuperAdmin) {
-            showToast('You do not have permission to delete admin accounts.', 'error');
-            return;
-        }
+        if (u.id === user.id) { showToast('You cannot delete your own account.', 'error'); return; }
+        if ((u.role === 'admin' || u.role === 'superadmin') && !isSuperAdmin) { showToast('You do not have permission to delete admin accounts.', 'error'); return; }
         if (!confirm(`Move user "${u.username}" to trash?`)) return;
         try {
             await api('POST', `/admin/users/${userId}/delete`, {});
@@ -607,19 +776,13 @@
 
     // ─── Restore / Permanent Delete ─────────────────────────────
     window.restoreUser = async (userId) => {
-        try {
-            await api('POST', `/admin/trash/users/restore/${userId}`, {});
-            showToast('User restored.');
-            loadAll();
-        } catch(e) { showToast(e.message, 'error'); }
+        try { await api('POST', `/admin/trash/users/restore/${userId}`, {}); showToast('User restored.'); loadAll(); }
+        catch(e) { showToast(e.message, 'error'); }
     };
     window.permanentDeleteUser = async (userId) => {
         if (!confirm('Permanently delete this user?')) return;
-        try {
-            await api('DELETE', `/admin/trash/users/permanent/${userId}`, {});
-            showToast('User permanently deleted.');
-            loadAll();
-        } catch(e) { showToast(e.message, 'error'); }
+        try { await api('DELETE', `/admin/trash/users/permanent/${userId}`, {}); showToast('User permanently deleted.'); loadAll(); }
+        catch(e) { showToast(e.message, 'error'); }
     };
 
     // ─── Houses ──────────────────────────────────────────────────
@@ -662,36 +825,24 @@
     };
 
     window.restoreHouse = async (houseId) => {
-        try {
-            await api('POST', `/admin/trash/houses/restore/${houseId}`, {});
-            showToast('House restored.');
-            loadAll();
-        } catch(e) { showToast(e.message, 'error'); }
+        try { await api('POST', `/admin/trash/houses/restore/${houseId}`, {}); showToast('House restored.'); loadAll(); }
+        catch(e) { showToast(e.message, 'error'); }
     };
     window.permanentDeleteHouse = async (houseId) => {
         if (!confirm('Permanently delete this house and all its data?')) return;
-        try {
-            await api('DELETE', `/admin/trash/houses/permanent/${houseId}`, {});
-            showToast('House permanently deleted.');
-            loadAll();
-        } catch(e) { showToast(e.message, 'error'); }
+        try { await api('DELETE', `/admin/trash/houses/permanent/${houseId}`, {}); showToast('House permanently deleted.'); loadAll(); }
+        catch(e) { showToast(e.message, 'error'); }
     };
 
     // ─── Tenants ──────────────────────────────────────────────────
     window.restoreTenant = async (tenantId, houseId) => {
-        try {
-            await api('POST', `/admin/trash/tenants/restore/${tenantId}?houseId=${houseId}`, {});
-            showToast('Tenant restored.');
-            loadAll();
-        } catch(e) { showToast(e.message, 'error'); }
+        try { await api('POST', `/admin/trash/tenants/restore/${tenantId}?houseId=${houseId}`, {}); showToast('Tenant restored.'); loadAll(); }
+        catch(e) { showToast(e.message, 'error'); }
     };
     window.permanentDeleteTenant = async (tenantId, houseId) => {
         if (!confirm('Permanently delete this tenant?')) return;
-        try {
-            await api('DELETE', `/admin/trash/tenants/permanent/${tenantId}?houseId=${houseId}`, {});
-            showToast('Tenant permanently deleted.');
-            loadAll();
-        } catch(e) { showToast(e.message, 'error'); }
+        try { await api('DELETE', `/admin/trash/tenants/permanent/${tenantId}?houseId=${houseId}`, {}); showToast('Tenant permanently deleted.'); loadAll(); }
+        catch(e) { showToast(e.message, 'error'); }
     };
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -711,14 +862,141 @@
         });
     });
 
-    // ─── Password confirmation for delete actions ─────────────
-    // (For normal admin, delete actions don't require password confirmation on frontend – backend handles it)
-    // But we keep the password modal for consistency if needed.
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // NOTIFICATIONS
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    const priorityIcon = { urgent:'🔴', high:'🟡', normal:'🔵', low:'🟢' };
+    const priorityLabel = { urgent:'🔴 Urgent', high:'🟡 High', normal:'🔵 Normal', low:'🟢 Low' };
+
+    async function loadNotices() {
+        try {
+            const notifs = await api('GET', '/notifications');
+            const strip = document.getElementById('notifStrip');
+            if (!notifs || notifs.length === 0) { strip.innerHTML = ''; return; }
+            strip.innerHTML = notifs.map(n => `
+                <div class="notif-banner ${n.priority || 'normal'}">
+                    <span class="nf-icon">${priorityIcon[n.priority] || '📌'}</span>
+                    <div class="nf-body">
+                        <div class="nf-title">${escHtml(n.title)}</div>
+                        <div class="nf-msg">${escHtml(n.message)}</div>
+                        <div class="nf-meta">From ${escHtml(n.sender_name)}</div>
+                    </div>
+                    <button class="nf-dismiss" onclick="dismissNotif(${n.id})">✕</button>
+                </div>
+            `).join('');
+        } catch (e) { console.error('Failed to load notices:', e); }
+    }
+
+    window.dismissNotif = async (id) => {
+        try { await api('PATCH', `/notifications/${id}/dismiss`); await loadNotices(); }
+        catch (e) { console.error('Failed to dismiss:', e); }
+    };
+
+    window.createNotice = async () => {
+        const title = document.getElementById('noticeTitle').value.trim();
+        const message = document.getElementById('noticeMessage').value.trim();
+        const priority = document.getElementById('noticePriority').value;
+        if (!title || !message) { alert('Title and message are required.'); return; }
+        const statusEl = document.getElementById('noticeStatus');
+        statusEl.textContent = 'Sending...';
+        try {
+            await api('POST', '/notifications', { title, message, priority });
+            document.getElementById('noticeForm').reset();
+            statusEl.textContent = '✅ Notice broadcast!';
+            setTimeout(() => statusEl.textContent = '', 3000);
+            await loadSentNotices();
+        } catch (err) { statusEl.textContent = '❌ ' + err.message; }
+    };
+
+    async function loadSentNotices() {
+        try {
+            const notifs = await api('GET', '/notifications/sent');
+            const uid = Number(user.id);
+            const mine = notifs.filter(n => Number(n.sender_id) === uid);
+            const container = document.getElementById('sentNoticesList');
+            if (!mine.length) {
+                container.innerHTML = '<p class="text-muted" style="font-size:0.82rem;">No notices sent yet.</p>';
+                return;
+            }
+            container.innerHTML = mine.map(n => `
+                <div class="notice-item ${n.priority || 'normal'}" style="display:flex;justify-content:space-between;align-items:flex-start;">
+                    <div style="flex:1;">
+                        <div style="display:flex;justify-content:space-between;gap:8px;">
+                            <strong>${escHtml(n.title)}</strong>
+                            <span style="font-size:0.7rem;color:var(--text-muted);white-space:nowrap;">${priorityLabel[n.priority] || 'Normal'}</span>
+                        </div>
+                        <p style="font-size:0.82rem;color:var(--text-2);margin-top:4px;">${escHtml(n.message)}</p>
+                        <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px;">
+                            Status: ${n.is_active ? '<span style="color:var(--success);">Active</span>' : '<span style="color:var(--text-muted);">Dismissed</span>'} &middot;
+                            Target: ${n.target_role} &middot; ${new Date(n.created_at).toLocaleDateString()}
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:4px;flex-shrink:0;">
+                        <button class="notice-edit-btn" onclick="openEditNoticeModal(${n.id})" title="Edit">✏️</button>
+                        <button class="notice-edit-btn" onclick="deleteSentNotice(${n.id})" title="Delete" style="color:var(--danger);">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (e) { console.error('Failed to load sent notices:', e); }
+    }
+
+    // ─── Edit Notice ─────────────────────────────────────────
+    let currentEditNotif = null;
+
+    window.openEditNoticeModal = async (notifId) => {
+        try {
+            const notifs = await api('GET', '/notifications/sent');
+            const n = notifs.find(x => x.id === notifId && x.sender_id === user.id);
+            if (!n) { showToast('Notice not found', 'error'); return; }
+            currentEditNotif = n;
+            document.getElementById('editNoticeId').value = n.id;
+            document.getElementById('editNoticeTitle').value = n.title;
+            document.getElementById('editNoticeMessage').value = n.message;
+            document.getElementById('editNoticePriority').value = n.priority || 'normal';
+            openModal('editNoticeModal');
+        } catch (e) { showToast('Failed to load notice', 'error'); }
+    };
+
+    document.getElementById('editNoticeForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('editNoticeId').value;
+        const title = document.getElementById('editNoticeTitle').value.trim();
+        const message = document.getElementById('editNoticeMessage').value.trim();
+        const priority = document.getElementById('editNoticePriority').value;
+        if (!title || !message) { showToast('Title and message are required', 'error'); return; }
+        try {
+            await api('PUT', `/notifications/${id}`, { title, message, priority });
+            showToast('Notice updated!');
+            closeModal('editNoticeModal');
+            await loadSentNotices();
+            await loadNotices();
+        } catch (err) { showToast('Error: ' + err.message, 'error'); }
+    });
+
+    window.deleteSentNotice = async (id) => {
+        if (!confirm('Delete this notice permanently?')) return;
+        try {
+            await api('DELETE', `/notifications/${id}`);
+            showToast('Notice deleted');
+            await loadSentNotices();
+            await loadNotices();
+        } catch (e) { showToast('Error: ' + e.message, 'error'); }
+    };
+
+    function escHtml(s) {
+        if (!s) return '';
+        const d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // INIT
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     loadAll();
+    loadNotices();
+    loadSentNotices();
 </script>
 </body>
 </html>

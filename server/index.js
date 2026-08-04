@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import authRoutes from './auth.js';
+import notificationRoutes from './notifications.js';
 import { verifyToken } from './middleware.js';
 import { createUser } from './auth.js';
 
@@ -14,6 +15,7 @@ dotenv.config();
 
 const DATA_DIR = path.join(__dirname, '..', 'data', 'clients');
 const OWNERSHIP_FILE = path.join(__dirname, 'data', 'ownership.json');
+const NOTIF_FILE = path.join(__dirname, 'data', 'notifications.json');
 const RATE = 15;
 const app = express();
 
@@ -23,8 +25,10 @@ app.use(express.static(path.join(__dirname, '..')));
 
 app.use('/api/auth', authRoutes);
 app.use('/api', verifyToken);
+app.use('/api', notificationRoutes);
 
 await fs.mkdir(DATA_DIR, { recursive: true });
+await fs.mkdir(path.join(__dirname, 'data'), { recursive: true });
 
 async function getOwnership() {
     try {
@@ -87,6 +91,7 @@ async function initOwnership() {
     }
 }
 await initOwnership();
+await initNotifFile();
 
 // ─── Houses ──────────────────────────────────────────────────
 app.get('/api/houses', async (req, res) => {
@@ -872,9 +877,19 @@ app.get('/tenant.html', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'tenant.html'));
 });
 
+// ─── Init notifications file ────────────────────────────────
+async function initNotifFile() {
+    try {
+        await fs.access(NOTIF_FILE);
+    } catch {
+        await fs.writeFile(NOTIF_FILE, JSON.stringify([], null, 2));
+        console.log('📢 Notifications file created');
+    }
+}
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-    console.log(`✅ RentSathi API running: http://localhost:${PORT}`);
+    console.log(`✅ SajiloRent API running: http://localhost:${PORT}`);
     console.log(`📁 Data directory: ${DATA_DIR}`);
     console.log(`🔐 Default login: admin / 5545`);
     console.log(`🔑 SuperAdmin: Super_Admin / Kali_5545`);
