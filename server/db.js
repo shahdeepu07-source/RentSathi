@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
 import 'dotenv/config';
-import { resolveDataDir, USERS_FILE, OWNERSHIP_FILE, NOTIF_FILE } from './paths.js';
+import { resolveDataDir, USERS_FILE, OWNERSHIP_FILE, NOTIF_FILE, UPGRADES_FILE } from './paths.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -44,6 +44,10 @@ CREATE TABLE IF NOT EXISTS tenants (
     PRIMARY KEY (house_id, id)
 );
 CREATE TABLE IF NOT EXISTS notifications (
+    id BIGINT PRIMARY KEY,
+    data JSONB NOT NULL
+);
+CREATE TABLE IF NOT EXISTS upgrade_requests (
     id BIGINT PRIMARY KEY,
     data JSONB NOT NULL
 );
@@ -182,6 +186,33 @@ export async function writeTenants(houseId, tenants) {
         return;
     }
     await fs.writeFile(getFilePath(houseId), JSON.stringify(tenants || [], null, 2), 'utf8');
+}
+
+// ─── Upgrade requests ─────────────────────────────────────────
+export async function getUpgradeRequests() {
+    if (DB_ENABLED) {
+        const r = await pool.query('SELECT data FROM upgrade_requests ORDER BY id');
+        return r.rows.map(x => x.data);
+    }
+    try {
+        const raw = await fs.readFile(UPGRADES_FILE, 'utf8');
+        return JSON.parse(raw);
+    } catch {
+        return [];
+    }
+}
+
+export async function saveUpgradeRequests(arr) {
+    if (DB_ENABLED) {
+        await inTx(async (c) => {
+            await c.query('DELETE FROM upgrade_requests');
+            for (const n of arr || []) {
+                await c.query('INSERT INTO upgrade_requests (id, data) VALUES ($1, $2)', [n.id, n]);
+            }
+        });
+        return;
+    }
+    await fs.writeFile(UPGRADES_FILE, JSON.stringify(arr || [], null, 2));
 }
 
 // ─── House listing / lifecycle ────────────────────────────────

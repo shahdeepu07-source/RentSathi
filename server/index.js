@@ -9,7 +9,7 @@ import notificationRoutes from './notifications.js';
 import { verifyToken } from './middleware.js';
 import { createUser } from './auth.js';
 import { resolveDataDir } from './paths.js';
-import { getUsers, saveUsers, getOwnership, saveOwnership, readTenants, writeTenants, listHouseIds, houseExists, renameHouse, deleteHousePermanent, getNotifs, saveNotifs } from './db.js';
+import { getUsers, saveUsers, getOwnership, saveOwnership, readTenants, writeTenants, listHouseIds, houseExists, renameHouse, deleteHousePermanent, getNotifs, saveNotifs, getUpgradeRequests, saveUpgradeRequests } from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -830,6 +830,56 @@ app.delete('/api/admin/trash/tenants/permanent/:tenantId', async (req, res) => {
     } catch (err) {
         console.error('Error permanently deleting tenant:', err);
         res.status(500).json({ error: 'Failed to permanently delete tenant' });
+    }
+});
+
+// ─── Subscription / upgrade requests ─────────────────────────
+app.post('/api/subscription/request', async (req, res) => {
+    const { plan, notes } = req.body;
+    if (!plan) return res.status(400).json({ error: 'Plan is required' });
+    try {
+        const reqs = await getUpgradeRequests();
+        reqs.push({
+            id: Date.now(),
+            username: req.user.username,
+            role: req.user.role,
+            plan,
+            notes: notes || '',
+            status: 'pending',
+            createdAt: new Date().toISOString()
+        });
+        await saveUpgradeRequests(reqs);
+        res.status(201).json({ success: true });
+    } catch (err) {
+        console.error('Error creating upgrade request:', err);
+        res.status(500).json({ error: 'Failed to submit request' });
+    }
+});
+
+app.get('/api/subscription/requests', async (req, res) => {
+    if (req.user.role !== 'superadmin') return res.status(403).json({ error: 'SuperAdmin access required' });
+    try {
+        res.json(await getUpgradeRequests());
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to load requests' });
+    }
+});
+
+app.post('/api/subscription/requests/:id/respond', async (req, res) => {
+    if (req.user.role !== 'superadmin') return res.status(403).json({ error: 'SuperAdmin access required' });
+    const { status } = req.body;
+    if (!['approved', 'declined'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
+    try {
+        const reqs = await getUpgradeRequests();
+        const idx = reqs.findIndex(r => r.id === parseInt(req.params.id));
+        if (idx === -1) return res.status(404).json({ error: 'Request not found' });
+        reqs[idx].status = status;
+        reqs[idx].respondedAt = new Date().toISOString();
+        await saveUpgradeRequests(reqs);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error responding to upgrade request:', err);
+        res.status(500).json({ error: 'Failed to respond' });
     }
 });
 

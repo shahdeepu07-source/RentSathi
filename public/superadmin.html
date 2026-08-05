@@ -318,6 +318,14 @@
       <div class="stat-card"><div class="label">Houses</div><div class="value blue" id="totalHouses">0</div></div>
       <div class="stat-card"><div class="label">Admins</div><div class="value red" id="totalAdmins">0</div></div>
     </div>
+
+    <div class="section-card" style="margin-top:20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h3 style="margin:0;">🔄 Upgrade Requests</h3>
+        <span style="font-size:0.75rem;color:var(--text-muted);">Owners asking to upgrade plans</span>
+      </div>
+      <div id="upgRequests">Loading...</div>
+    </div>
   </div>
 
   <!-- ─── TAB: Users ─── -->
@@ -686,6 +694,7 @@
             deletedHouses = await api('GET', '/admin/trash/houses');
             deletedTenants = await api('GET', '/admin/trash/tenants');
             renderAll();
+            loadUpgradeRequests();
         } catch (e) { showToast('Failed to load data: ' + e.message, 'error'); }
     }
 
@@ -694,6 +703,41 @@
         renderHouses();
         renderStats();
         renderTrash();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // UPGRADE REQUESTS
+    // ═══════════════════════════════════════════════════════════
+    async function loadUpgradeRequests() {
+        const el = document.getElementById('upgRequests');
+        try {
+            const reqs = await api('GET', '/subscription/requests');
+            if (!reqs.length) {
+                el.innerHTML = '<p style="color:var(--text-muted);font-size:.85rem;margin:0;">No upgrade requests yet.</p>';
+                return;
+            }
+            el.innerHTML = reqs.slice().reverse().map(r => `
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
+                    <div>
+                        <div style="font-weight:600;font-size:.9rem;">${escHtml(r.username)} <span class="badge" style="font-size:.68rem;">${escHtml(r.plan === 'full' ? 'Full-service' : 'Self-service')}</span></div>
+                        <div style="font-size:.75rem;color:var(--text-muted);">${new Date(r.createdAt).toLocaleString()}${r.notes ? ' &middot; ' + escHtml(r.notes) : ''}</div>
+                    </div>
+                    ${r.status === 'pending' ? `
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn-success" style="font-size:.75rem;padding:6px 14px;" onclick="respondUpgrade(${r.id},'approved')">Approve</button>
+                        <button class="btn-danger" style="font-size:.75rem;padding:6px 14px;" onclick="respondUpgrade(${r.id},'declined')">Decline</button>
+                    </div>` : `<span class="badge ${r.status === 'approved' ? 'badge-sub-active' : ''}" style="font-size:.75rem;">${escHtml(r.status)}</span>`}
+                </div>`).join('');
+        } catch (e) {
+            el.innerHTML = '<p style="color:var(--text-muted);font-size:.85rem;margin:0;">Failed to load requests.</p>';
+        }
+    }
+    async function respondUpgrade(id, status) {
+        try {
+            await api('POST', '/subscription/requests/' + id + '/respond', { status: status });
+            showToast('Request ' + status);
+            loadUpgradeRequests();
+        } catch (e) { showToast(e.message, 'error'); }
     }
 
     // ═══════════════════════════════════════════════════════════

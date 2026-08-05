@@ -289,7 +289,63 @@
 </nav>
 
 <style>
-  #cpw-overlay { display:none; position:fixed; inset:0; z-index:1100; background:rgba(0,0,0,.65); align-items:center; justify-content:center; padding:20px; }
+  #upg-overlay { display:none; position:fixed; inset:0; z-index:1100; background:rgba(0,0,0,.65); align-items:center; justify-content:center; padding:20px; }
+  #upg-overlay.active { display:flex; }
+  #upg-box { background:var(--card,#fff); border:1px solid var(--border,#e5e7eb); border-radius:12px; width:100%; max-width:420px; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,.4); }
+  #upg-box h3 { margin:0 0 16px; font-size:1.05rem; }
+  #upg-box .f-group { margin-bottom:12px; }
+  #upg-box label { display:block; font-size:.68rem; font-weight:700; text-transform:uppercase; color:var(--text-muted,#64748b); margin-bottom:4px; }
+  #upg-box select, #upg-box textarea { width:100%; padding:10px 12px; border:1px solid var(--border,#e5e7eb); border-radius:6px; background:var(--card,#fff); color:var(--text,#111); font-size:.9rem; outline:none; font-family:inherit; }
+  #upg-box select:focus, #upg-box textarea:focus { border-color:var(--accent,#2563eb); }
+  #upg-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:18px; }
+  #upg-actions button { padding:8px 16px; border-radius:6px; border:1px solid var(--border,#e5e7eb); background:var(--card,#fff); color:var(--text,#111); cursor:pointer; font-weight:600; }
+  #upg-actions button[type="submit"] { background:var(--accent,#2563eb); border-color:var(--accent,#2563eb); color:#fff; }
+</style>
+<div id="upg-overlay" onclick="if (event.target === this) document.getElementById('upg-overlay').classList.remove('active')">
+  <div id="upg-box">
+    <h3>⬆️ Request plan upgrade</h3>
+    <div class="f-group"><label>Desired plan</label>
+      <select id="upg-plan">
+        <option value="self">Self-service</option>
+        <option value="full">Full-service</option>
+      </select>
+    </div>
+    <div class="f-group"><label>Notes (optional)</label>
+      <textarea id="upg-notes" rows="3" placeholder="Houses, tenant count, anything we should know"></textarea>
+    </div>
+    <div id="upg-msg" style="color:var(--danger,#dc2626);font-size:.85rem;"></div>
+    <div id="upg-actions">
+      <button type="button" onclick="document.getElementById('upg-overlay').classList.remove('active')">Cancel</button>
+      <button type="submit" onclick="submitUpgradeRequest(event)">Send request</button>
+    </div>
+  </div>
+</div>
+<script>
+  function openUpgradeModal() {
+    document.getElementById('upg-msg').textContent = '';
+    document.getElementById('upg-overlay').classList.add('active');
+  }
+  async function submitUpgradeRequest(ev) {
+    if (ev) ev.preventDefault();
+    var plan = document.getElementById('upg-plan').value;
+    var notes = document.getElementById('upg-notes').value.trim();
+    var msg = document.getElementById('upg-msg');
+    msg.textContent = '';
+    try {
+      var res = await fetch(API_BASE + '/subscription/request', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+        body: JSON.stringify({ plan: plan, notes: notes })
+      });
+      var data = await res.json().catch(function () { return {}; });
+      if (!res.ok) { msg.textContent = data.error || 'Failed to submit request.'; return; }
+      document.getElementById('upg-overlay').classList.remove('active');
+      document.getElementById('upg-notes').value = '';
+      showToast('Upgrade request sent');
+    } catch (e) {
+      msg.textContent = 'Network error. Please try again.';
+    }
+  }
+</script>
   #cpw-overlay.active { display:flex; }
   #cpw-box { background:var(--card,#fff); border:1px solid var(--border,#e5e7eb); border-radius:12px; width:100%; max-width:400px; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,.4); }
   #cpw-box h3 { margin:0 0 16px; font-size:1.05rem; }
@@ -575,7 +631,7 @@
       <div class="section-card" style="margin:0;">
         <h3 style="margin-bottom:16px;">⚙️ Actions</h3>
         <div style="display:flex;flex-direction:column;gap:12px;">
-          <button class="btn-primary" style="width:100%;padding:14px;" onclick="showToast('Payment gateway coming soon!')">⬆️ Upgrade Plan</button>
+          <button class="btn-primary" style="width:100%;padding:14px;" onclick="openUpgradeModal()">⬆️ Upgrade Plan</button>
           <button class="btn-outline" style="width:100%;padding:14px;" onclick="showToast('Manage billing details coming soon!')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Manage Billing</button>
           <div style="margin-top:8px;padding:12px;background:rgba(239,68,68,0.08);border-radius:8px;border:1px solid rgba(239,68,68,0.2);">
             <p style="font-size:0.8rem;color:var(--text-muted);">Need help? Contact support for plan changes, cancellations, or billing inquiries.</p>
