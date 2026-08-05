@@ -41,7 +41,7 @@
         .role-selector button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
         .made-by-kali { position:fixed; bottom:12px; right:16px; z-index:999; display:flex; align-items:center; gap:6px; color:#6b7280; font-size:0.7rem; font-family:'SF Mono','Fira Code','Cascadia Code',monospace; letter-spacing:0.8px; opacity:0.5; transition:opacity 0.3s; pointer-events:none; }
         .made-by-kali span { color:var(--accent); font-weight:600; opacity:0.85; }
-        @media(max-width:480px){ .login-card { padding:28px 20px; } .role-selector button { padding:10px 16px; min-height:44px; } .login-card .role-selector button { flex:1; } }
+        @media(max-width:480px){ .login-card { padding:28px 20px; } .role-selector { flex-wrap:wrap; gap:8px; } .login-card .role-selector button { flex:1 1 calc(50% - 8px); min-height:44px; padding:10px 8px; white-space:nowrap; } }
     </style>
 </head>
 <body>
@@ -56,6 +56,7 @@
             <button class="active" data-role="owner">Owner</button>
             <button data-role="tenant">Tenant</button>
             <button data-role="admin">Admin</button>
+            <button data-role="admin-owner">Admin (Owner)</button>
         </div>
         <div id="loginError" class="error"></div>
         <form id="loginForm">
@@ -83,14 +84,16 @@
     const btn = document.getElementById('loginBtn');
     const roleBtns = document.querySelectorAll('.role-selector button');
     let selectedRole = 'owner';
+    let forceOwner = false;
 
     roleBtns.forEach(btn => {
         btn.addEventListener('click', function() {
             roleBtns.forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             selectedRole = this.dataset.role;
+            forceOwner = selectedRole === 'admin-owner';
             const field = document.getElementById('username');
-            field.placeholder = selectedRole === 'owner' ? 'Enter your username' :
+            field.placeholder = selectedRole === 'owner' ? 'Enter your owner username' :
                                  selectedRole === 'tenant' ? 'Enter your tenant username' :
                                  'Enter your admin username';
         });
@@ -127,8 +130,8 @@
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
             let redirect = '/index.html';
-            if (data.user.role === 'admin') redirect = '/admin.html';
-            else if (data.user.role === 'superadmin') redirect = '/superadmin.html';
+            if (data.user.role === 'admin') redirect = forceOwner ? '/index.html' : '/admin.html';
+            else if (data.user.role === 'superadmin') redirect = forceOwner ? '/index.html' : '/superadmin.html';
             else if (data.user.role === 'tenant') redirect = '/tenant.html';
             window.location.href = redirect;
         } catch (err) {
