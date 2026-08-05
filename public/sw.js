@@ -1,4 +1,4 @@
-const CACHE = 'warm-v5';
+const CACHE = 'warm-v6';
 const SHELL = ['/', '/login.html', '/assets/logo.svg', '/assets/favicon.svg'];
 
 self.addEventListener('install', (event) => {
