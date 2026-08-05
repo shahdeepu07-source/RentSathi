@@ -229,6 +229,34 @@
 </head>
 <body>
 
+<!-- ─── Boot splash (hides the cold-start wait) ─── -->
+<div id="boot-splash">
+    <style>
+        #boot-splash { position:fixed; inset:0; z-index:9999; background:#0b1120; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; transition:opacity .35s; }
+        .boot-mark { width:64px; height:64px; border-radius:50%; background:linear-gradient(135deg,#1d4ed8,#2563eb); display:flex; align-items:center; justify-content:center; box-shadow:0 0 0 6px rgba(37,99,235,.15), 0 12px 32px rgba(0,0,0,.4); }
+        .boot-mark span { color:#fff; font-size:1.7rem; font-weight:800; font-family:'Inter',system-ui,sans-serif; }
+        .boot-name { color:#fff; font-weight:700; font-size:1.1rem; letter-spacing:.02em; font-family:'Inter',system-ui,sans-serif; }
+        .boot-txt { color:#64748b; font-size:.8rem; letter-spacing:.08em; text-transform:uppercase; font-family:'Inter',system-ui,sans-serif; }
+        .boot-spin { width:26px; height:26px; border:3px solid rgba(255,255,255,.15); border-top-color:#60a5fa; border-radius:50%; animation:boot-rotate .8s linear infinite; }
+        @keyframes boot-rotate { to { transform:rotate(360deg); } }
+    </style>
+    <div class="boot-mark"><span>S</span></div>
+    <div class="boot-name">SajiloRent</div>
+    <div class="boot-spin"></div>
+    <div class="boot-txt">Waking up server</div>
+</div>
+<script>
+    function hideBoot() {
+        var b = document.getElementById('boot-splash');
+        if (b) { b.style.opacity = '0'; setTimeout(function () { if (b.parentNode) b.parentNode.removeChild(b); }, 450); }
+    }
+    window.addEventListener('load', hideBoot);
+    setTimeout(hideBoot, 60000);
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});
+    }
+</script>
+
 <!-- ─── Header ─── -->
 <header class="site-header">
     <div class="container">
