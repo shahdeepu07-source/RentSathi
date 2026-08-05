@@ -1,4 +1,4 @@
-const CACHE = 'warm-v7';
+const CACHE = 'warm-v8';
 const SHELL = ['/', '/login.html', '/assets/logo.svg', '/assets/favicon.svg'];
 
 self.addEventListener('install', (event) => {
@@ -23,6 +23,21 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET' || !req.url.startsWith(self.location.origin)) return;
   const url = new URL(req.url);
   if (url.pathname.startsWith('/api/') || url.pathname === '/sw.js') return;
+
+  // Page navigations are network-first so users always get the latest HTML
+  // (fixes stale UI after deploys); everything else stays cache-first.
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      fetch(req).then((res) => {
+        if (res.ok) {
+          const clone = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, clone)).catch(() => {});
+        }
+        return res;
+      }).catch(() => caches.match(req))
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(req).then((cached) => {
