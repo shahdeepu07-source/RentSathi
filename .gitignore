@@ -9,4 +9,5 @@ desktop/dist4/
 desktop/release/
 desktop/out/
 android/.idea/
+android/keystore/
 desktop/node_modules/
