@@ -174,27 +174,27 @@
         .price-card ul { list-style:none; margin:0 0 18px; }
         .price-card li { display:flex; align-items:flex-start; gap:9px; color:var(--text); font-size:.9rem; margin-bottom:9px; }
         .price-card li::before { content:""; width:6px; height:6px; border-radius:50%; background:var(--accent); margin-top:7px; flex-shrink:0; }
-        .price-from { border-top:1px solid var(--border); padding-top:14px; margin-top:auto; }
+        .price-from { border-top:1px solid var(--border); padding-top:14px; margin-bottom:18px; }
         .price-from b { font-size:1.5rem; color:var(--text); }
         .price-from b small { font-size:.85rem; color:var(--muted); font-weight:500; }
         .price-from .annual { color:var(--muted); font-size:.8rem; margin-top:2px; }
-        .calc-box { background:var(--white); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-1); padding:26px; max-width:760px; margin:0 auto; }
-        .calc-seg { display:flex; gap:8px; margin-bottom:18px; }
-        .calc-seg button { flex:1; padding:11px 0; border-radius:10px; border:1px solid var(--border); background:var(--subtle); color:var(--muted); font-weight:600; font-size:.88rem; cursor:pointer; transition:all .2s; }
-        .calc-seg button.active { background:var(--accent); border-color:var(--accent); color:#fff; }
-        .calc-row { display:flex; align-items:center; gap:18px; margin-bottom:20px; flex-wrap:wrap; }
-        .calc-help { color:var(--muted); font-size:.82rem; margin:0 0 22px; }
+        .price-card .btn { width:100%; margin-bottom:10px; }
+        .calc-toggle { background:var(--white); border:1px solid var(--border); color:var(--muted); }
+        .calc-toggle:hover { border-color:var(--accent); color:var(--accent); }
+        .calc-panel { display:none; background:var(--subtle); border:1px solid var(--border); border-radius:12px; padding:18px; margin-top:4px; }
+        .calc-panel.open { display:block; }
+        .calc-panel .calc-help { color:var(--muted); font-size:.82rem; margin:0 0 16px; }
+        .calc-row { display:flex; align-items:center; gap:18px; margin-bottom:18px; flex-wrap:wrap; }
         .calc-row label { font-size:.82rem; font-weight:600; color:var(--text); min-width:120px; }
-        .calc-row input[type="range"] { flex:1; min-width:180px; accent-color:var(--accent); }
+        .calc-row input[type="range"] { flex:1; min-width:160px; accent-color:var(--accent); }
         .calc-count { width:44px; text-align:center; font-weight:700; color:var(--accent); font-size:1.05rem; }
-        .calc-out { display:grid; grid-template-columns:1fr 1fr; gap:16px; background:var(--subtle); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:14px; }
+        .calc-out { display:grid; grid-template-columns:1fr 1fr; gap:14px; background:var(--white); border:1px solid var(--border); border-radius:12px; padding:18px; margin-bottom:12px; }
         .calc-out div small { display:block; color:var(--muted); font-size:.75rem; margin-bottom:3px; }
-        .calc-out b { font-size:1.4rem; }
+        .calc-out b { font-size:1.35rem; }
         .calc-out .save { color:#16a34a; font-size:.8rem; font-weight:600; }
-        .calc-tiers { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:6px; }
+        .calc-tiers { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
         .calc-tiers small { padding:5px 12px; border:1px solid var(--border); border-radius:999px; color:var(--muted); font-size:.74rem; background:var(--white); }
         .calc-tiers small b { color:var(--accent); }
-        .calc-note { text-align:center; color:var(--muted); font-size:.82rem; margin-top:16px; }
         .multi-note { max-width:760px; margin:26px auto 0; background:var(--white); border:1px dashed var(--border); border-radius:12px; padding:18px 22px; font-size:.86rem; color:var(--muted); text-align:center; }
 
         /* ─── Made-by-kali badge ─── */
@@ -303,7 +303,7 @@
                 <p>Pay per tenant each month. The more tenants you manage, the less you pay per tenant.</p>
             </div>
             <div class="price-grid">
-                <div class="price-card">
+                <div class="price-card" data-svc="self">
                     <h3>Self-service</h3>
                     <p class="tag">You manage everything in the app</p>
                     <ul>
@@ -315,10 +315,33 @@
                     </ul>
                     <div class="price-from">
                         <b>Rs 55</b> <small>/ tenant / month</small><br>
-                        <span class="annual">Yearly: 2 months free</span>
+                        <span class="annual">Volume discounts &middot; yearly: 2 months free</span>
+                    </div>
+                    <a class="btn btn-primary" href="/register.html">Start free trial</a>
+                    <button class="btn calc-toggle" type="button">See full pricing</button>
+                    <div class="calc-panel">
+                        <p class="calc-help">Slide to choose how many tenants one house has.</p>
+                        <div class="calc-row">
+                            <label>Tenants in house</label>
+                            <input type="range" class="calcTenants" min="1" max="20" value="5">
+                            <span class="calc-count">5</span>
+                        </div>
+                        <div class="calc-out">
+                            <div>
+                                <small>Per tenant / month</small>
+                                <b class="calcRate">Rs 80</b>
+                                <div class="save calcSave"></div>
+                            </div>
+                            <div>
+                                <small>Total / month</small>
+                                <b class="calcMonthTotal">Rs 400</b>
+                                <div class="save">Yearly: <span class="calcYearTotal">Rs 4,000</span> (2 months free)</div>
+                            </div>
+                        </div>
+                        <div class="calc-tiers calcTiers"></div>
                     </div>
                 </div>
-                <div class="price-card pop">
+                <div class="price-card pop" data-svc="full">
                     <h3>Full-service</h3>
                     <p class="tag">We manage everything for you</p>
                     <ul>
@@ -330,36 +353,32 @@
                     </ul>
                     <div class="price-from">
                         <b>Rs 140</b> <small>/ tenant / month</small><br>
-                        <span class="annual">Volume discount below</span>
+                        <span class="annual">Volume discounts &middot; yearly: 2 months free</span>
+                    </div>
+                    <a class="btn btn-primary" href="/register.html">Start free trial</a>
+                    <button class="btn calc-toggle" type="button">See full pricing</button>
+                    <div class="calc-panel">
+                        <p class="calc-help">Slide to choose how many tenants one house has.</p>
+                        <div class="calc-row">
+                            <label>Tenants in house</label>
+                            <input type="range" class="calcTenants" min="1" max="20" value="5">
+                            <span class="calc-count">5</span>
+                        </div>
+                        <div class="calc-out">
+                            <div>
+                                <small>Per tenant / month</small>
+                                <b class="calcRate">Rs 175</b>
+                                <div class="save calcSave"></div>
+                            </div>
+                            <div>
+                                <small>Total / month</small>
+                                <b class="calcMonthTotal">Rs 875</b>
+                                <div class="save">Yearly: <span class="calcYearTotal">Rs 8,750</span> (2 months free)</div>
+                            </div>
+                        </div>
+                        <div class="calc-tiers calcTiers"></div>
                     </div>
                 </div>
-            </div>
-
-            <div class="calc-box">
-                <div class="calc-seg" id="calcSvc">
-                    <button class="active" data-svc="self">Self-service</button>
-                    <button data-svc="full">Full-service</button>
-                </div>
-                <p class="calc-help">Slide to choose how many tenants one house has.</p>
-                <div class="calc-row">
-                    <label for="calcTenants">Tenants in house</label>
-                    <input type="range" id="calcTenants" min="1" max="20" value="5">
-                    <span class="calc-count" id="calcCount">5</span>
-                </div>
-                <div class="calc-out">
-                    <div>
-                        <small>Per tenant / month</small>
-                        <b id="calcRate">Rs 80</b>
-                        <div class="save" id="calcSave"></div>
-                    </div>
-                    <div>
-                        <small>Total / month</small>
-                        <b id="calcMonthTotal">Rs 400</b>
-                        <div class="save">Yearly: <span id="calcYearTotal">Rs 4,000</span> (2 months free)</div>
-                    </div>
-                </div>
-                <div class="calc-tiers" id="calcTiers"></div>
-                <p class="calc-note">Start free with a 30-day trial &middot; no card required &middot; <a href="/register.html" style="color:var(--accent);font-weight:600;">Register your house now</a></p>
             </div>
 
             <div class="multi-note">
@@ -602,16 +621,6 @@
         };
         var BASE = { self: 100, full: 250 };
 
-        var svcBtns = document.querySelectorAll('#calcSvc button');
-        var slider = document.getElementById('calcTenants');
-        var count = document.getElementById('calcCount');
-        var rateEl = document.getElementById('calcRate');
-        var saveEl = document.getElementById('calcSave');
-        var monthEl = document.getElementById('calcMonthTotal');
-        var yearEl = document.getElementById('calcYearTotal');
-        var tiersEl = document.getElementById('calcTiers');
-        var svc = 'self';
-
         function rateFor(svc, n) {
             var tiers = TIERS[svc];
             var r = tiers[0][1];
@@ -623,39 +632,47 @@
 
         function fmt(n) { return 'Rs ' + n.toLocaleString('en-IN'); }
 
-        function render() {
-            var n = parseInt(slider.value, 10) || 1;
-            count.textContent = n;
-            var rate = rateFor(svc, n);
-            var base = BASE[svc];
-            var monthly = rate * n;
-            var yearly = monthly * 10;
-            var off = Math.round((1 - rate / base) * 100);
-            rateEl.textContent = fmt(rate);
-            monthEl.textContent = fmt(monthly);
-            yearEl.textContent = fmt(yearly);
-            saveEl.textContent = off > 0 ? 'Save ' + off + '% vs base rate' : 'Base rate';
-            tiersEl.innerHTML = '';
-            TIERS[svc].forEach(function (t, i) {
-                var label = t[0] === 1 ? '1 tenant' : (t[0] === 16 ? '16+ tenants' : t[0] + '-' + ((TIERS[svc][i + 1] || [20])[0] - 1) + ' tenants');
-                var act = n >= t[0] && (i === TIERS[svc].length - 1 || n < TIERS[svc][i + 1][0]);
-                var span = document.createElement('small');
-                span.innerHTML = label + ': <b>Rs ' + t[1] + '</b>';
-                if (act) { span.style.borderColor = 'var(--accent)'; span.style.color = 'var(--accent)'; }
-                tiersEl.appendChild(span);
-            });
-        }
+        document.querySelectorAll('.price-card').forEach(function (card) {
+            var svc = card.dataset.svc;
+            var toggle = card.querySelector('.calc-toggle');
+            var panel = card.querySelector('.calc-panel');
+            var slider = card.querySelector('.calcTenants');
+            var count = card.querySelector('.calc-count');
+            var rateEl = card.querySelector('.calcRate');
+            var saveEl = card.querySelector('.calcSave');
+            var monthEl = card.querySelector('.calcMonthTotal');
+            var yearEl = card.querySelector('.calcYearTotal');
+            var tiersEl = card.querySelector('.calcTiers');
 
-        svcBtns.forEach(function (b) {
-            b.addEventListener('click', function () {
-                svcBtns.forEach(function (x) { x.classList.remove('active'); });
-                b.classList.add('active');
-                svc = b.dataset.svc;
-                render();
+            function render() {
+                var n = parseInt(slider.value, 10) || 1;
+                count.textContent = n;
+                var rate = rateFor(svc, n);
+                var monthly = rate * n;
+                var yearly = monthly * 10;
+                var off = Math.round((1 - rate / BASE[svc]) * 100);
+                rateEl.textContent = fmt(rate);
+                monthEl.textContent = fmt(monthly);
+                yearEl.textContent = fmt(yearly);
+                saveEl.textContent = off > 0 ? 'Save ' + off + '% vs base rate' : 'Base rate';
+                tiersEl.innerHTML = '';
+                TIERS[svc].forEach(function (t, i) {
+                    var label = t[0] === 1 ? '1 tenant' : (t[0] === 16 ? '16+ tenants' : t[0] + '-' + ((TIERS[svc][i + 1] || [20])[0] - 1) + ' tenants');
+                    var act = n >= t[0] && (i === TIERS[svc].length - 1 || n < TIERS[svc][i + 1][0]);
+                    var span = document.createElement('small');
+                    span.innerHTML = label + ': <b>Rs ' + t[1] + '</b>';
+                    if (act) { span.style.borderColor = 'var(--accent)'; span.style.color = 'var(--accent)'; }
+                    tiersEl.appendChild(span);
+                });
+            }
+
+            toggle.addEventListener('click', function () {
+                var open = panel.classList.toggle('open');
+                toggle.textContent = open ? 'Hide pricing' : 'See full pricing';
             });
+            slider.addEventListener('input', render);
+            render();
         });
-        slider.addEventListener('input', render);
-        render();
     })();
 </script>
 <script>
