@@ -867,6 +867,13 @@ app.get('/apple-touch-icon.png', (req, res) => {
 app.get('/sw.js', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'sw.js'));
 });
+app.get('/install-widget.js', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'public', 'install-widget.js'));
+});
+app.get('/downloads/:file', (req, res) => {
+    const file = path.basename(req.params.file);
+    res.download(path.join(__dirname, '..', 'public', 'downloads', file));
+});
 
 // ─── Init notifications data ────────────────────────────────
 async function initNotifFile() {

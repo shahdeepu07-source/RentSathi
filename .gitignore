@@ -2,3 +2,11 @@
 .env
 *.log
 .DS_Store
+desktop/dist/
+desktop/dist2/
+desktop/dist3/
+desktop/dist4/
+desktop/release/
+desktop/out/
+android/.idea/
+desktop/node_modules/

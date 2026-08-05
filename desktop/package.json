@@ -1,0 +1,37 @@
+{
+  "name": "sajilorent-desktop",
+  "productName": "SajiloRent",
+  "version": "1.0.0",
+  "description": "SajiloRent - rental management (Windows desktop app)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win portable",
+    "build:installer": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.sajilorent.desktop",
+    "productName": "SajiloRent",
+    "files": [
+      "main.js",
+      "icon.png"
+    ],
+    "win": {
+      "icon": "icon.png",
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "SajiloRent-windows-v${version}.${ext}"
+    },
+    "nsis": {
+      "artifactName": "SajiloRent-windows-setup-v${version}.${ext}"
+    }
+  },
+  "allowScripts": {
+    "electron@33.4.11": true
+  }
+}
