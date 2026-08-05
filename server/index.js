@@ -67,8 +67,8 @@ async function getUserById(userId) {
 
 // Houses the current user may access.
 //  - superadmin  → all active houses
-//  - admin       → the houses listed in their `houses` field; if the field is
-//                  unset, all active houses except M_house (legacy behaviour)
+//  - admin       → all active houses; M_house is exclusive to the `admin`
+//                  account (admin/5545)
 //  - owner       → houses they own
 async function accessibleHouses(user, includeDeleted = false) {
     const ownership = await getOwnership();
@@ -78,15 +78,7 @@ async function accessibleHouses(user, includeDeleted = false) {
         return allHouses.filter(h => includeDeleted || !ownership[h]?.deleted);
     }
     if (user.role === 'admin') {
-        const fresh = await getUserById(user.userId);
-        let list;
-        if (fresh && Array.isArray(fresh.houses)) {
-            list = fresh.houses.slice();
-        } else {
-            list = allHouses.filter(h => h !== 'M_house');
-        }
-        // M_house is exclusive to the `admin` account (admin/5545)
-        if (user.username !== 'admin') list = list.filter(h => h !== 'M_house');
+        const list = user.username === 'admin' ? allHouses.slice() : allHouses.filter(h => h !== 'M_house');
         return list.filter(h => includeDeleted || !ownership[h]?.deleted);
     }
     return allHouses.filter(h => {
@@ -98,9 +90,7 @@ async function accessibleHouses(user, includeDeleted = false) {
 async function canAccessMHouse(user) {
     if (!user) return false;
     if (user.role === 'superadmin') return true;
-    if (user.role !== 'admin' || user.username !== 'admin') return false;
-    const fresh = await getUserById(user.userId);
-    return fresh && Array.isArray(fresh.houses) && fresh.houses.includes('M_house');
+    return user.role === 'admin' && user.username === 'admin';
 }
 
 async function checkOwnership(houseId, user) {

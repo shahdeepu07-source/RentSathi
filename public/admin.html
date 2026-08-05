@@ -459,11 +459,6 @@
       </div>
       <div class="form-group"><label>Address</label><input type="text" id="userAddress"></div>
       <div class="form-group"><label>Notes</label><textarea id="userNotes" rows="2"></textarea></div>
-      <div class="form-group" id="userHousesGroup" style="display:none;">
-        <label>House Access (Admin)</label>
-        <div id="userHousesList" style="display:flex;flex-wrap:wrap;gap:10px;padding:10px 12px;background:#0f172a;border:1px solid var(--border);border-radius:6px;"></div>
-        <p style="font-size:0.72rem;color:var(--text-muted);margin-top:4px;">Unchecked houses are blocked. <strong>M_House</strong> is reserved for the <strong>admin</strong> account only.</p>
-      </div>
       <div class="form-actions">
         <button type="button" class="btn-outline" onclick="closeModal('userModal')">Cancel</button>
         <button type="submit" class="btn-success" id="userSubmitBtn">Save</button>
@@ -694,15 +689,9 @@
             let displayName = u.fullName || '—';
             if (u.role === 'superadmin' && !isSuperAdmin) displayName = '***';
             const subStatus = u.subscription_status || 'active';
-            let houseLabel = '';
-            if (u.role === 'admin') {
-                houseLabel = Array.isArray(u.houses)
-                    ? (u.houses.length ? escHtml(u.houses.join(', ')) : 'None')
-                    : 'All except M_House';
-            }
 
             return `<tr>
-                <td><strong>${u.username}</strong>${houseLabel ? `<div style="font-size:0.68rem;color:var(--text-muted);margin-top:2px;">🏠 ${houseLabel}</div>` : ''}</td>
+                <td><strong>${u.username}</strong></td>
                 <td>${displayName}</td>
                 <td><span class="badge ${badgeMap[u.role] || ''}">${u.role}</span></td>
                 <td><span class="badge ${subBadge[subStatus] || 'badge-sub-active'}">${subStatus}</span></td>
@@ -817,7 +806,6 @@
         document.getElementById('userEmail').value = '';
         document.getElementById('userAddress').value = '';
         document.getElementById('userNotes').value = '';
-        document.getElementById('userHousesGroup').style.display = 'none';
         document.getElementById('userModalTitle').textContent = 'Create Owner';
         document.getElementById('userSubmitBtn').textContent = 'Create';
         openModal('userModal');
@@ -839,30 +827,8 @@
         document.getElementById('userNotes').value = u.notes || '';
         document.getElementById('userModalTitle').textContent = 'Edit User';
         document.getElementById('userSubmitBtn').textContent = 'Update';
-        const isAdminEdit = u.role === 'admin';
-        document.getElementById('userHousesGroup').style.display = isAdminEdit ? 'block' : 'none';
-        if (isAdminEdit) {
-            const sel = Array.isArray(u.houses) ? u.houses : null;
-            renderUserHouses(sel, u.username);
-        }
         openModal('userModal');
     };
-
-    function renderUserHouses(selected, targetUsername) {
-        const list = document.getElementById('userHousesList');
-        if (!allHouses.length) {
-            list.innerHTML = '<span style="font-size:0.8rem;color:var(--text-muted);">No houses available</span>';
-            return;
-        }
-        const showM = targetUsername === 'admin';
-        const opts = allHouses.filter(h => showM || h !== 'M_house');
-        list.innerHTML = opts.map(h => {
-            const checked = selected === null || selected.includes(h);
-            return `<label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:var(--text-2);text-transform:none;letter-spacing:0;cursor:pointer;">
-                <input type="checkbox" class="house-access" value="${escHtml(h).replace(/"/g, '&quot;')}" ${checked ? 'checked' : ''}> ${escHtml(h)}
-            </label>`;
-        }).join('');
-    }
 
     document.getElementById('userForm').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -878,10 +844,6 @@
         try {
             if (userId) {
                 const payload = { fullName, phone, email, address, notes };
-                const target = allUsers.find(x => x.id == userId);
-                if (target && target.role === 'admin') {
-                    payload.houses = [...document.querySelectorAll('.house-access:checked')].map(c => c.value);
-                }
                 await api('PUT', `/auth/users/${userId}`, payload);
                 showToast('User updated successfully');
             } else {
