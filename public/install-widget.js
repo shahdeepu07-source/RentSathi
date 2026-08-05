@@ -13,6 +13,11 @@
   };
 
   var ua = navigator.userAgent;
+  var isNativeApp =
+    (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ||
+    /Electron/i.test(ua);
+  if (isNativeApp) return;
+
   var platform =
     /iPhone|iPad|iPod/i.test(ua) ? "ios"
     : /Android/i.test(ua) ? "android"
