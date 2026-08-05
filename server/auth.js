@@ -59,6 +59,7 @@ console.log('SuperAdmin created');
                 email: '',
                 address: '',
                 notes: '',
+                houses: ['M_house'],
                 subscription_status: 'active',
                 trial_start: null,
                 trial_end: null,
@@ -89,6 +90,14 @@ console.log('SuperAdmin created');
         console.log('✅ Admin created');
         console.log('✅ SuperAdmin created');
     }
+}
+
+// Houses an admin may manage. M_house is reserved for the `admin` account.
+function sanitizeHouses(houses, username) {
+    if (!Array.isArray(houses)) return undefined;
+    let list = houses.filter(h => typeof h === 'string' && h.trim());
+    if (username !== 'admin') list = list.filter(h => h !== 'M_house');
+    return [...new Set(list)];
 }
 
 async function getUsers(includeDeleted = false) {
@@ -203,7 +212,8 @@ router.post('/login', async (req, res) => {
                 role: user.role,
                 fullName: user.fullName || '',
                 subscription_status: user.subscription_status,
-                trial_end: user.trial_end
+                trial_end: user.trial_end,
+                houses: user.houses
             }
         });
     } catch (err) {
@@ -229,7 +239,7 @@ router.post('/users', async (req, res) => {
         if (!['admin', 'superadmin'].includes(decoded.role)) {
             return res.status(403).json({ error: 'Admin or SuperAdmin access required' });
         }
-        const { username, password, role, fullName, phone, email, address, notes } = req.body;
+        const { username, password, role, fullName, phone, email, address, notes, houses } = req.body;
         if (!username || !password) {
             return res.status(400).json({ error: 'Username and password required' });
         }
@@ -261,6 +271,10 @@ router.post('/users', async (req, res) => {
             deleted_at: null,
             created_at: new Date().toISOString()
         };
+        if (role === 'admin') {
+            const safeHouses = sanitizeHouses(houses, username);
+            if (safeHouses !== undefined) newUser.houses = safeHouses;
+        }
         users.push(newUser);
         await saveUsers(users);
         res.status(201).json({
@@ -293,7 +307,7 @@ router.put('/users/:userId', async (req, res) => {
             return res.status(403).json({ error: 'Admin or SuperAdmin access required' });
         }
         const userId = parseInt(req.params.userId);
-        const { fullName, phone, email, address, notes, subscription_status } = req.body;
+        const { fullName, phone, email, address, notes, subscription_status, houses } = req.body;
         const users = await getUsers(true);
         const user = users.find(u => u.id === userId);
         if (!user) {
@@ -309,6 +323,11 @@ router.put('/users/:userId', async (req, res) => {
         if (notes !== undefined) user.notes = notes;
         if (subscription_status !== undefined && user.role === 'owner') {
             user.subscription_status = subscription_status;
+        }
+        if (houses !== undefined && user.role === 'admin') {
+            const safeHouses = sanitizeHouses(houses, user.username);
+            if (safeHouses === undefined) delete user.houses;
+            else user.houses = safeHouses;
         }
         await saveUsers(users);
         res.json({ success: true, user });
@@ -335,7 +354,7 @@ router.post('/superadmin/admins', async (req, res) => {
         if (decoded.role !== 'superadmin') {
             return res.status(403).json({ error: 'SuperAdmin access required' });
         }
-        const { username, password, fullName, phone, email, address, notes } = req.body;
+        const { username, password, fullName, phone, email, address, notes, houses } = req.body;
         if (!username || !password) {
             return res.status(400).json({ error: 'Username and password required' });
         }
@@ -361,6 +380,8 @@ router.post('/superadmin/admins', async (req, res) => {
             deleted_at: null,
             created_at: new Date().toISOString()
         };
+        const safeHouses = sanitizeHouses(houses, username);
+        if (safeHouses !== undefined) newAdmin.houses = safeHouses;
         users.push(newAdmin);
         await saveUsers(users);
         res.status(201).json({
@@ -490,7 +511,8 @@ router.get('/me', async (req, res) => {
             email: user.email || '',
             address: user.address || '',
             subscription_status: user.subscription_status,
-            trial_end: user.trial_end
+            trial_end: user.trial_end,
+            houses: user.houses
         });
     } catch (err) {
         console.error('💥 Get user error:', err);

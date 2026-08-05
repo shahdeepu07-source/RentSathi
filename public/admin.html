@@ -176,6 +176,7 @@
     /* ─── RESPONSIVE ─── */
     .topbar, .tabbar { display:none; }
     .tb-owner { display:none; }
+    .owner-panel-iframe { width:100%; height:calc(100vh - 230px); min-height:480px; border:none; border-radius:10px; background:#0f172a; }
     .sidebar-nav a.owner-link { margin-top:8px; border:1px solid var(--border); color:var(--warn); }
     .sidebar-nav a.owner-link:hover { border-color:var(--warn); background:rgba(245,158,11,0.08); color:var(--warn); }
 
@@ -221,6 +222,7 @@
       .modal .form-actions { justify-content:stretch; }
       .modal .form-actions button { flex:1; }
       .main-header { margin-bottom:16px; }
+      .owner-panel-iframe { height:calc(100vh - 200px); min-height:460px; }
       .made-by-kali { display:none; }
     }
   </style>
@@ -239,7 +241,7 @@
     <a data-tab="tab-houses"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>  <span>Houses</span></a>
     <a data-tab="tab-trash"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>  <span>Trash</span></a>
     <a data-tab="tab-notices"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l3 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M16 8a5 5 0 0 1 0 8"/></svg>  <span>Notices</span></a>
-    <a href="/index.html" class="owner-link"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>  <span>Owner Dashboard</span></a>
+    <a data-tab="tab-owner" class="owner-link"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>  <span>Owner</span></a>
   </div>
   <div class="sidebar-footer">
     <div class="user-name" id="sidebarUser"></div>
@@ -262,7 +264,7 @@
         <div class="tb-role" id="tbRole">Admin</div>
       </div>
       <button class="tb-logout" onclick="logout()">Sign out</button>
-      <a href="/index.html" class="tb-owner" title="Open Owner Dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Owner</span></a>
+      <a data-tab="tab-owner" class="tb-owner" title="Open Owner Panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Owner</span></a>
       <button class="install-app-btn" id="installAppBtnM" title="Install App"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
     </div>
   </header>
@@ -417,6 +419,19 @@
     </div>
   </div>
 
+  <!-- ─── TAB: Owner (houses, tenants & bills) ─── -->
+  <div class="tab-panel" id="tab-owner">
+    <div class="main-header">
+      <div>
+        <h1>Owner Panel</h1>
+        <div class="sub">Manage your houses, tenants and bills</div>
+      </div>
+    </div>
+    <div class="section-card" style="padding:6px;">
+      <iframe class="owner-panel-iframe" src="/index.html" title="Owner Panel"></iframe>
+    </div>
+  </div>
+
   <!-- FOOTER SPACER -->
   <div style="height:40px;"></div>
 </div>
@@ -444,6 +459,11 @@
       </div>
       <div class="form-group"><label>Address</label><input type="text" id="userAddress"></div>
       <div class="form-group"><label>Notes</label><textarea id="userNotes" rows="2"></textarea></div>
+      <div class="form-group" id="userHousesGroup" style="display:none;">
+        <label>House Access (Admin)</label>
+        <div id="userHousesList" style="display:flex;flex-wrap:wrap;gap:10px;padding:10px 12px;background:#0f172a;border:1px solid var(--border);border-radius:6px;"></div>
+        <p style="font-size:0.72rem;color:var(--text-muted);margin-top:4px;">Unchecked houses are blocked. <strong>M_House</strong> is reserved for the <strong>admin</strong> account only.</p>
+      </div>
       <div class="form-actions">
         <button type="button" class="btn-outline" onclick="closeModal('userModal')">Cancel</button>
         <button type="submit" class="btn-success" id="userSubmitBtn">Save</button>
@@ -568,7 +588,7 @@
     // TAB NAVIGATION
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     document.addEventListener('click', function(e) {
-        const link = e.target.closest('.sidebar-nav a, .tabbar a');
+        const link = e.target.closest('.sidebar-nav a, .tabbar a, .topbar a[data-tab]');
         if (!link) return;
         if (link.hasAttribute('href')) return;
         e.preventDefault();
@@ -674,9 +694,15 @@
             let displayName = u.fullName || '—';
             if (u.role === 'superadmin' && !isSuperAdmin) displayName = '***';
             const subStatus = u.subscription_status || 'active';
+            let houseLabel = '';
+            if (u.role === 'admin') {
+                houseLabel = Array.isArray(u.houses)
+                    ? (u.houses.length ? escHtml(u.houses.join(', ')) : 'None')
+                    : 'All except M_House';
+            }
 
             return `<tr>
-                <td><strong>${u.username}</strong></td>
+                <td><strong>${u.username}</strong>${houseLabel ? `<div style="font-size:0.68rem;color:var(--text-muted);margin-top:2px;">🏠 ${houseLabel}</div>` : ''}</td>
                 <td>${displayName}</td>
                 <td><span class="badge ${badgeMap[u.role] || ''}">${u.role}</span></td>
                 <td><span class="badge ${subBadge[subStatus] || 'badge-sub-active'}">${subStatus}</span></td>
@@ -791,6 +817,7 @@
         document.getElementById('userEmail').value = '';
         document.getElementById('userAddress').value = '';
         document.getElementById('userNotes').value = '';
+        document.getElementById('userHousesGroup').style.display = 'none';
         document.getElementById('userModalTitle').textContent = 'Create Owner';
         document.getElementById('userSubmitBtn').textContent = 'Create';
         openModal('userModal');
@@ -812,8 +839,30 @@
         document.getElementById('userNotes').value = u.notes || '';
         document.getElementById('userModalTitle').textContent = 'Edit User';
         document.getElementById('userSubmitBtn').textContent = 'Update';
+        const isAdminEdit = u.role === 'admin';
+        document.getElementById('userHousesGroup').style.display = isAdminEdit ? 'block' : 'none';
+        if (isAdminEdit) {
+            const sel = Array.isArray(u.houses) ? u.houses : null;
+            renderUserHouses(sel, u.username);
+        }
         openModal('userModal');
     };
+
+    function renderUserHouses(selected, targetUsername) {
+        const list = document.getElementById('userHousesList');
+        if (!allHouses.length) {
+            list.innerHTML = '<span style="font-size:0.8rem;color:var(--text-muted);">No houses available</span>';
+            return;
+        }
+        const showM = targetUsername === 'admin';
+        const opts = allHouses.filter(h => showM || h !== 'M_house');
+        list.innerHTML = opts.map(h => {
+            const checked = selected === null || selected.includes(h);
+            return `<label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:var(--text-2);text-transform:none;letter-spacing:0;cursor:pointer;">
+                <input type="checkbox" class="house-access" value="${escHtml(h).replace(/"/g, '&quot;')}" ${checked ? 'checked' : ''}> ${escHtml(h)}
+            </label>`;
+        }).join('');
+    }
 
     document.getElementById('userForm').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -828,7 +877,12 @@
         if (!username || !fullName) { showToast('Full Name and Username are required', 'error'); return; }
         try {
             if (userId) {
-                await api('PUT', `/auth/users/${userId}`, { fullName, phone, email, address, notes });
+                const payload = { fullName, phone, email, address, notes };
+                const target = allUsers.find(x => x.id == userId);
+                if (target && target.role === 'admin') {
+                    payload.houses = [...document.querySelectorAll('.house-access:checked')].map(c => c.value);
+                }
+                await api('PUT', `/auth/users/${userId}`, payload);
                 showToast('User updated successfully');
             } else {
                 if (!password) { showToast('Password is required for new user', 'error'); return; }
@@ -1140,6 +1194,7 @@
   <a class="active" data-tab="tab-dashboard"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg><span>Home</span></a>
   <a data-tab="tab-users"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>Users</span></a>
   <a data-tab="tab-houses"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Houses</span></a>
+  <a data-tab="tab-owner"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Owner</span></a>
   <a data-tab="tab-trash"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span>Trash</span></a>
   <a data-tab="tab-notices"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l3 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M16 8a5 5 0 0 1 0 8"/></svg><span>Notices</span></a>
 </nav>

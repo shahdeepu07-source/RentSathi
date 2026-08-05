@@ -9,6 +9,9 @@
     "email": "",
     "address": "",
     "notes": "",
+    "houses": [
+      "M_house"
+    ],
     "subscription_status": "active",
     "trial_start": null,
     "trial_end": null,

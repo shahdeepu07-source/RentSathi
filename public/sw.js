@@ -1,4 +1,4 @@
-const CACHE = 'sajilorent-v2';
+const CACHE = 'sajilorent-v3';
 
 self.addEventListener('install', () => {
   self.skipWaiting();

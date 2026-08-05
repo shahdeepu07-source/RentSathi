@@ -8,7 +8,7 @@ import authRoutes from './auth.js';
 import notificationRoutes from './notifications.js';
 import { verifyToken } from './middleware.js';
 import { createUser } from './auth.js';
-import { resolveDataDir, OWNERSHIP_FILE, NOTIF_FILE } from './paths.js';
+import { resolveDataDir, USERS_FILE, OWNERSHIP_FILE, NOTIF_FILE } from './paths.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -55,18 +55,64 @@ const writeTenants = async (houseId, data) => {
     await fs.writeFile(getFilePath(houseId), JSON.stringify(data, null, 2), 'utf8');
 };
 
-async function checkOwnership(houseId, userId, userRole) {
-    if (userRole === 'admin' || userRole === 'superadmin') return true;
-    const ownership = await getOwnership();
-    const owner = ownership[houseId];
-    return owner && owner.owner_id == userId && !owner.deleted;
+async function getUserById(userId) {
+    try {
+        const data = await fs.readFile(USERS_FILE, 'utf8');
+        const users = JSON.parse(data);
+        return users.find(u => u.id == userId && !u.deleted) || null;
+    } catch {
+        return null;
+    }
 }
 
-function canAccessMHouse(user) {
+// Houses the current user may access.
+//  - superadmin  → all active houses
+//  - admin       → the houses listed in their `houses` field; if the field is
+//                  unset, all active houses except M_house (legacy behaviour)
+//  - owner       → houses they own
+async function accessibleHouses(user, includeDeleted = false) {
+    const ownership = await getOwnership();
+    const files = await fs.readdir(DATA_DIR);
+    const allHouses = files.filter(f => f.endsWith('.json')).map(f => f.replace('.json', ''));
+    if (user.role === 'superadmin') {
+        return allHouses.filter(h => includeDeleted || !ownership[h]?.deleted);
+    }
+    if (user.role === 'admin') {
+        const fresh = await getUserById(user.userId);
+        let list;
+        if (fresh && Array.isArray(fresh.houses)) {
+            list = fresh.houses.slice();
+        } else {
+            list = allHouses.filter(h => h !== 'M_house');
+        }
+        // M_house is exclusive to the `admin` account (admin/5545)
+        if (user.username !== 'admin') list = list.filter(h => h !== 'M_house');
+        return list.filter(h => includeDeleted || !ownership[h]?.deleted);
+    }
+    return allHouses.filter(h => {
+        const owner = ownership[h];
+        return owner && owner.owner_id == user.userId && (includeDeleted || !owner.deleted);
+    });
+}
+
+async function canAccessMHouse(user) {
     if (!user) return false;
     if (user.role === 'superadmin') return true;
-    if (user.role === 'admin' && user.username === 'admin') return true;
-    return false;
+    if (user.role !== 'admin' || user.username !== 'admin') return false;
+    const fresh = await getUserById(user.userId);
+    return fresh && Array.isArray(fresh.houses) && fresh.houses.includes('M_house');
+}
+
+async function checkOwnership(houseId, user) {
+    if (user.role === 'superadmin') return true;
+    if (houseId === 'M_house' && !(await canAccessMHouse(user))) return false;
+    if (user.role === 'admin') {
+        const houses = await accessibleHouses(user);
+        return houses.includes(houseId);
+    }
+    const ownership = await getOwnership();
+    const owner = ownership[houseId];
+    return owner && owner.owner_id == user.userId && !owner.deleted;
 }
 
 async function initOwnership() {
@@ -93,24 +139,7 @@ await initNotifFile();
 // ─── Houses ──────────────────────────────────────────────────
 app.get('/api/houses', async (req, res) => {
     try {
-        const userId = req.user.userId;
-        const userRole = req.user.role;
-        const user = req.user;
-        const files = await fs.readdir(DATA_DIR);
-        const allHouses = files.filter(f => f.endsWith('.json')).map(f => f.replace('.json', ''));
-        const ownership = await getOwnership();
-        const activeHouses = allHouses.filter(h => !ownership[h]?.deleted);
-        let visibleHouses = activeHouses;
-        if (userRole !== 'admin' && userRole !== 'superadmin') {
-            visibleHouses = activeHouses.filter(houseId => {
-                const owner = ownership[houseId];
-                return owner && owner.owner_id == userId;
-            });
-        } else {
-            if (userRole === 'admin' && user.username !== 'admin') {
-                visibleHouses = activeHouses.filter(h => h !== 'M_house');
-            }
-        }
+        const visibleHouses = await accessibleHouses(req.user);
         res.json(visibleHouses);
     } catch (err) {
         console.error('Error loading houses:', err);
@@ -121,14 +150,10 @@ app.get('/api/houses', async (req, res) => {
 app.get('/api/houses/ownership', async (req, res) => {
     try {
         const ownership = await getOwnership();
+        const access = await accessibleHouses(req.user);
         const active = {};
         for (const [key, val] of Object.entries(ownership)) {
-            if (!val.deleted) {
-                if (req.user.role === 'admin' && req.user.username !== 'admin' && key === 'M_house') {
-                    continue;
-                }
-                active[key] = val;
-            }
+            if (!val.deleted && access.includes(key)) active[key] = val;
         }
         res.json(active);
     } catch (err) {
@@ -142,7 +167,7 @@ app.post('/api/houses', async (req, res) => {
         const userId = req.user.userId;
         const userRole = req.user.role;
         const user = req.user;
-        if (name === 'M_house' && !canAccessMHouse(user)) {
+        if (name === 'M_house' && !(await canAccessMHouse(user))) {
             return res.status(403).json({ error: 'You do not have permission to manage M_house' });
         }
         if (!name) return res.status(400).json({ error: 'House name required' });
@@ -175,11 +200,14 @@ app.put('/api/houses/:id', async (req, res) => {
         const houseId = req.params.id;
         const userRole = req.user.role;
         const user = req.user;
-        if (houseId === 'M_house' && !canAccessMHouse(user)) {
+        if (houseId === 'M_house' && !(await canAccessMHouse(user))) {
             return res.status(403).json({ error: 'You do not have permission to manage M_house' });
         }
         if (!['admin', 'superadmin'].includes(userRole)) {
             return res.status(403).json({ error: 'Admin or SuperAdmin access required' });
+        }
+        if (!(await checkOwnership(houseId, req.user))) {
+            return res.status(403).json({ error: 'You do not have access to this house' });
         }
         const { name, address, owner_id } = req.body;
         const ownership = await getOwnership();
@@ -213,11 +241,14 @@ app.post('/api/houses/:id/delete', async (req, res) => {
         const houseId = req.params.id;
         const userRole = req.user.role;
         const user = req.user;
-        if (houseId === 'M_house' && !canAccessMHouse(user)) {
+        if (houseId === 'M_house' && !(await canAccessMHouse(user))) {
             return res.status(403).json({ error: 'You do not have permission to manage M_house' });
         }
         if (!['admin', 'superadmin'].includes(userRole)) {
             return res.status(403).json({ error: 'Only admin can delete houses' });
+        }
+        if (!(await checkOwnership(houseId, req.user))) {
+            return res.status(403).json({ error: 'You do not have access to this house' });
         }
         const ownership = await getOwnership();
         if (!ownership[houseId]) {
@@ -239,13 +270,10 @@ app.post('/api/houses/:id/delete', async (req, res) => {
 
 app.get('/api/admin/trash/houses', async (req, res) => {
     if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
-    const user = req.user;
     const ownership = await getOwnership();
+    const access = await accessibleHouses(req.user, true);
     let deleted = Object.keys(ownership)
-        .filter(k => ownership[k].deleted === true);
-    if (user.role === 'admin' && user.username !== 'admin') {
-        deleted = deleted.filter(k => k !== 'M_house');
-    }
+        .filter(k => ownership[k].deleted === true && access.includes(k));
     res.json(deleted.map(k => ({ name: k, ...ownership[k] })));
 });
 
@@ -253,12 +281,16 @@ app.post('/api/admin/trash/houses/restore/:houseId', async (req, res) => {
     if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
     const houseId = req.params.houseId;
     const user = req.user;
-    if (houseId === 'M_house' && !canAccessMHouse(user)) {
+    if (houseId === 'M_house' && !(await canAccessMHouse(user))) {
         return res.status(403).json({ error: 'You do not have permission to manage M_house' });
     }
     const ownership = await getOwnership();
     if (!ownership[houseId] || !ownership[houseId].deleted) {
         return res.status(404).json({ error: 'Deleted house not found' });
+    }
+    const access = await accessibleHouses(req.user, true);
+    if (!access.includes(houseId)) {
+        return res.status(403).json({ error: 'You do not have access to this house' });
     }
     ownership[houseId].deleted = false;
     ownership[houseId].deleted_at = null;
@@ -270,12 +302,16 @@ app.delete('/api/admin/trash/houses/permanent/:houseId', async (req, res) => {
     if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
     const houseId = req.params.houseId;
     const user = req.user;
-    if (houseId === 'M_house' && !canAccessMHouse(user)) {
+    if (houseId === 'M_house' && !(await canAccessMHouse(user))) {
         return res.status(403).json({ error: 'You do not have permission to manage M_house' });
     }
     const ownership = await getOwnership();
     if (!ownership[houseId] || !ownership[houseId].deleted) {
         return res.status(404).json({ error: 'Deleted house not found' });
+    }
+    const access = await accessibleHouses(req.user, true);
+    if (!access.includes(houseId)) {
+        return res.status(403).json({ error: 'You do not have access to this house' });
     }
     try {
         await fs.unlink(getFilePath(houseId));
@@ -400,11 +436,11 @@ app.patch('/api/admin/subscription/:userId', async (req, res) => {
 app.get('/api/tenants', async (req, res) => {
     const { houseId } = req.query;
     if (!houseId) return res.status(400).json({ error: 'Missing houseId' });
-    if (houseId === 'M_house' && !canAccessMHouse(req.user)) {
+    if (houseId === 'M_house' && !(await canAccessMHouse(req.user))) {
         return res.status(403).json({ error: 'Access denied to M_house' });
     }
     try {
-        const hasAccess = await checkOwnership(houseId, req.user.userId, req.user.role);
+        const hasAccess = await checkOwnership(houseId, req.user);
         if (!hasAccess) return res.status(403).json({ error: 'Access denied' });
         const tenants = await readTenants(houseId);
         const active = tenants.filter(t => !t.deleted);
@@ -418,11 +454,11 @@ app.get('/api/tenants', async (req, res) => {
 app.post('/api/tenants', async (req, res) => {
     const { houseId } = req.query;
     if (!houseId) return res.status(400).json({ error: 'Missing houseId' });
-    if (houseId === 'M_house' && !canAccessMHouse(req.user)) {
+    if (houseId === 'M_house' && !(await canAccessMHouse(req.user))) {
         return res.status(403).json({ error: 'Access denied to M_house' });
     }
     try {
-        const hasAccess = await checkOwnership(houseId, req.user.userId, req.user.role);
+        const hasAccess = await checkOwnership(houseId, req.user);
         if (!hasAccess) return res.status(403).json({ error: 'Access denied' });
         const { name, rent_amount, last_reading, tenant_username, tenant_password, tenant_fullName, tenant_phone, tenant_email, tenant_address } = req.body;
         if (!name || rent_amount == null) return res.status(400).json({ error: 'Name and rent required' });
@@ -468,11 +504,11 @@ app.post('/api/tenants', async (req, res) => {
 app.put('/api/tenants/:id', async (req, res) => {
     const { houseId } = req.query;
     if (!houseId) return res.status(400).json({ error: 'Missing houseId' });
-    if (houseId === 'M_house' && !canAccessMHouse(req.user)) {
+    if (houseId === 'M_house' && !(await canAccessMHouse(req.user))) {
         return res.status(403).json({ error: 'Access denied to M_house' });
     }
     try {
-        const hasAccess = await checkOwnership(houseId, req.user.userId, req.user.role);
+        const hasAccess = await checkOwnership(houseId, req.user);
         if (!hasAccess) return res.status(403).json({ error: 'Access denied' });
         const id = parseInt(req.params.id);
         const { name, rent_amount, last_reading, phone, email, address } = req.body;
@@ -500,11 +536,11 @@ app.put('/api/tenants/:id', async (req, res) => {
 app.post('/api/tenants/:id/delete', async (req, res) => {
     const { houseId } = req.query;
     if (!houseId) return res.status(400).json({ error: 'Missing houseId' });
-    if (houseId === 'M_house' && !canAccessMHouse(req.user)) {
+    if (houseId === 'M_house' && !(await canAccessMHouse(req.user))) {
         return res.status(403).json({ error: 'Access denied to M_house' });
     }
     try {
-        const hasAccess = await checkOwnership(houseId, req.user.userId, req.user.role);
+        const hasAccess = await checkOwnership(houseId, req.user);
         if (!hasAccess) return res.status(403).json({ error: 'Access denied' });
         const tenantId = parseInt(req.params.id);
         let tenants = await readTenants(houseId);
@@ -525,11 +561,11 @@ app.post('/api/tenants/:id/delete', async (req, res) => {
 app.post('/api/calculate', async (req, res) => {
     const { houseId } = req.query;
     if (!houseId) return res.status(400).json({ error: 'Missing houseId' });
-    if (houseId === 'M_house' && !canAccessMHouse(req.user)) {
+    if (houseId === 'M_house' && !(await canAccessMHouse(req.user))) {
         return res.status(403).json({ error: 'Access denied to M_house' });
     }
     try {
-        const hasAccess = await checkOwnership(houseId, req.user.userId, req.user.role);
+        const hasAccess = await checkOwnership(houseId, req.user);
         if (!hasAccess) return res.status(403).json({ error: 'Access denied' });
         const { id, curr, water, waste, due, ded, month, dedReason, note } = req.body;
         if (!id || curr == null) return res.status(400).json({ error: 'Tenant ID and current reading required' });
@@ -582,14 +618,14 @@ app.patch('/api/bills/pay', async (req, res) => {
     if (!houseId || !tenantId || !billId) {
         return res.status(400).json({ error: 'houseId, tenantId, billId required' });
     }
-    if (houseId === 'M_house' && !canAccessMHouse(req.user)) {
+    if (houseId === 'M_house' && !(await canAccessMHouse(req.user))) {
         return res.status(403).json({ error: 'Access denied to M_house' });
     }
     if (!paymentType || !['equal', 'due', 'advance'].includes(paymentType)) {
         return res.status(400).json({ error: 'paymentType must be equal, due, or advance' });
     }
     try {
-        const hasAccess = await checkOwnership(houseId, req.user.userId, req.user.role);
+        const hasAccess = await checkOwnership(houseId, req.user);
         if (!hasAccess) return res.status(403).json({ error: 'Access denied' });
         let tenants = await readTenants(houseId);
         const tenant = tenants.find(t => t.id === parseInt(tenantId));
@@ -627,11 +663,11 @@ app.patch('/api/bills/pay', async (req, res) => {
 app.delete('/api/tenants/:id/history/:index', async (req, res) => {
     const { houseId } = req.query;
     if (!houseId) return res.status(400).json({ error: 'Missing houseId' });
-    if (houseId === 'M_house' && !canAccessMHouse(req.user)) {
+    if (houseId === 'M_house' && !(await canAccessMHouse(req.user))) {
         return res.status(403).json({ error: 'Access denied to M_house' });
     }
     try {
-        const hasAccess = await checkOwnership(houseId, req.user.userId, req.user.role);
+        const hasAccess = await checkOwnership(houseId, req.user);
         if (!hasAccess) return res.status(403).json({ error: 'Access denied' });
         const id = parseInt(req.params.id);
         const idx = parseInt(req.params.index);
@@ -664,7 +700,7 @@ app.put('/api/tenants/:id/balance', async (req, res) => {
     if (isNaN(newBalance)) return res.status(400).json({ error: 'Invalid balance value' });
 
     try {
-        const hasAccess = await checkOwnership(houseId, req.user.userId, req.user.role);
+        const hasAccess = await checkOwnership(houseId, req.user);
         if (!hasAccess) return res.status(403).json({ error: 'Access denied' });
 
         let tenants = await readTenants(houseId);
@@ -701,7 +737,7 @@ app.post('/api/admin/link-tenant', async (req, res) => {
     if (!houseId || !tenantId || !userId) {
         return res.status(400).json({ error: 'houseId, tenantId, and userId required' });
     }
-    if (houseId === 'M_house' && !canAccessMHouse(req.user)) {
+    if (houseId === 'M_house' && !(await canAccessMHouse(req.user))) {
         return res.status(403).json({ error: 'Access denied to M_house' });
     }
     try {
@@ -807,7 +843,7 @@ app.post('/api/admin/trash/tenants/restore/:tenantId', async (req, res) => {
     if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
     const { houseId } = req.query;
     if (!houseId) return res.status(400).json({ error: 'houseId required' });
-    if (houseId === 'M_house' && !canAccessMHouse(req.user)) {
+    if (houseId === 'M_house' && !(await canAccessMHouse(req.user))) {
         return res.status(403).json({ error: 'Access denied to M_house' });
     }
     const tenantId = parseInt(req.params.tenantId);
@@ -831,7 +867,7 @@ app.delete('/api/admin/trash/tenants/permanent/:tenantId', async (req, res) => {
     if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
     const { houseId } = req.query;
     if (!houseId) return res.status(400).json({ error: 'houseId required' });
-    if (houseId === 'M_house' && !canAccessMHouse(req.user)) {
+    if (houseId === 'M_house' && !(await canAccessMHouse(req.user))) {
         return res.status(403).json({ error: 'Access denied to M_house' });
     }
     const tenantId = parseInt(req.params.tenantId);
