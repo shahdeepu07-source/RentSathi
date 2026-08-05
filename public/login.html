@@ -165,6 +165,38 @@
         .footer-bottom { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; border-top:1px solid rgba(255,255,255,.08); padding-top:22px; color:#64748b; font-size:.8rem; }
         .footer-bottom .tt { color:#8aa0b8; font-weight:600; }
 
+        /* ─── Pricing ─── */
+        .price-grid { display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-bottom:34px; }
+        .price-card { background:var(--white); border:1px solid var(--border); border-radius:14px; padding:28px 26px; box-shadow:var(--shadow-1); display:flex; flex-direction:column; }
+        .price-card.pop { border-color:#2563eb; box-shadow:0 0 0 1px #2563eb, var(--shadow-2); }
+        .price-card h3 { font-size:1.2rem; font-weight:700; margin-bottom:4px; }
+        .price-card .tag { color:var(--muted); font-size:.9rem; margin-bottom:16px; }
+        .price-card ul { list-style:none; margin:0 0 18px; }
+        .price-card li { display:flex; align-items:flex-start; gap:9px; color:var(--text); font-size:.9rem; margin-bottom:9px; }
+        .price-card li::before { content:""; width:6px; height:6px; border-radius:50%; background:var(--accent); margin-top:7px; flex-shrink:0; }
+        .price-from { border-top:1px solid var(--border); padding-top:14px; margin-top:auto; }
+        .price-from b { font-size:1.5rem; color:var(--text); }
+        .price-from b small { font-size:.85rem; color:var(--muted); font-weight:500; }
+        .price-from .annual { color:var(--muted); font-size:.8rem; margin-top:2px; }
+        .calc-box { background:var(--white); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-1); padding:26px; max-width:760px; margin:0 auto; }
+        .calc-seg { display:flex; gap:8px; margin-bottom:18px; }
+        .calc-seg button { flex:1; padding:11px 0; border-radius:10px; border:1px solid var(--border); background:var(--subtle); color:var(--muted); font-weight:600; font-size:.88rem; cursor:pointer; transition:all .2s; }
+        .calc-seg button.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+        .calc-row { display:flex; align-items:center; gap:18px; margin-bottom:20px; flex-wrap:wrap; }
+        .calc-help { color:var(--muted); font-size:.82rem; margin:0 0 22px; }
+        .calc-row label { font-size:.82rem; font-weight:600; color:var(--text); min-width:120px; }
+        .calc-row input[type="range"] { flex:1; min-width:180px; accent-color:var(--accent); }
+        .calc-count { width:44px; text-align:center; font-weight:700; color:var(--accent); font-size:1.05rem; }
+        .calc-out { display:grid; grid-template-columns:1fr 1fr; gap:16px; background:var(--subtle); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:14px; }
+        .calc-out div small { display:block; color:var(--muted); font-size:.75rem; margin-bottom:3px; }
+        .calc-out b { font-size:1.4rem; }
+        .calc-out .save { color:#16a34a; font-size:.8rem; font-weight:600; }
+        .calc-tiers { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:6px; }
+        .calc-tiers small { padding:5px 12px; border:1px solid var(--border); border-radius:999px; color:var(--muted); font-size:.74rem; background:var(--white); }
+        .calc-tiers small b { color:var(--accent); }
+        .calc-note { text-align:center; color:var(--muted); font-size:.82rem; margin-top:16px; }
+        .multi-note { max-width:760px; margin:26px auto 0; background:var(--white); border:1px dashed var(--border); border-radius:12px; padding:18px 22px; font-size:.86rem; color:var(--muted); text-align:center; }
+
         /* ─── Made-by-kali badge ─── */
         .made-by-kali { position:fixed; bottom:12px; right:16px; z-index:999; display:flex; align-items:center; gap:6px; color:#6b7280; font-size:0.7rem; font-family:'SF Mono','Fira Code','Cascadia Code',monospace; letter-spacing:0.8px; opacity:0.5; transition:opacity 0.3s; pointer-events:none; }
         .made-by-kali span { color:var(--accent); font-weight:600; opacity:0.85; }
@@ -175,6 +207,7 @@
             .login-area { max-width:420px; }
             .feat-grid, .steps, .benefit-grid { grid-template-columns:1fr 1fr; }
             .sec-grid { grid-template-columns:1fr 1fr; }
+            .price-grid { grid-template-columns:1fr; }
             .footer-grid { grid-template-columns:1fr 1fr; }
         }
         @media (max-width:560px) {
@@ -188,6 +221,9 @@
             .footer-grid { grid-template-columns:1fr; gap:26px; }
             .login-card { padding:26px 20px; }
             .role-selector button { min-height:42px; }
+            .calc-out { grid-template-columns:1fr; }
+            .calc-row { flex-direction:column; align-items:stretch; gap:8px; }
+            .calc-count { width:auto; text-align:center; }
         }
     </style>
 </head>
@@ -199,6 +235,7 @@
         <a class="brand" href="/"><img src="/logo.svg" alt="SajiloRent logo">SajiloRent</a>
         <nav class="nav-links">
             <a href="#features">Features</a>
+            <a href="#pricing">Pricing</a>
             <a href="#benefits">Benefits</a>
             <a href="#security">Security</a>
             <a href="#app">Preview</a>
@@ -253,6 +290,81 @@
                         New owner? <a href="/register.html">Register here</a>
                     </div>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── Pricing ─── -->
+    <section class="band tint" id="pricing">
+        <div class="container">
+            <div class="sec-head">
+                <div class="sec-label">Pricing</div>
+                <h2>Simple, per-tenant pricing</h2>
+                <p>Pay per tenant each month. The more tenants you manage, the less you pay per tenant.</p>
+            </div>
+            <div class="price-grid">
+                <div class="price-card">
+                    <h3>Self-service</h3>
+                    <p class="tag">You manage everything in the app</p>
+                    <ul>
+                        <li>Add tenants, owners, houses &amp; notices</li>
+                        <li>Generate &amp; download monthly bills</li>
+                        <li>Track payments, paid &amp; unpaid</li>
+                        <li>Daily &amp; monthly history of every house</li>
+                        <li>Works on web, Android &amp; Windows</li>
+                    </ul>
+                    <div class="price-from">
+                        <b>Rs 55</b> <small>/ tenant / month</small><br>
+                        <span class="annual">Yearly: 2 months free</span>
+                    </div>
+                </div>
+                <div class="price-card pop">
+                    <h3>Full-service</h3>
+                    <p class="tag">We manage everything for you</p>
+                    <ul>
+                        <li>Everything in self-service, plus:</li>
+                        <li>We create every monthly bill for you</li>
+                        <li>We track payments &amp; remind about dues</li>
+                        <li>We send notices to tenants for you</li>
+                        <li>You get a clean monthly statement report</li>
+                    </ul>
+                    <div class="price-from">
+                        <b>Rs 140</b> <small>/ tenant / month</small><br>
+                        <span class="annual">Volume discount below</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="calc-box">
+                <div class="calc-seg" id="calcSvc">
+                    <button class="active" data-svc="self">Self-service</button>
+                    <button data-svc="full">Full-service</button>
+                </div>
+                <p class="calc-help">Slide to choose how many tenants one house has.</p>
+                <div class="calc-row">
+                    <label for="calcTenants">Tenants in house</label>
+                    <input type="range" id="calcTenants" min="1" max="20" value="5">
+                    <span class="calc-count" id="calcCount">5</span>
+                </div>
+                <div class="calc-out">
+                    <div>
+                        <small>Per tenant / month</small>
+                        <b id="calcRate">Rs 80</b>
+                        <div class="save" id="calcSave"></div>
+                    </div>
+                    <div>
+                        <small>Total / month</small>
+                        <b id="calcMonthTotal">Rs 400</b>
+                        <div class="save">Yearly: <span id="calcYearTotal">Rs 4,000</span> (2 months free)</div>
+                    </div>
+                </div>
+                <div class="calc-tiers" id="calcTiers"></div>
+                <p class="calc-note">Start free with a 30-day trial &middot; no card required &middot; <a href="/register.html" style="color:var(--accent);font-weight:600;">Register your house now</a></p>
+            </div>
+
+            <div class="multi-note">
+                <b style="color:var(--text);">Own 2 or more houses?</b> &nbsp;Multiple-house pricing available —
+                from <b style="color:var(--accent);">Rs 199/house/month</b> (self-service) or <b style="color:var(--accent);">Rs 399/house/month</b> (full-service), plus per-tenant rates. Contact us for a quote.
             </div>
         </div>
     </section>
@@ -447,6 +559,7 @@
                 <h4>Product</h4>
                 <ul>
                     <li><a href="#features">Features</a></li>
+                    <li><a href="#pricing">Pricing</a></li>
                     <li><a href="#how">How it works</a></li>
                     <li><a href="#benefits">Benefits</a></li>
                     <li><a href="#app">Preview</a></li>
@@ -479,6 +592,71 @@
 <script>
     var yr = document.getElementById('yr');
     if (yr) yr.textContent = new Date().getFullYear();
+</script>
+<script>
+    /* Pricing calculator */
+    (function () {
+        var TIERS = {
+            self: [[1, 100], [2, 90], [4, 80], [7, 70], [11, 60], [16, 55]],
+            full: [[1, 250], [2, 225], [4, 200], [7, 175], [11, 150], [16, 140]]
+        };
+        var BASE = { self: 100, full: 250 };
+
+        var svcBtns = document.querySelectorAll('#calcSvc button');
+        var slider = document.getElementById('calcTenants');
+        var count = document.getElementById('calcCount');
+        var rateEl = document.getElementById('calcRate');
+        var saveEl = document.getElementById('calcSave');
+        var monthEl = document.getElementById('calcMonthTotal');
+        var yearEl = document.getElementById('calcYearTotal');
+        var tiersEl = document.getElementById('calcTiers');
+        var svc = 'self';
+
+        function rateFor(svc, n) {
+            var tiers = TIERS[svc];
+            var r = tiers[0][1];
+            for (var i = 0; i < tiers.length; i++) {
+                if (n >= tiers[i][0]) r = tiers[i][1];
+            }
+            return r;
+        }
+
+        function fmt(n) { return 'Rs ' + n.toLocaleString('en-IN'); }
+
+        function render() {
+            var n = parseInt(slider.value, 10) || 1;
+            count.textContent = n;
+            var rate = rateFor(svc, n);
+            var base = BASE[svc];
+            var monthly = rate * n;
+            var yearly = monthly * 10;
+            var off = Math.round((1 - rate / base) * 100);
+            rateEl.textContent = fmt(rate);
+            monthEl.textContent = fmt(monthly);
+            yearEl.textContent = fmt(yearly);
+            saveEl.textContent = off > 0 ? 'Save ' + off + '% vs base rate' : 'Base rate';
+            tiersEl.innerHTML = '';
+            TIERS[svc].forEach(function (t, i) {
+                var label = t[0] === 1 ? '1 tenant' : (t[0] === 16 ? '16+ tenants' : t[0] + '-' + ((TIERS[svc][i + 1] || [20])[0] - 1) + ' tenants');
+                var act = n >= t[0] && (i === TIERS[svc].length - 1 || n < TIERS[svc][i + 1][0]);
+                var span = document.createElement('small');
+                span.innerHTML = label + ': <b>Rs ' + t[1] + '</b>';
+                if (act) { span.style.borderColor = 'var(--accent)'; span.style.color = 'var(--accent)'; }
+                tiersEl.appendChild(span);
+            });
+        }
+
+        svcBtns.forEach(function (b) {
+            b.addEventListener('click', function () {
+                svcBtns.forEach(function (x) { x.classList.remove('active'); });
+                b.classList.add('active');
+                svc = b.dataset.svc;
+                render();
+            });
+        });
+        slider.addEventListener('input', render);
+        render();
+    })();
 </script>
 <script>
     const API_BASE = '/api';
