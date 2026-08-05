@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SajiloRent</string>
+    <string name="title_activity_main">SajiloRent</string>
+    <string name="package_name">com.sajilorent.app</string>
+    <string name="custom_url_scheme">com.sajilorent.app</string>
+</resources>

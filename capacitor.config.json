@@ -1,0 +1,9 @@
+{
+  "appId": "com.sajilorent.app",
+  "appName": "SajiloRent",
+  "webDir": "public",
+  "server": {
+    "url": "https://sajilorent.onrender.com",
+    "cleartext": false
+  }
+}
