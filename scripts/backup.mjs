@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
 import 'dotenv/config';
-import { resolveDataDir, USERS_FILE, OWNERSHIP_FILE, NOTIF_FILE, UPGRADES_FILE } from '../server/paths.js';
+import { resolveDataDir, USERS_FILE, OWNERSHIP_FILE, NOTIF_FILE, UPGRADES_FILE, PAYMENTS_FILE } from '../server/paths.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BACKUP_DIR = path.join(__dirname, '..', 'backups');
@@ -16,12 +16,13 @@ async function dumpPostgres() {
         max: 2
     });
     try {
-        const [u, h, t, n, up] = await Promise.all([
+        const [u, h, t, n, up, py] = await Promise.all([
             pool.query('SELECT data FROM users ORDER BY id'),
             pool.query('SELECT name, data FROM houses ORDER BY name'),
             pool.query('SELECT house_id, data FROM tenants ORDER BY house_id, id'),
             pool.query('SELECT data FROM notifications ORDER BY id'),
-            pool.query('SELECT data FROM upgrade_requests ORDER BY id')
+            pool.query('SELECT data FROM upgrade_requests ORDER BY id'),
+            pool.query("SELECT data FROM payments ORDER BY data->>'createdAt'")
         ]);
         const tenants = {};
         for (const row of t.rows) {
@@ -35,7 +36,8 @@ async function dumpPostgres() {
             houses: Object.fromEntries(h.rows.map(r => [r.name, r.data])),
             tenants,
             notifications: n.rows.map(r => r.data),
-            upgrade_requests: up.rows.map(r => r.data)
+            upgrade_requests: up.rows.map(r => r.data),
+            payments: py.rows.map(r => r.data)
         };
     } finally {
         await pool.end();
@@ -59,7 +61,8 @@ async function dumpJson() {
         houses: (await read(OWNERSHIP_FILE)) || {},
         tenants,
         notifications: (await read(NOTIF_FILE)) || [],
-        upgrade_requests: (await read(UPGRADES_FILE)) || []
+        upgrade_requests: (await read(UPGRADES_FILE)) || [],
+        payments: (await read(PAYMENTS_FILE)) || []
     };
 }
 

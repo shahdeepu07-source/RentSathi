@@ -13,6 +13,7 @@ Simple monthly billing, notices and payment tracking for houses, tenants and own
 - Roles: SuperAdmin, Admin, Owner, Tenant
 - Web + Android (Capacitor) + Windows (Electron)
 - Per-tenant subscription pricing with volume discounts
+- eSewa EPay payments: in-app checkout → eSewa gateway → server-verified callback auto-upgrades the account (sandbox test merchant by default)
 
 ## Tech stack
 
@@ -39,6 +40,14 @@ Demo accounts (seeded by `server/auth.js` on first run):
 |---------------|----------|------------|
 | Super_Admin   | Kali_5545 | superadmin |
 | admin         | 5545     | admin      |
+
+## eSewa payments
+
+The subscription tab ("Upgrade Plan") opens a checkout: choose plan, billing cycle and tenant count, then pay with eSewa. The owner is redirected to the gateway; the callback is verified server-side (`server/esewa.js` + `/api/subscription/esewa/success`) before the account flips to `paid` and the payment/request records are stored in Postgres (also included in backups).
+
+- Sandbox is default: `ESEWA_MODE=sandbox`, test merchant `EPAYTEST`. No real money moves.
+- For live payments register as an eSewa merchant, then in the platform env set `ESEWA_MODE=live`, `ESEWA_SCD` and `ESEWA_SECRET` (see `.env.example`). `su`/`fu` callbacks use `BASE_URL` (falls back to the Render URL).
+- Manual fallback: owners without eSewa can still send a request that a SuperAdmin approves.
 
 ## Backups
 

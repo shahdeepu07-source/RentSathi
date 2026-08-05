@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
 import 'dotenv/config';
-import { resolveDataDir, USERS_FILE, OWNERSHIP_FILE, NOTIF_FILE, UPGRADES_FILE } from './paths.js';
+import { resolveDataDir, USERS_FILE, OWNERSHIP_FILE, NOTIF_FILE, UPGRADES_FILE, PAYMENTS_FILE } from './paths.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,6 +49,10 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 CREATE TABLE IF NOT EXISTS upgrade_requests (
     id BIGINT PRIMARY KEY,
+    data JSONB NOT NULL
+);
+CREATE TABLE IF NOT EXISTS payments (
+    pid TEXT PRIMARY KEY,
     data JSONB NOT NULL
 );
 `;
@@ -213,6 +217,33 @@ export async function saveUpgradeRequests(arr) {
         return;
     }
     await fs.writeFile(UPGRADES_FILE, JSON.stringify(arr || [], null, 2));
+}
+
+// ─── Payments (eSewa) ───────────────────────────────────────
+export async function getPayments() {
+    if (DB_ENABLED) {
+        const r = await pool.query("SELECT data FROM payments ORDER BY data->>'createdAt'");
+        return r.rows.map(x => x.data);
+    }
+    try {
+        const raw = await fs.readFile(PAYMENTS_FILE, 'utf8');
+        return JSON.parse(raw);
+    } catch {
+        return [];
+    }
+}
+
+export async function savePayments(arr) {
+    if (DB_ENABLED) {
+        await inTx(async (c) => {
+            await c.query('DELETE FROM payments');
+            for (const p of arr || []) {
+                await c.query('INSERT INTO payments (pid, data) VALUES ($1, $2)', [p.pid, p]);
+            }
+        });
+        return;
+    }
+    await fs.writeFile(PAYMENTS_FILE, JSON.stringify(arr || [], null, 2));
 }
 
 // ─── House listing / lifecycle ────────────────────────────────

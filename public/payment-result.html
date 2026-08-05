@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1120">
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+    <title>SajiloRent - Payment</title>
+    <style>
+        html { -webkit-text-size-adjust:100%; }
+        :root { --bg:#0b1120; --card:#111827; --text:#f8fafc; --accent:#2563eb; --border:#1f2937; }
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter',system-ui,sans-serif; }
+        body { background:var(--bg); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+        .card { width:100%; max-width:440px; background:var(--card); padding:40px 32px; border-radius:16px; border:1px solid var(--border); box-shadow:0 20px 60px rgba(0,0,0,0.5); text-align:center; }
+        .icon { font-size:3rem; margin-bottom:12px; }
+        h1 { font-size:1.5rem; font-weight:700; margin-bottom:8px; color:var(--text); }
+        p.detail { color:#94a3b8; font-size:0.9rem; line-height:1.6; margin-bottom:24px; }
+        .btn { display:inline-block; padding:12px 22px; background:var(--accent); color:#fff; border-radius:8px; font-weight:600; text-decoration:none; font-size:0.95rem; transition:0.2s; }
+        .btn:hover { background:#1d4ed8; }
+        .logo { height:40px; width:auto; margin-bottom:16px; }
+        .made-by-kali { position:fixed; bottom:12px; right:16px; z-index:999; color:#6b7280; font-size:0.7rem; font-family:'SF Mono','Fira Code','Cascadia Code',monospace; letter-spacing:0.8px; opacity:0.5; pointer-events:none; }
+        .made-by-kali span { color:var(--accent); font-weight:600; opacity:0.85; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <img class="logo" src="/assets/logo.svg" alt="SajiloRent">
+    <div class="icon" id="icon">&#10003;</div>
+    <h1 id="title">Payment successful</h1>
+    <p class="desc" id="desc">Your plan is now active. You can continue in the app.</p>
+    <a class="btn" href="/login.html">Continue to SajiloRent</a>
+</div>
+<div class="made-by-kali">made by <span>kali</span></div>
+<script>
+    var status = new URLSearchParams(location.search).get('status') || '';
+    var elt = {
+        icon: document.getElementById('icon'),
+        title: document.getElementById('title'),
+        desc: document.getElementById('desc')
+    };
+    if (status === 'success') {
+        elt.icon.textContent = '✓';
+        elt.icon.style.color = '#22c55e';
+        elt.title.textContent = 'Payment successful';
+        elt.desc.textContent = 'Thank you! Your plan is now active. Please log in to continue.';
+} else if (status === 'failed' || status === 'amount_mismatch') {
+        elt.icon.textContent = '✕';
+        elt.icon.style.color = '#ef4444';
+        elt.title.textContent = 'Payment not completed';
+        elt.desc.textContent = 'Your payment did not go through. If money was deducted it will be refunded by eSewa. You can try again from the app.';
+    } else if (status === 'missing') {
+        elt.icon.textContent = '?';
+        elt.icon.style.color = '#eab308';
+        elt.title.textContent = 'Payment reference not found';
+        elt.desc.textContent = 'We couldn\'t find this payment. Contact support with your reference ID.';
+    } else {
+        elt.icon.textContent = '!';
+        elt.icon.style.color = '#f97316';
+        elt.title.textContent = 'Something went wrong';
+        elt.desc.textContent = 'An unexpected error occurred. If money was deducted it will be refunded by eSewa. Please try again from the app.';
+    }
+</script>
+</body>
+</html>

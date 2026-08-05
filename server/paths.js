@@ -28,3 +28,4 @@ export const USERS_FILE = path.join(DATA_ROOT, 'users.json');
 export const OWNERSHIP_FILE = path.join(DATA_ROOT, 'ownership.json');
 export const NOTIF_FILE = path.join(DATA_ROOT, 'notifications.json');
 export const UPGRADES_FILE = path.join(DATA_ROOT, 'upgrade_requests.json');
+export const PAYMENTS_FILE = path.join(DATA_ROOT, 'payments.json');

@@ -291,39 +291,122 @@
 <style>
   #upg-overlay { display:none; position:fixed; inset:0; z-index:1100; background:rgba(0,0,0,.65); align-items:center; justify-content:center; padding:20px; }
   #upg-overlay.active { display:flex; }
-  #upg-box { background:var(--card,#fff); border:1px solid var(--border,#e5e7eb); border-radius:12px; width:100%; max-width:420px; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,.4); }
+  #upg-box { background:var(--card,#fff); border:1px solid var(--border,#e5e7eb); border-radius:12px; width:100%; max-width:440px; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,.4); max-height:92vh; overflow-y:auto; }
   #upg-box h3 { margin:0 0 16px; font-size:1.05rem; }
   #upg-box .f-group { margin-bottom:12px; }
   #upg-box label { display:block; font-size:.68rem; font-weight:700; text-transform:uppercase; color:var(--text-muted,#64748b); margin-bottom:4px; }
-  #upg-box select, #upg-box textarea { width:100%; padding:10px 12px; border:1px solid var(--border,#e5e7eb); border-radius:6px; background:var(--card,#fff); color:var(--text,#111); font-size:.9rem; outline:none; font-family:inherit; }
-  #upg-box select:focus, #upg-box textarea:focus { border-color:var(--accent,#2563eb); }
-  #upg-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:18px; }
+  #upg-box select, #upg-box textarea, #upg-box input[type="number"] { width:100%; padding:10px 12px; border:1px solid var(--border,#e5e7eb); border-radius:6px; background:var(--card,#fff); color:var(--text,#111); font-size:.9rem; outline:none; font-family:inherit; }
+  #upg-box select:focus, #upg-box textarea:focus, #upg-box input:focus { border-color:var(--accent,#2563eb); }
+  #upg-price { margin:14px 0; padding:12px 14px; border-radius:8px; background:var(--accent-soft,rgba(37,99,235,.08)); border:1px dashed var(--border,#cbd5e1); font-size:.9rem; color:var(--text,#111); }
+  #upg-price b { font-size:1.05rem; }
+  #upg-pay { width:100%; padding:13px; border:none; border-radius:8px; background:var(--accent,#2563eb); color:#fff; font-weight:700; font-size:.95rem; cursor:pointer; }
+  #upg-pay:disabled { opacity:.6; cursor:not-allowed; }
+  #upg-or { text-align:center; font-size:.75rem; color:var(--text-muted,#64748b); margin:12px 0; }
+  #upg-manual-link { display:block; text-align:center; font-size:.8rem; color:var(--accent,#2563eb); cursor:pointer; text-decoration:underline; }
+  #upg-manual { display:none; }
+  #upg-manual.show { display:block; }
+  #upg-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:12px; }
   #upg-actions button { padding:8px 16px; border-radius:6px; border:1px solid var(--border,#e5e7eb); background:var(--card,#fff); color:var(--text,#111); cursor:pointer; font-weight:600; }
   #upg-actions button[type="submit"] { background:var(--accent,#2563eb); border-color:var(--accent,#2563eb); color:#fff; }
 </style>
 <div id="upg-overlay" onclick="if (event.target === this) document.getElementById('upg-overlay').classList.remove('active')">
   <div id="upg-box">
-    <h3>⬆️ Request plan upgrade</h3>
-    <div class="f-group"><label>Desired plan</label>
-      <select id="upg-plan">
+    <h3>⬆️ Upgrade plan</h3>
+    <div class="f-group"><label>Plan</label>
+      <select id="upg-plan" onchange="upgRefresh()">
         <option value="self">Self-service</option>
         <option value="full">Full-service</option>
       </select>
     </div>
-    <div class="f-group"><label>Notes (optional)</label>
-      <textarea id="upg-notes" rows="3" placeholder="Houses, tenant count, anything we should know"></textarea>
+    <div class="f-group"><label>Billing cycle</label>
+      <select id="upg-cycle" onchange="upgRefresh()">
+        <option value="monthly">Monthly</option>
+        <option value="yearly">Yearly (2 months free)</option>
+      </select>
     </div>
+    <div class="f-group"><label>Tenant records</label>
+      <input type="number" id="upg-tenants" value="5" min="1" max="200" oninput="upgRefresh()">
+    </div>
+    <div id="upg-price"></div>
     <div id="upg-msg" style="color:var(--danger,#dc2626);font-size:.85rem;"></div>
-    <div id="upg-actions">
-      <button type="button" onclick="document.getElementById('upg-overlay').classList.remove('active')">Cancel</button>
-      <button type="submit" onclick="submitUpgradeRequest(event)">Send request</button>
+    <button id="upg-pay" onclick="submitCheckout()">Pay with eSewa</button>
+    <p id="upg-esewa-note" style="font-size:.72rem;color:var(--text-muted,#64748b);margin:8px 0 0;text-align:center;">You'll be redirected to eSewa to complete the payment.</p>
+    <div id="upg-or">or</div>
+    <a id="upg-manual-link" onclick="toggleManual()">No eSewa? Request manual approval</a>
+    <div id="upg-manual">
+      <div class="f-group" style="margin-top:12px;"><label>Notes (optional)</label>
+        <textarea id="upg-notes" rows="3" placeholder="Houses, tenant count, anything we should know"></textarea>
+      </div>
+      <div id="upg-actions">
+        <button type="button" onclick="document.getElementById('upg-overlay').classList.remove('active')">Cancel</button>
+        <button type="submit" onclick="submitUpgradeRequest(event)">Send request</button>
+      </div>
     </div>
   </div>
 </div>
 <script>
+  var UP_TIERS = { self: [[1,100],[2,90],[4,80],[7,70],[11,60],[16,55]], full: [[1,250],[2,225],[4,200],[7,175],[11,150],[16,140]] };
+  function upgRate(svc, n) {
+    var tiers = UP_TIERS[svc], r = tiers[0][1];
+    for (var i = 0; i < tiers.length; i++) { if (n >= tiers[i][0]) r = tiers[i][1]; }
+    return r;
+  }
+  function upgTotal() {
+    var svc = document.getElementById('upg-plan').value;
+    var cyc = document.getElementById('upg-cycle').value;
+    var n = Math.max(1, Math.min(200, parseInt(document.getElementById('upg-tenants').value, 10) || 1));
+    var rate = upRate(svc, n);
+    var months = cyc === 'yearly' ? 10 : 1;
+    return { rate: rate, months: months, amt: rate * n * months };
+  }
+  function upgRefresh() {
+    var n = Math.max(1, Math.min(200, parseInt(document.getElementById('upg-tenants').value, 10) || 1));
+    document.getElementById('upg-tenants').value = n;
+    var t = upgTotal();
+    var cyc = document.getElementById('upg-cycle').value;
+    var per = cyc === 'yearly' ? '/yr' : '/mo';
+    document.getElementById('upg-price').innerHTML = 'Rs ' + t.rate + ' per tenant per month x ' + t.months + ' month(s)<br><b>Total: Rs ' + t.amt.toLocaleString('en-IN') + '</b> ' + (cyc === 'yearly' ? '/year (2 months free)' : '/month');
+    document.getElementById('upg-pay').textContent = 'Pay with eSewa — Rs ' + t.amt.toLocaleString('en-IN') + ' ' + per;
+  }
   function openUpgradeModal() {
     document.getElementById('upg-msg').textContent = '';
+    toggleManual(true);
+    upgRefresh();
     document.getElementById('upg-overlay').classList.add('active');
+  }
+  function toggleManual(forceHide) {
+    var manual = document.getElementById('upg-manual');
+    var link = document.getElementById('upg-manual-link');
+    var goManual = (forceHide === undefined || forceHide === null) ? !manual.classList.contains('show') : !forceHide;
+    if (goManual) { manual.classList.add('show'); link.style.display = 'none'; }
+    else { manual.classList.remove('show'); link.style.display = 'block'; }
+  }
+  async function submitCheckout() {
+    var msg = document.getElementById('upg-msg');
+    msg.textContent = '';
+    try {
+      var res = await fetch(API_BASE + '/subscription/checkout', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+        body: JSON.stringify({
+          plan: document.getElementById('upg-plan').value,
+          cycle: document.getElementById('upg-cycle').value,
+          tenants: parseInt(document.getElementById('upg-tenants').value, 10)
+        })
+      });
+      var data = await res.json().catch(function () { return {}; });
+      if (!res.ok) { msg.textContent = data.error || 'Failed to create checkout.'; return; }
+      var form = document.createElement('form');
+      form.method = 'POST'; form.action = data.url; form.style.display = 'none';
+      for (var k in data.params) {
+        var inp = document.createElement('input');
+        inp.type = 'hidden'; inp.name = k; inp.value = data.params[k];
+        form.appendChild(inp);
+      }
+      document.body.appendChild(form);
+      form.submit();
+    } catch (e) {
+      msg.textContent = 'Network error. Please try again.';
+    }
   }
   async function submitUpgradeRequest(ev) {
     if (ev) ev.preventDefault();

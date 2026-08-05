@@ -720,13 +720,13 @@
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
                     <div>
                         <div style="font-weight:600;font-size:.9rem;">${escHtml(r.username)} <span class="badge" style="font-size:.68rem;">${escHtml(r.plan === 'full' ? 'Full-service' : 'Self-service')}</span></div>
-                        <div style="font-size:.75rem;color:var(--text-muted);">${new Date(r.createdAt).toLocaleString()}${r.notes ? ' &middot; ' + escHtml(r.notes) : ''}</div>
+                        <div style="font-size:.75rem;color:var(--text-muted);">${new Date(r.createdAt).toLocaleString()}${r.tenants ? ' &middot; ' + r.tenants + ' tenants &middot; Rs ' + (r.amount || 0).toLocaleString('en-IN') : ''}${r.notes ? ' &middot; ' + escHtml(r.notes) : ''}</div>
                     </div>
                     ${r.status === 'pending' ? `
                     <div style="display:flex;gap:8px;">
                         <button class="btn-success" style="font-size:.75rem;padding:6px 14px;" onclick="respondUpgrade(${r.id},'approved')">Approve</button>
                         <button class="btn-danger" style="font-size:.75rem;padding:6px 14px;" onclick="respondUpgrade(${r.id},'declined')">Decline</button>
-                    </div>` : `<span class="badge ${r.status === 'approved' ? 'badge-sub-active' : ''}" style="font-size:.75rem;">${escHtml(r.status)}</span>`}
+                    </div>` : `<span class="badge ${r.paid ? 'badge-paid' : (r.status === 'approved' ? 'badge-sub-active' : r.status === 'declined' ? 'badge-balance-zero' : '')}" style="font-size:.75rem;">${r.paid ? 'Paid ✓' : r.status === 'pending_payment' ? 'Awaiting payment' : escHtml(r.status)}</span>`}
                 </div>`).join('');
         } catch (e) {
             el.innerHTML = '<p style="color:var(--text-muted);font-size:.85rem;margin:0;">Failed to load requests.</p>';

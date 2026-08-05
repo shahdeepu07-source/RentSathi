@@ -9,7 +9,8 @@ import notificationRoutes from './notifications.js';
 import { verifyToken } from './middleware.js';
 import { createUser } from './auth.js';
 import { resolveDataDir } from './paths.js';
-import { getUsers, saveUsers, getOwnership, saveOwnership, readTenants, writeTenants, listHouseIds, houseExists, renameHouse, deleteHousePermanent, getNotifs, saveNotifs, getUpgradeRequests, saveUpgradeRequests } from './db.js';
+import { getUsers, saveUsers, getOwnership, saveOwnership, readTenants, writeTenants, listHouseIds, houseExists, renameHouse, deleteHousePermanent, getNotifs, saveNotifs, getUpgradeRequests, saveUpgradeRequests, getPayments, savePayments } from './db.js';
+import { computeAmount, paymentForm, paymentEndpoint, verifyTransaction } from './esewa.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,6 +22,65 @@ const app = express();
 
 app.use(express.json());
 app.use(cookieParser());
+
+// ─── Public eSewa callbacks (eSewa redirects the browser here with NO
+// bearer token, so these must be registered before the auth middleware) ──
+app.get('/api/subscription/esewa/success', async (req, res) => {
+    const { refId, pid, amt } = req.query;
+    try {
+        const payments = await getPayments();
+        const p = payments.find(x => x.pid === pid);
+        if (!p) return res.redirect('/payment-result.html?status=missing');
+        if (parseInt(amt, 10) !== p.amount) return res.redirect('/payment-result.html?status=amount_mismatch');
+
+        const ok = await verifyTransaction({ pid, refId, amt: String(p.amount) });
+        if (!ok) {
+            p.status = 'failed';
+            await savePayments(payments);
+            return res.redirect('/payment-result.html?status=failed');
+        }
+
+        p.status = 'paid';
+        p.refId = refId;
+        p.verifiedAt = new Date().toISOString();
+        await savePayments(payments);
+
+        const reqs = await getUpgradeRequests();
+        const rq = reqs.find(r => r.pid === pid);
+        if (rq) {
+            rq.status = 'approved';
+            rq.paid = true;
+            rq.refId = refId;
+            rq.respondedAt = new Date().toISOString();
+            await saveUpgradeRequests(reqs);
+        }
+
+        const users = await getUsers();
+        const u = users.find(x => String(x.id) === String(p.userId));
+        if (u) {
+            u.subscription_status = 'paid';
+            u.subscription_plan = p.plan;
+            u.billing_cycle = p.cycle;
+            u.subscription_tenants = p.tenants;
+            u.last_payment = { amount: p.amount, refId, cycle: p.cycle, paidAt: p.verifiedAt };
+            await saveUsers(users);
+        }
+        res.redirect('/payment-result.html?status=success');
+    } catch (err) {
+        console.error('eSewa success callback error:', err);
+        res.redirect('/payment-result.html?status=error');
+    }
+});
+
+app.get('/api/subscription/esewa/failure', async (req, res) => {
+    const { pid } = req.query;
+    try {
+        const payments = await getPayments();
+        const p = payments.find(x => x.pid === pid);
+        if (p) { p.status = 'failed'; await savePayments(payments); }
+    } catch (err) { console.error('eSewa failure callback error:', err); }
+    res.redirect('/payment-result.html?status=failed');
+});
 
 app.use('/api/auth', authRoutes);
 app.use('/api', verifyToken);
@@ -883,6 +943,63 @@ app.post('/api/subscription/requests/:id/respond', async (req, res) => {
     }
 });
 
+// ─── eSewa checkouts ─────────────────────────────────────────
+app.post('/api/subscription/checkout', async (req, res) => {
+    const { plan, cycle, tenants } = req.body;
+    if (!['self', 'full'].includes(plan)) return res.status(400).json({ error: 'Invalid plan' });
+    if (!['monthly', 'yearly'].includes(cycle)) return res.status(400).json({ error: 'Invalid cycle' });
+    const n = parseInt(tenants, 10);
+    if (!Number.isInteger(n) || n < 1 || n > 200) return res.status(400).json({ error: 'Tenants must be 1–200' });
+    try {
+        const { amt } = computeAmount({ plan, cycle, tenants: n });
+        const pid = `SR-${req.user.userId}-${Date.now()}`;
+        const now = new Date().toISOString();
+        const rec = {
+            pid,
+            username: req.user.username,
+            userId: req.user.userId,
+            plan, cycle, tenants: n,
+            amount: amt,
+            status: 'pending',
+            createdAt: now
+        };
+        const payments = await getPayments();
+        payments.push(rec);
+        await savePayments(payments);
+
+        const reqs = await getUpgradeRequests();
+        reqs.push({
+            id: Date.now(),
+            pid,
+            username: req.user.username,
+            userId: req.user.userId,
+            role: req.user.role,
+            plan, cycle, tenants: n, amount: amt,
+            status: 'pending_payment',
+            via: 'esewa',
+            createdAt: now
+        });
+        await saveUpgradeRequests(reqs);
+
+        res.json({
+            url: paymentEndpoint(),
+            params: paymentForm({ pid, amt })
+        });
+    } catch (err) {
+        console.error('Error creating checkout:', err);
+        res.status(500).json({ error: 'Failed to create checkout' });
+    }
+});
+
+app.get('/api/subscription/payments', async (req, res) => {
+    if (req.user.role !== 'superadmin') return res.status(403).json({ error: 'SuperAdmin access required' });
+    try {
+        res.json(await getPayments());
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to load payments' });
+    }
+});
+
 // ─── Pages (explicit allowlist only — data/server folders stay private) ──
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'login.html'));
@@ -892,6 +1009,9 @@ app.get('/login.html', (req, res) => {
 });
 app.get('/register.html', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'register.html'));
+});
+app.get('/payment-result.html', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'public', 'payment-result.html'));
 });
 app.get('/admin.html', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
