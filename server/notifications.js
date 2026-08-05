@@ -2,14 +2,13 @@ import { Router } from 'express';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { resolveDataDir, OWNERSHIP_FILE, NOTIF_FILE } from './paths.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const router = Router();
 
-const NOTIF_FILE = path.join(__dirname, '..', 'data', 'notifications.json');
-const DATA_DIR = path.join(__dirname, '..', 'data', 'clients');
-const OWNERSHIP_FILE = path.join(__dirname, '..', 'data', 'ownership.json');
+const DATA_DIR = await resolveDataDir();
 
 // ─── Helpers ──────────────────────────────────────────────────
 async function getNotifs() {

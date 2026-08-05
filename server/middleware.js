@@ -2,7 +2,8 @@ import 'dotenv/config';
 import jwt from 'jsonwebtoken';
 
 if (!process.env.JWT_SECRET) {
-    throw new Error('JWT_SECRET is missing. Create a .env file with JWT_SECRET=<strong random value>');
+    console.warn('[WARN] JWT_SECRET is not set. Using a development fallback secret. For a stable deployment set JWT_SECRET in the platform env vars (Railway: Settings > Variables).');
+    process.env.JWT_SECRET = 'sajilorent-dev-fallback-secret';
 }
 
 const SECRET = process.env.JWT_SECRET;

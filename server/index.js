@@ -8,14 +8,13 @@ import authRoutes from './auth.js';
 import notificationRoutes from './notifications.js';
 import { verifyToken } from './middleware.js';
 import { createUser } from './auth.js';
+import { resolveDataDir, OWNERSHIP_FILE, NOTIF_FILE } from './paths.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config();
 
-const DATA_DIR = path.join(__dirname, '..', 'data', 'clients');
-const OWNERSHIP_FILE = path.join(__dirname, '..', 'data', 'ownership.json');
-const NOTIF_FILE = path.join(__dirname, '..', 'data', 'notifications.json');
+const DATA_DIR = await resolveDataDir();
 const RATE = 15;
 const app = express();
 

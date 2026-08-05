@@ -14,7 +14,7 @@
     <title>SajiloRent - Login</title>
     <style>
         html { -webkit-text-size-adjust:100%; }
-        :root { --bg:#0b1120; --card:#111827; --text:#f8fafc; --accent:#2563eb; --border:#1f2937; }
+        :root { --bg:#0b1120; --card:#111827; --text:#f8fafc; --accent:#2563eb; --border:#1f2937; --text-muted:#94a3b8; }
         * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter',system-ui,sans-serif; }
         body { background:var(--bg); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
         .login-container { width:100%; max-width:420px; }
@@ -35,9 +35,10 @@
         @keyframes spin { to { transform:rotate(360deg); } }
         .btn-text { display:inline-block; vertical-align:middle; }
         .role-selector { display:flex; gap:12px; justify-content:center; margin-bottom:20px; }
-        .role-selector button { background:transparent; border:1px solid var(--border); border-radius:20px; padding:6px 16px; color:var(--text-muted); font-size:0.8rem; cursor:pointer; transition:0.2s; }
-        .role-selector button.active { background:var(--accent); border-color:var(--accent); color:#fff; }
-        .role-selector button:hover { border-color:var(--accent); }
+        .role-selector button { background:#0f172a; border:1px solid #334155; border-radius:20px; padding:6px 16px; color:var(--text-muted); font-size:0.8rem; font-weight:600; cursor:pointer; transition:0.2s; }
+        .role-selector button.active { background:var(--accent); border-color:var(--accent); color:#fff; box-shadow:0 0 0 3px rgba(37,99,235,0.25); }
+        .role-selector button:hover:not(.active) { border-color:var(--accent); color:var(--text); }
+        .role-selector button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
         .made-by-kali { position:fixed; bottom:12px; right:16px; z-index:999; display:flex; align-items:center; gap:6px; color:#6b7280; font-size:0.7rem; font-family:'SF Mono','Fira Code','Cascadia Code',monospace; letter-spacing:0.8px; opacity:0.5; transition:opacity 0.3s; pointer-events:none; }
         .made-by-kali span { color:var(--accent); font-weight:600; opacity:0.85; }
         @media(max-width:480px){ .login-card { padding:28px 20px; } .role-selector button { padding:10px 16px; min-height:44px; } .login-card .role-selector button { flex:1; } }
