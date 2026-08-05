@@ -85,6 +85,10 @@
     .badge-sub-active { background:var(--success); color:#000; }
     .badge-sub-inactive { background:var(--text-muted); color:#fff; }
     .badge-sub-cancelled { background:var(--danger); color:#fff; }
+    .badge-paid { background:var(--success); color:#fff; }
+    .badge-pending { background:var(--warn); color:#000; }
+    .badge-failed { background:var(--danger); color:#fff; }
+    .badge-balance-zero { background:var(--text-muted); color:#fff; }
 
     .btn-primary { background:var(--accent); color:#fff; border:none; padding:8px 18px; border-radius:6px; font-weight:600; font-size:0.85rem; cursor:pointer; transition:var(--transition); }
     .btn-primary:hover { background:var(--accent-hover); transform:translateY(-1px); }
@@ -222,6 +226,7 @@
     <a data-tab="tab-houses"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>  <span>Houses</span></a>
     <a data-tab="tab-trash"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>  <span>Trash</span></a>
     <a data-tab="tab-notices"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l3 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M16 8a5 5 0 0 1 0 8"/></svg>  <span>Notices</span></a>
+    <a data-tab="tab-revenue"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v12"/><path d="M16 14a4 4 0 0 1-4 4 4 4 0 0 1 0-8 4 4 0 0 0 0-8 4 4 0 0 1 4 4"/></svg>  <span>Revenue</span></a>
   </div>
   <div class="sidebar-footer">
     <div class="user-name" id="sidebarUser"></div>
@@ -488,6 +493,40 @@
     </div>
   </div>
 
+  <!-- ─── TAB: Revenue ─── -->
+  <div class="tab-panel" id="tab-revenue">
+    <div class="main-header">
+      <div>
+        <h1>Revenue &amp; Invoices</h1>
+        <div class="sub">eSewa subscription payments</div>
+      </div>
+      <button class="btn-primary" onclick="loadPayments()">🔄 Refresh</button>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="label">Collected</div><div class="value green" id="revCollected">Rs 0</div></div>
+      <div class="stat-card"><div class="label">Pending</div><div class="value yellow" id="revPending">Rs 0</div></div>
+      <div class="stat-card"><div class="label">Paid Invoices</div><div class="value blue" id="revPaidCount">0</div></div>
+      <div class="stat-card"><div class="label">This Month</div><div class="value red" id="revMonth">Rs 0</div></div>
+    </div>
+    <div class="section-card">
+      <div class="filter-bar">
+        <input type="text" id="revSearch" placeholder="🔍 Search by user or PID...">
+        <select id="revStatusFilter">
+          <option value="">All Statuses</option>
+          <option value="paid">Paid</option>
+          <option value="pending">Pending</option>
+          <option value="failed">Failed</option>
+        </select>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Invoice</th><th>User</th><th>Plan</th><th>Cycle</th><th>Tenants</th><th>Amount</th><th>Status</th><th>Date</th><th>Ref ID</th></tr></thead>
+          <tbody id="revTable"><tr><td colspan="9" class="text-muted" style="text-align:center;">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <div style="height:40px;"></div>
 </div>
 
@@ -741,8 +780,69 @@
     }
 
     // ═══════════════════════════════════════════════════════════
-    // USERS
+    // REVENUE & INVOICES
     // ═══════════════════════════════════════════════════════════
+    let allPayments = [];
+
+    function formatRs(n) {
+        return 'Rs ' + (Number(n) || 0).toLocaleString('en-IN');
+    }
+
+    window.loadPayments = async () => {
+        const tbody = document.getElementById('revTable');
+        try {
+            allPayments = await api('GET', '/subscription/payments');
+            renderPayments();
+            const paid = allPayments.filter(p => p.status === 'paid');
+            const pending = allPayments.filter(p => p.status === 'pending');
+            const now = new Date();
+            const monthPaid = paid.filter(p => {
+                const d = p.verifiedAt ? new Date(p.verifiedAt) : (p.createdAt ? new Date(p.createdAt) : null);
+                return d && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+            });
+            document.getElementById('revCollected').textContent = formatRs(paid.reduce((s, p) => s + (p.amount || 0), 0));
+            document.getElementById('revPending').textContent = formatRs(pending.reduce((s, p) => s + (p.amount || 0), 0));
+            document.getElementById('revPaidCount').textContent = paid.length;
+            document.getElementById('revMonth').textContent = formatRs(monthPaid.reduce((s, p) => s + (p.amount || 0), 0));
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="9" class="text-muted" style="text-align:center;">Failed to load payments: ${escHtml(e.message)}</td></tr>`;
+        }
+    };
+
+    function renderPayments() {
+        const search = (document.getElementById('revSearch').value || '').toLowerCase();
+        const status = document.getElementById('revStatusFilter').value;
+        const rows = allPayments.slice().reverse().filter(p =>
+            (status ? p.status === status : true) &&
+            (!search || (p.username || '').toLowerCase().includes(search) || (p.pid || '').toLowerCase().includes(search))
+        );
+        const tbody = document.getElementById('revTable');
+        if (!rows.length) {
+            tbody.innerHTML = `<tr><td colspan="9" class="text-muted" style="text-align:center;">No invoices found.</td></tr>`;
+            return;
+        }
+        const badgeMap = { paid: 'badge-paid', pending: 'badge-pending', failed: 'badge-failed' };
+        const planLabel = { self: 'Self-service', full: 'Full-service' };
+        tbody.innerHTML = rows.map(p => `
+            <tr>
+                <td><strong>${escHtml(p.pid)}</strong></td>
+                <td>${escHtml(p.username)}</td>
+                <td><span class="badge">${planLabel[p.plan] || escHtml(p.plan)}</span></td>
+                <td>${escHtml(p.cycle)}</td>
+                <td>${p.tenants || 1}</td>
+                <td style="font-weight:600;">${formatRs(p.amount)}</td>
+                <td><span class="badge ${badgeMap[p.status] || 'badge-pending'}">${escHtml(p.status)}</span></td>
+                <td>${p.verifiedAt ? new Date(p.verifiedAt).toLocaleDateString() : (p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '—')}</td>
+                <td>${p.refId ? escHtml(p.refId) : '—'}</td>
+            </tr>`).join('');
+    }
+
+    document.getElementById('revSearch').addEventListener('input', renderPayments);
+    document.getElementById('revStatusFilter').addEventListener('change', renderPayments);
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // USERS
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     function renderUsers() {
         const search = document.getElementById('usersSearch').value.toLowerCase();
         const roleFilter = document.getElementById('usersRoleFilter').value;
@@ -1294,6 +1394,7 @@
     loadAll();
     loadNotices();
     loadSentNotices();
+    loadPayments();
 
     // ─── Mobile: auto-label table cells for stacked-card layout ───
     (function () {
@@ -1317,6 +1418,7 @@
   <a data-tab="tab-houses"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Houses</span></a>
   <a data-tab="tab-trash"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span>Trash</span></a>
   <a data-tab="tab-notices"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l3 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M16 8a5 5 0 0 1 0 8"/></svg><span>Notices</span></a>
+  <a data-tab="tab-revenue"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v12"/><path d="M16 14a4 4 0 0 1-4 4 4 4 0 0 1 0-8 4 4 0 0 0 0-8 4 4 0 0 1 4 4"/></svg><span>Revenue</span></a>
 </nav>
 <script>
 if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => {}); }); }
