@@ -1,6 +1,7 @@
 const { app, BrowserWindow, Menu, shell } = require('electron');
 
-const APP_URL = 'https://sajilorent.onrender.com';
+const APP_ORIGIN = 'https://sajilorent.onrender.com';
+const APP_URL = APP_ORIGIN + '/login.html?view=app';
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -20,7 +21,7 @@ function createWindow() {
   });
 
   win.webContents.on('will-navigate', (e, url) => {
-    if (!url.startsWith(APP_URL) && url.startsWith('http')) {
+    if (!url.startsWith(APP_ORIGIN) && url.startsWith('http')) {
       e.preventDefault();
       shell.openExternal(url);
     }
