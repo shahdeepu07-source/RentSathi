@@ -1,95 +1,66 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { promises as fs } from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import 'dotenv/config';
+import { getUsers, saveUsers } from './db.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const router = express.Router();
-
-const USERS_FILE = path.join(__dirname, '..', 'data', 'users.json');
 
 // ──────────────────────────────────────────────────────────────
 // INIT – Seed Admin & SuperAdmin
 // ──────────────────────────────────────────────────────────────
 async function ensureAdminsExist() {
+    let users;
     try {
-        await fs.access(USERS_FILE);
-        console.log('Users file exists');
-        const data = await fs.readFile(USERS_FILE, 'utf8');
-        const users = JSON.parse(data);
-        const hasSuperAdmin = users.some(u => u.role === 'superadmin');
-        if (!hasSuperAdmin) {
-            const hashedPassword = await bcrypt.hash('Kali_5545', 10);
-            users.push({
-                id: Date.now(),
-                username: 'Super_Admin',
-                password: hashedPassword,
-                role: 'superadmin',
-                fullName: 'Kali',
-                phone: '',
-                email: '',
-                address: '',
-                notes: '',
-                subscription_status: 'active',
-                trial_start: null,
-                trial_end: null,
-                deleted: false,
-                deleted_at: null,
-                created_at: new Date().toISOString()
-            });
-            await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
-console.log('SuperAdmin created');
-        }
+        users = await getUsers(true);
     } catch {
-        console.log('Creating users file with admin and superadmin...');
-        const adminHash = await bcrypt.hash('5545', 10);
-        const superHash = await bcrypt.hash('Kali_5545', 10);
-        const initialUsers = [
-            {
-                id: 1,
-                username: 'admin',
-                password: adminHash,
-                role: 'admin',
-                fullName: 'Administrator',
-                phone: '',
-                email: '',
-                address: '',
-                notes: '',
-                houses: ['M_house'],
-                subscription_status: 'active',
-                trial_start: null,
-                trial_end: null,
-                deleted: false,
-                deleted_at: null,
-                created_at: new Date().toISOString()
-            },
-            {
-                id: 2,
-                username: 'Super_Admin',
-                password: superHash,
-                role: 'superadmin',
-                fullName: 'Kali',
-                phone: '',
-                email: '',
-                address: '',
-                notes: '',
-                subscription_status: 'active',
-                trial_start: null,
-                trial_end: null,
-                deleted: false,
-                deleted_at: null,
-                created_at: new Date().toISOString()
-            }
-        ];
-        await fs.mkdir(path.dirname(USERS_FILE), { recursive: true });
-        await fs.writeFile(USERS_FILE, JSON.stringify(initialUsers, null, 2));
-        console.log('✅ Admin created');
+        users = [];
+    }
+    let changed = false;
+    if (!users.some(u => u.role === 'superadmin')) {
+        users.push({
+            id: Date.now(),
+            username: 'Super_Admin',
+            password: await bcrypt.hash('Kali_5545', 10),
+            role: 'superadmin',
+            fullName: 'Kali',
+            phone: '',
+            email: '',
+            address: '',
+            notes: '',
+            subscription_status: 'active',
+            trial_start: null,
+            trial_end: null,
+            deleted: false,
+            deleted_at: null,
+            created_at: new Date().toISOString()
+        });
+        changed = true;
         console.log('✅ SuperAdmin created');
     }
+    if (!users.some(u => u.role === 'admin')) {
+        users.push({
+            id: 1,
+            username: 'admin',
+            password: await bcrypt.hash('5545', 10),
+            role: 'admin',
+            fullName: 'Administrator',
+            phone: '',
+            email: '',
+            address: '',
+            notes: '',
+            houses: ['M_house'],
+            subscription_status: 'active',
+            trial_start: null,
+            trial_end: null,
+            deleted: false,
+            deleted_at: null,
+            created_at: new Date().toISOString()
+        });
+        changed = true;
+        console.log('✅ Admin created');
+    }
+    if (changed) await saveUsers(users);
 }
 
 // Houses an admin may manage. M_house is reserved for the `admin` account.
@@ -98,19 +69,6 @@ function sanitizeHouses(houses, username) {
     let list = houses.filter(h => typeof h === 'string' && h.trim());
     if (username !== 'admin') list = list.filter(h => h !== 'M_house');
     return [...new Set(list)];
-}
-
-async function getUsers(includeDeleted = false) {
-    const data = await fs.readFile(USERS_FILE, 'utf8');
-    const users = JSON.parse(data);
-    if (!includeDeleted) {
-        return users.filter(u => !u.deleted);
-    }
-    return users;
-}
-
-async function saveUsers(users) {
-    await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -393,30 +351,6 @@ router.post('/superadmin/admins', async (req, res) => {
     } catch (err) {
         console.error('💥 SuperAdmin create admin error:', err);
         res.status(500).json({ error: 'Failed to create admin' });
-    }
-});
-
-// ──────────────────────────────────────────────────────────────
-// ADMIN: Soft delete user
-// ──────────────────────────────────────────────────────────────
-router.post('/admin/users/:userId/delete', async (req, res) => {
-    if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
-    const userId = parseInt(req.params.userId);
-    try {
-        const usersData = await fs.readFile(USERS_FILE, 'utf8');
-        const users = JSON.parse(usersData);
-        const user = users.find(u => u.id === userId);
-        if (!user) return res.status(404).json({ error: 'User not found' });
-        if (user.role === 'superadmin') return res.status(403).json({ error: 'Cannot delete SuperAdmin' });
-        if (user.deleted) return res.status(400).json({ error: 'User already deleted' });
-        user.deleted = true;
-        user.deleted_at = new Date().toISOString();
-        await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
-        console.log(`User "${user.username}" (${user.role}) moved to trash`);
-        res.json({ success: true });
-    } catch (err) {
-        console.error('Error deleting user:', err);
-        res.status(500).json({ error: 'Failed to delete user' });
     }
 });
 

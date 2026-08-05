@@ -1,38 +1,9 @@
 import { Router } from 'express';
-import { promises as fs } from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { resolveDataDir, OWNERSHIP_FILE, NOTIF_FILE } from './paths.js';
+import { getNotifs, saveNotifs, getOwnership, listHouseIds, readTenants } from './db.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const router = Router();
 
-const DATA_DIR = await resolveDataDir();
-
-// ─── Helpers ──────────────────────────────────────────────────
-async function getNotifs() {
-    try {
-        const raw = await fs.readFile(NOTIF_FILE, 'utf8');
-        return JSON.parse(raw);
-    } catch { return []; }
-}
-
-async function saveNotifs(arr) {
-    await fs.writeFile(NOTIF_FILE, JSON.stringify(arr, null, 2));
-}
-
-async function getOwnership() {
-    try {
-        const raw = await fs.readFile(OWNERSHIP_FILE, 'utf8');
-        return JSON.parse(raw);
-    } catch { return {}; }
-}
-
-function getFilePath(houseId) {
-    return path.join(DATA_DIR, `${houseId}.json`);
-}
-
+// ─── Constants ────────────────────────────────────────────────
 const VALID_ROLES = ['superadmin', 'admin', 'owner', 'tenant'];
 const VALID_PRIORITIES = ['low', 'normal', 'high', 'urgent'];
 
@@ -158,15 +129,14 @@ router.get('/notifications', async (req, res) => {
         } else if (role === 'tenant') {
             // Tenants see notices their owner posted (target_role=tenant, matching their house)
             // Find which house(s) this tenant belongs to
-            const files = await fs.readdir(DATA_DIR);
-            const houses = files.filter(f => f.endsWith('.json')).map(f => f.replace('.json', ''));
+            const houses = await listHouseIds();
             const ownership = await getOwnership();
             const activeHouses = houses.filter(h => !ownership[h]?.deleted);
 
             let myHouses = [];
             for (const house of activeHouses) {
                 try {
-                    const tenants = JSON.parse(await fs.readFile(getFilePath(house), 'utf8'));
+                    const tenants = await readTenants(house);
                     const match = tenants.find(t =>
                         !t.deleted && (t.tenant_user_id === userId ||
                         t.name.toLowerCase() === (req.user.username || '').toLowerCase())

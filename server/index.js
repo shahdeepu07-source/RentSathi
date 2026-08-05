@@ -8,7 +8,8 @@ import authRoutes from './auth.js';
 import notificationRoutes from './notifications.js';
 import { verifyToken } from './middleware.js';
 import { createUser } from './auth.js';
-import { resolveDataDir, USERS_FILE, OWNERSHIP_FILE, NOTIF_FILE } from './paths.js';
+import { resolveDataDir } from './paths.js';
+import { getUsers, saveUsers, getOwnership, saveOwnership, readTenants, writeTenants, listHouseIds, houseExists, renameHouse, deleteHousePermanent, getNotifs, saveNotifs } from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,42 +28,9 @@ app.use('/api', notificationRoutes);
 
 await fs.mkdir(DATA_DIR, { recursive: true });
 
-async function getOwnership() {
-    try {
-        const data = await fs.readFile(OWNERSHIP_FILE, 'utf8');
-        return JSON.parse(data);
-    } catch {
-        return {};
-    }
-}
-
-async function saveOwnership(ownership) {
-    await fs.writeFile(OWNERSHIP_FILE, JSON.stringify(ownership, null, 2));
-}
-
-const getFilePath = (houseId) => path.join(DATA_DIR, `${houseId}.json`);
-
-const readTenants = async (houseId) => {
-    try {
-        const data = await fs.readFile(getFilePath(houseId), 'utf8');
-        return JSON.parse(data);
-    } catch {
-        return [];
-    }
-};
-
-const writeTenants = async (houseId, data) => {
-    await fs.writeFile(getFilePath(houseId), JSON.stringify(data, null, 2), 'utf8');
-};
-
 async function getUserById(userId) {
-    try {
-        const data = await fs.readFile(USERS_FILE, 'utf8');
-        const users = JSON.parse(data);
-        return users.find(u => u.id == userId && !u.deleted) || null;
-    } catch {
-        return null;
-    }
+    const users = await getUsers(true);
+    return users.find(u => u.id == userId) || null;
 }
 
 // Houses the current user may access.
@@ -72,8 +40,7 @@ async function getUserById(userId) {
 //  - owner       → houses they own
 async function accessibleHouses(user, includeDeleted = false) {
     const ownership = await getOwnership();
-    const files = await fs.readdir(DATA_DIR);
-    const allHouses = files.filter(f => f.endsWith('.json')).map(f => f.replace('.json', ''));
+    const allHouses = await listHouseIds();
     if (user.role === 'superadmin') {
         return allHouses.filter(h => includeDeleted || !ownership[h]?.deleted);
     }
@@ -106,22 +73,21 @@ async function checkOwnership(houseId, user) {
 }
 
 async function initOwnership() {
-    try {
-        await fs.access(OWNERSHIP_FILE);
-        console.log('Ownership file loaded');
-    } catch {
-        await fs.mkdir(path.dirname(OWNERSHIP_FILE), { recursive: true });
-        await fs.writeFile(OWNERSHIP_FILE, JSON.stringify({
-            "M_house": {
-                owner_id: 1,
-                created_by: 1,
-                created_at: new Date().toISOString(),
-                deleted: false,
-                deleted_at: null
-            }
-        }, null, 2));
-        console.log('Ownership file created with default M_house (owner: admin)');
+    const existing = await getOwnership();
+    if (existing && Object.keys(existing).length) {
+        console.log('Ownership data loaded');
+        return;
     }
+    await saveOwnership({
+        "M_house": {
+            owner_id: 1,
+            created_by: 1,
+            created_at: new Date().toISOString(),
+            deleted: false,
+            deleted_at: null
+        }
+    });
+    console.log('Ownership initialised with default M_house (owner: admin)');
 }
 await initOwnership();
 await initNotifFile();
@@ -163,11 +129,9 @@ app.post('/api/houses', async (req, res) => {
         if (!name) return res.status(400).json({ error: 'House name required' });
         let finalOwnerId = userId;
         if (['admin', 'superadmin'].includes(userRole) && owner_id) finalOwnerId = owner_id;
-        const filePath = getFilePath(name);
-        try {
-            await fs.access(filePath);
+        if (await houseExists(name)) {
             return res.status(400).json({ error: 'House already exists' });
-        } catch {}
+        }
         await writeTenants(name, []);
         const ownership = await getOwnership();
         ownership[name] = {
@@ -187,7 +151,7 @@ app.post('/api/houses', async (req, res) => {
 
 app.put('/api/houses/:id', async (req, res) => {
     try {
-        const houseId = req.params.id;
+        let houseId = req.params.id;
         const userRole = req.user.role;
         const user = req.user;
         if (houseId === 'M_house' && !(await canAccessMHouse(user))) {
@@ -205,12 +169,10 @@ app.put('/api/houses/:id', async (req, res) => {
             return res.status(404).json({ error: 'House not found' });
         }
         if (name && name !== houseId) {
-            const newPath = getFilePath(name);
-            try {
-                await fs.access(newPath);
+            if (await houseExists(name)) {
                 return res.status(400).json({ error: 'A house with that name already exists' });
-            } catch {}
-            await fs.rename(getFilePath(houseId), newPath);
+            }
+            await renameHouse(houseId, name);
             const oldEntry = ownership[houseId];
             delete ownership[houseId];
             ownership[name] = oldEntry;
@@ -304,18 +266,20 @@ app.delete('/api/admin/trash/houses/permanent/:houseId', async (req, res) => {
         return res.status(403).json({ error: 'You do not have access to this house' });
     }
     try {
-        await fs.unlink(getFilePath(houseId));
-    } catch (e) {}
-    delete ownership[houseId];
-    await saveOwnership(ownership);
-    res.json({ success: true });
+        await deleteHousePermanent(houseId);
+        delete ownership[houseId];
+        await saveOwnership(ownership);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error permanently deleting house:', err);
+        res.status(500).json({ error: 'Failed to permanently delete house' });
+    }
 });
 
 app.get('/api/admin/trash/users', async (req, res) => {
     if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
     try {
-        const usersData = await fs.readFile(path.join(__dirname, '..', 'data', 'users.json'), 'utf8');
-        const users = JSON.parse(usersData);
+        const users = await getUsers(true);
         const deleted = users.filter(u => u.deleted === true);
         res.json(deleted);
     } catch (err) {
@@ -328,15 +292,14 @@ app.post('/api/admin/trash/users/restore/:userId', async (req, res) => {
     if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
     const userId = parseInt(req.params.userId);
     try {
-        const usersData = await fs.readFile(path.join(__dirname, '..', 'data', 'users.json'), 'utf8');
-        const users = JSON.parse(usersData);
+        const users = await getUsers(true);
         const user = users.find(u => u.id === userId);
         if (!user || !user.deleted) {
             return res.status(404).json({ error: 'Deleted user not found' });
         }
         user.deleted = false;
         user.deleted_at = null;
-        await fs.writeFile(path.join(__dirname, '..', 'data', 'users.json'), JSON.stringify(users, null, 2));
+        await saveUsers(users);
         res.json({ success: true });
     } catch (err) {
         console.error('Error restoring user:', err);
@@ -348,14 +311,13 @@ app.delete('/api/admin/trash/users/permanent/:userId', async (req, res) => {
     if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
     const userId = parseInt(req.params.userId);
     try {
-        const usersData = await fs.readFile(path.join(__dirname, '..', 'data', 'users.json'), 'utf8');
-        let users = JSON.parse(usersData);
+        let users = await getUsers(true);
         const idx = users.findIndex(u => u.id === userId);
         if (idx === -1 || !users[idx].deleted) {
             return res.status(404).json({ error: 'Deleted user not found' });
         }
         users.splice(idx, 1);
-        await fs.writeFile(path.join(__dirname, '..', 'data', 'users.json'), JSON.stringify(users, null, 2));
+        await saveUsers(users);
         res.json({ success: true });
     } catch (err) {
         console.error('Error permanently deleting user:', err);
@@ -367,15 +329,14 @@ app.post('/api/admin/users/:userId/delete', async (req, res) => {
     if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
     const userId = parseInt(req.params.userId);
     try {
-        const usersData = await fs.readFile(path.join(__dirname, '..', 'data', 'users.json'), 'utf8');
-        const users = JSON.parse(usersData);
+        const users = await getUsers(true);
         const user = users.find(u => u.id === userId);
         if (!user) return res.status(404).json({ error: 'User not found' });
         if (user.role === 'superadmin') return res.status(403).json({ error: 'Cannot delete SuperAdmin' });
         if (user.deleted) return res.status(400).json({ error: 'User already deleted' });
         user.deleted = true;
         user.deleted_at = new Date().toISOString();
-        await fs.writeFile(path.join(__dirname, '..', 'data', 'users.json'), JSON.stringify(users, null, 2));
+        await saveUsers(users);
         console.log(`User "${user.username}" (${user.role}) moved to trash`);
         res.json({ success: true });
     } catch (err) {
@@ -389,8 +350,7 @@ app.patch('/api/admin/subscription/:userId', async (req, res) => {
     const userId = parseInt(req.params.userId);
     const { action, duration } = req.body;
     try {
-        const usersData = await fs.readFile(path.join(__dirname, '..', 'data', 'users.json'), 'utf8');
-        const users = JSON.parse(usersData);
+        const users = await getUsers(true);
         const user = users.find(u => u.id === userId);
         if (!user) return res.status(404).json({ error: 'User not found' });
         if (user.role !== 'owner') return res.status(400).json({ error: 'Subscription only for owners' });
@@ -415,7 +375,7 @@ app.patch('/api/admin/subscription/:userId', async (req, res) => {
             default:
                 return res.status(400).json({ error: 'Invalid action' });
         }
-        await fs.writeFile(path.join(__dirname, '..', 'data', 'users.json'), JSON.stringify(users, null, 2));
+        await saveUsers(users);
         res.json({ success: true, user });
     } catch (err) {
         console.error('Error managing subscription:', err);
@@ -710,8 +670,7 @@ app.put('/api/tenants/:id/balance', async (req, res) => {
 app.get('/api/admin/users', async (req, res) => {
     if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
     try {
-        const usersData = await fs.readFile(path.join(__dirname, '..', 'data', 'users.json'), 'utf8');
-        const users = JSON.parse(usersData);
+        const users = await getUsers(true);
         const activeUsers = users.filter(u => !u.deleted);
         const safeUsers = activeUsers.map(({ password, ...rest }) => rest);
         res.json(safeUsers);
@@ -749,8 +708,7 @@ app.get('/api/tenant/bills', async (req, res) => {
     }
     const userId = req.user.userId;
     try {
-        const files = await fs.readdir(DATA_DIR);
-        const allHouses = files.filter(f => f.endsWith('.json')).map(f => f.replace('.json', ''));
+        const allHouses = await listHouseIds();
         let foundTenant = null;
         let foundHouse = null;
         let bills = [];
@@ -812,8 +770,7 @@ app.get('/api/admin/trash/tenants', async (req, res) => {
     if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
     const user = req.user;
     try {
-        const files = await fs.readdir(DATA_DIR);
-        const houses = files.filter(f => f.endsWith('.json')).map(f => f.replace('.json', ''));
+        const houses = await listHouseIds();
         let deletedTenants = [];
         for (const house of houses) {
             if (house === 'M_house' && user.role === 'admin' && user.username !== 'admin') continue;
@@ -911,13 +868,20 @@ app.get('/sw.js', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'sw.js'));
 });
 
-// ─── Init notifications file ────────────────────────────────
+// ─── Init notifications data ────────────────────────────────
 async function initNotifFile() {
     try {
-        await fs.access(NOTIF_FILE);
-    } catch {
-        await fs.writeFile(NOTIF_FILE, JSON.stringify([], null, 2));
-        console.log('Notifications file created');
+        const existing = await getNotifs();
+        if (existing.length) {
+            console.log('Notifications data loaded');
+            return;
+        }
+    } catch { /* fall through to seed */ }
+    try {
+        await saveNotifs([]);
+        console.log('Notifications data initialised');
+    } catch (err) {
+        console.error('Failed to initialise notifications:', err.message);
     }
 }
 
