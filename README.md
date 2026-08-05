@@ -34,13 +34,6 @@ npm run dev            # http://localhost:3000
 
 Without `DATABASE_URL` the app runs on JSON files under `data/` — no DB needed.
 
-Demo accounts (seeded by `server/auth.js` on first run):
-
-| Username      | Password | Role       |
-|---------------|----------|------------|
-| Super_Admin   | Kali_5545 | superadmin |
-| admin         | 5545     | admin      |
-
 ## eSewa payments
 
 The subscription tab ("Upgrade Plan") opens a checkout: choose plan, billing cycle and tenant count, then pay with eSewa. The owner is redirected to the gateway; the callback is verified server-side (`server/esewa.js` + `/api/subscription/esewa/success`) before the account flips to `paid` and the payment/request records are stored in Postgres (also included in backups).
