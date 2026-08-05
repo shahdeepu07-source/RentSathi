@@ -149,7 +149,6 @@ router.post('/login', async (req, res) => {
             if (now > trialEnd) {
                 user.subscription_status = 'expired';
                 await saveUsers(users);
-                return res.status(403).json({ error: 'Trial expired. Please contact admin to renew.' });
             }
         }
         const validPassword = await bcrypt.compare(password, user.password);
@@ -471,6 +470,10 @@ router.get('/me', async (req, res) => {
         const users = await getUsers(false);
         const user = users.find(u => u.id === decoded.userId);
         if (!user) return res.status(404).json({ error: 'User not found' });
+        if (user.role === 'owner' && user.subscription_status === 'trial' && user.trial_end && new Date() > new Date(user.trial_end)) {
+            user.subscription_status = 'expired';
+            await saveUsers(users);
+        }
         res.json({
             id: user.id,
             username: user.username,

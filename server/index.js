@@ -93,6 +93,30 @@ async function getUserById(userId) {
     return users.find(u => u.id == userId) || null;
 }
 
+// ─── Subscription gate ────────────────────────────────────────
+// Owners with an expired/inactive/cancelled plan may log in and read, but
+// write actions (bills, tenants, houses, payments) are blocked until they
+// subscribe again. Other roles pass through unchanged.
+const BLOCKED_STATUSES = ['expired', 'inactive', 'cancelled'];
+async function requireSubscription(req, res) {
+    if (req.user.role !== 'owner') return true;
+    const users = await getUsers(false);
+    const u = users.find(x => String(x.id) === String(req.user.userId));
+    if (!u) return true;
+    if (u.subscription_status === 'trial' && u.trial_end && new Date() > new Date(u.trial_end)) {
+        u.subscription_status = 'expired';
+        await saveUsers(users);
+    }
+    if (BLOCKED_STATUSES.includes(u.subscription_status)) {
+        res.status(403).json({
+            code: 'SUBSCRIPTION_REQUIRED',
+            error: 'Your subscription has ended. Get a subscription to continue using SajiloRent.'
+        });
+        return false;
+    }
+    return true;
+}
+
 // Houses the current user may access.
 //  - superadmin  → all active houses
 //  - admin       → all active houses; M_house is exclusive to the `admin`
@@ -178,6 +202,7 @@ app.get('/api/houses/ownership', async (req, res) => {
 });
 
 app.post('/api/houses', async (req, res) => {
+    if (!(await requireSubscription(req, res))) return;
     try {
         const { name, address, owner_id } = req.body;
         const userId = req.user.userId;
@@ -210,6 +235,7 @@ app.post('/api/houses', async (req, res) => {
 });
 
 app.put('/api/houses/:id', async (req, res) => {
+    if (!(await requireSubscription(req, res))) return;
     try {
         let houseId = req.params.id;
         const userRole = req.user.role;
@@ -249,6 +275,7 @@ app.put('/api/houses/:id', async (req, res) => {
 });
 
 app.post('/api/houses/:id/delete', async (req, res) => {
+    if (!(await requireSubscription(req, res))) return;
     try {
         const houseId = req.params.id;
         const userRole = req.user.role;
@@ -462,6 +489,7 @@ app.get('/api/tenants', async (req, res) => {
 });
 
 app.post('/api/tenants', async (req, res) => {
+    if (!(await requireSubscription(req, res))) return;
     const { houseId } = req.query;
     if (!houseId) return res.status(400).json({ error: 'Missing houseId' });
     if (houseId === 'M_house' && !(await canAccessMHouse(req.user))) {
@@ -512,6 +540,7 @@ app.post('/api/tenants', async (req, res) => {
 });
 
 app.put('/api/tenants/:id', async (req, res) => {
+    if (!(await requireSubscription(req, res))) return;
     const { houseId } = req.query;
     if (!houseId) return res.status(400).json({ error: 'Missing houseId' });
     if (houseId === 'M_house' && !(await canAccessMHouse(req.user))) {
@@ -544,6 +573,7 @@ app.put('/api/tenants/:id', async (req, res) => {
 });
 
 app.post('/api/tenants/:id/delete', async (req, res) => {
+    if (!(await requireSubscription(req, res))) return;
     const { houseId } = req.query;
     if (!houseId) return res.status(400).json({ error: 'Missing houseId' });
     if (houseId === 'M_house' && !(await canAccessMHouse(req.user))) {
@@ -569,6 +599,7 @@ app.post('/api/tenants/:id/delete', async (req, res) => {
 
 // ─── Bills ─────────────────────────────────────────────────────
 app.post('/api/calculate', async (req, res) => {
+    if (!(await requireSubscription(req, res))) return;
     const { houseId } = req.query;
     if (!houseId) return res.status(400).json({ error: 'Missing houseId' });
     if (houseId === 'M_house' && !(await canAccessMHouse(req.user))) {
@@ -621,6 +652,7 @@ app.post('/api/calculate', async (req, res) => {
 });
 
 app.patch('/api/bills/pay', async (req, res) => {
+    if (!(await requireSubscription(req, res))) return;
     const houseId = req.body.houseId || req.query.houseId;
     const tenantId = req.body.tenantId || req.query.tenantId;
     const billId = req.body.billId || req.query.billId;
@@ -671,6 +703,7 @@ app.patch('/api/bills/pay', async (req, res) => {
 
 // ─── DELETE bill – reverse bill and payment ──────────────────
 app.delete('/api/tenants/:id/history/:index', async (req, res) => {
+    if (!(await requireSubscription(req, res))) return;
     const { houseId } = req.query;
     if (!houseId) return res.status(400).json({ error: 'Missing houseId' });
     if (houseId === 'M_house' && !(await canAccessMHouse(req.user))) {
@@ -704,6 +737,7 @@ app.delete('/api/tenants/:id/history/:index', async (req, res) => {
 
 // ─── Manually update tenant balance ────────────────────────────
 app.put('/api/tenants/:id/balance', async (req, res) => {
+    if (!(await requireSubscription(req, res))) return;
     const { houseId } = req.query;
     const newBalance = parseFloat(req.body.balance);
     if (!houseId) return res.status(400).json({ error: 'Missing houseId' });
@@ -936,6 +970,23 @@ app.post('/api/subscription/requests/:id/respond', async (req, res) => {
         reqs[idx].status = status;
         reqs[idx].respondedAt = new Date().toISOString();
         await saveUpgradeRequests(reqs);
+
+        if (status === 'approved') {
+            const users = await getUsers(false);
+            const owner = users.find(u => u.username === reqs[idx].username && u.role === 'owner');
+            if (owner) {
+                const now = new Date();
+                const next = new Date(now);
+                next.setMonth(next.getMonth() + (reqs[idx].cycle === 'yearly' ? 12 : 1));
+                owner.subscription_status = 'paid';
+                owner.subscription_plan = reqs[idx].plan || 'self';
+                if (reqs[idx].tenants) owner.subscription_tenants = reqs[idx].tenants;
+                owner.billing_cycle = reqs[idx].cycle || 'monthly';
+                owner.trial_end = next.toISOString();
+                owner.subscription_approved_at = new Date().toISOString();
+                await saveUsers(users);
+            }
+        }
         res.json({ success: true });
     } catch (err) {
         console.error('Error responding to upgrade request:', err);

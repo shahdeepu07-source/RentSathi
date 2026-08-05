@@ -441,6 +441,14 @@
   #cpw-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:18px; }
   #cpw-actions button { padding:8px 16px; border-radius:6px; border:1px solid var(--border,#e5e7eb); background:var(--card,#fff); color:var(--text,#111); cursor:pointer; font-weight:600; }
   #cpw-actions button[type="submit"] { background:var(--accent,#2563eb); border-color:var(--accent,#2563eb); color:#fff; }
+  #sub-expired-overlay { display:none; position:fixed; inset:0; z-index:1200; background:rgba(0,0,0,.7); align-items:center; justify-content:center; padding:20px; }
+  #sub-expired-overlay.active { display:flex; }
+  #sub-expired-box { background:var(--card,#fff); border:1px solid var(--border,#e5e7eb); border-radius:12px; width:100%; max-width:400px; padding:24px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.4); animation:subPop .25s ease; }
+  @keyframes subPop { from { transform:scale(.92); opacity:0; } to { transform:scale(1); opacity:1; } }
+  #sub-expired-box h3 { margin:0 0 10px; color:#dc2626; font-size:1.05rem; }
+  #sub-expired-box p { margin:0 0 20px; color:var(--text-muted,#64748b); font-size:.9rem; line-height:1.5; }
+  #sub-expired-actions { display:flex; gap:10px; justify-content:center; }
+  #sub-expired-actions button { padding:10px 18px; border-radius:8px; border:1px solid var(--border,#e5e7eb); background:var(--card,#fff); color:var(--text,#111); cursor:pointer; font-weight:600; font-size:.88rem; }
 </style>
 <div id="cpw-overlay" onclick="if (event.target === this) document.getElementById('cpw-overlay').classList.remove('active')">
   <div id="cpw-box">
@@ -512,8 +520,18 @@
       </div>
     </div>
     <div id="trialBanner" class="trial-banner hidden">
-      <span>⏳ Free Trial</span>
+      <span id="trialBannerMsg">⏳ Free Trial</span>
       <span><span id="trialDaysLeft">30</span> days remaining</span>
+    </div>
+    <div id="sub-expired-overlay" onclick="if (event.target === this) {}">
+      <div id="sub-expired-box">
+        <h3>🚫 Your subscription has ended</h3>
+        <p>Your pass has been ended. Get the subscription to use it further.</p>
+        <div id="sub-expired-actions">
+          <button type="button" onclick="hideSubscriptionPopup()">Later</button>
+          <button type="button" class="btn-primary" onclick="hideSubscriptionPopup(); openUpgradeModal()">Get Subscription</button>
+        </div>
+      </div>
     </div>
     <div class="stats-grid" id="overviewSection">
       <div class="stat-card"><div class="label">⏳ Pending Bills</div><div class="value yellow" id="pendingTotal">Rs. 0</div><div style="font-size:0.75rem;color:var(--text-muted);margin-top:6px;"><span id="pendingCount">0 bills</span> &middot; <span id="pendingTenants">0 tenants</span></div></div>
@@ -907,10 +925,23 @@ async function api(method, url, data) {
   const res = await fetch(`${API_BASE}${url}`, opts);
   if (!res.ok) {
     if (res.status === 401) { logout(); throw new Error('Session expired'); }
-    const err = await res.text();
-    throw new Error(err || 'Request failed');
+    const body = await res.json().catch(() => null);
+    if (res.status === 403 && body && body.code === 'SUBSCRIPTION_REQUIRED') {
+      refreshUserFromServer();
+      showSubscriptionPopup();
+    }
+    throw new Error((body && body.error) || (await res.text()) || 'Request failed');
   }
   return res.json();
+}
+
+async function refreshUserFromServer() {
+  try {
+    const u = await api('GET', '/auth/me');
+    user = Object.assign({}, user, u);
+    localStorage.setItem('user', JSON.stringify(user));
+    updateTrialBanner();
+  } catch (e) { /* token may be invalid */ }
 }
 
 function openModal(id) { document.getElementById(id).classList.add('active'); }
@@ -933,19 +964,41 @@ function showToast(msg, type = 'success') {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function updateTrialBanner() {
   const banner = document.getElementById('trialBanner');
-  if (user.role === 'owner' && user.subscription_status === 'trial') {
+  const blocked = ['expired', 'inactive', 'cancelled'].includes(user.subscription_status);
+  if (user.role === 'owner' && blocked) {
+    const msg = document.getElementById('trialBannerMsg');
+    msg.textContent = '⛔ Your subscription has ended';
+    document.getElementById('trialDaysLeft').textContent = '';
+    banner.classList.remove('hidden');
+    banner.style.background = 'linear-gradient(135deg, var(--danger), #dc2626)';
+banner.style.color = '#fff';
+    banner.style.cursor = 'pointer';
+    banner.setAttribute('onclick', 'showSubscriptionPopup()');
+    showSubscriptionPopup();
+  } else if (user.role === 'owner' && user.subscription_status === 'trial') {
     const trialEnd = new Date(user.trial_end);
     const now = new Date();
     const daysLeft = Math.max(0, Math.ceil((trialEnd - now) / (1000 * 60 * 60 * 24)));
+    document.getElementById('trialBannerMsg').textContent = '⏳ Free Trial';
     document.getElementById('trialDaysLeft').textContent = daysLeft;
     banner.classList.remove('hidden');
     banner.style.background = daysLeft <= 5 ? 'linear-gradient(135deg, var(--danger), #dc2626)' : 'linear-gradient(135deg, var(--warn), #d97706)';
     banner.style.color = daysLeft <= 5 ? '#fff' : '#000';
+    banner.removeAttribute('onclick');
   } else {
     banner.classList.add('hidden');
   }
 }
-updateTrialBanner();
+
+function showSubscriptionPopup() {
+  const ov = document.getElementById('sub-expired-overlay');
+  if (ov && !ov.classList.contains('active')) ov.classList.add('active');
+}
+function hideSubscriptionPopup() {
+  const ov = document.getElementById('sub-expired-overlay');
+  if (ov) ov.classList.remove('active');
+}
+refreshUserFromServer();
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // HOUSES
