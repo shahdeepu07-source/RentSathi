@@ -355,7 +355,7 @@
     var svc = document.getElementById('upg-plan').value;
     var cyc = document.getElementById('upg-cycle').value;
     var n = Math.max(1, Math.min(200, parseInt(document.getElementById('upg-tenants').value, 10) || 1));
-    var rate = upRate(svc, n);
+    var rate = upgRate(svc, n);
     var months = cyc === 'yearly' ? 10 : 1;
     return { rate: rate, months: months, amt: rate * n * months };
   }
@@ -429,6 +429,7 @@
     }
   }
 </script>
+<style>
   #cpw-overlay.active { display:flex; }
   #cpw-box { background:var(--card,#fff); border:1px solid var(--border,#e5e7eb); border-radius:12px; width:100%; max-width:400px; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,.4); }
   #cpw-box h3 { margin:0 0 16px; font-size:1.05rem; }
