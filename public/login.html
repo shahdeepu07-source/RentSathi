@@ -543,25 +543,7 @@
         }
     });
 
-    // Auto-redirect if already logged in
-    const token = localStorage.getItem('token');
-    if (token) {
-        fetch(`${API_BASE}/auth/me`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
-        .then(res => res.ok ? res.json() : Promise.reject())
-        .then(user => {
-            let redirect = '/index.html';
-            if (user.role === 'admin') redirect = '/admin.html';
-            else if (user.role === 'superadmin') redirect = '/superadmin.html';
-            else if (user.role === 'tenant') redirect = '/tenant.html';
-            window.location.href = redirect;
-        })
-        .catch(() => {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-        });
-    }
+    // Landing page is always the first stop; sign in when ready.
 </script>
 <script>
 if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => {}); }); }
