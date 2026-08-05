@@ -3,6 +3,10 @@
   if (window.__sajiloInstallWidget) return;
   window.__sajiloInstallWidget = true;
 
+  // Only show on top-level windows — nested panels (e.g. the Owner tab in
+  // the Admin panel) would otherwise render a duplicate floating App button.
+  if (window.self !== window.top) return;
+
   var CONFIG = {
     version: "1.0",
     apk: "/downloads/SajiloRent-v1.0.apk",
