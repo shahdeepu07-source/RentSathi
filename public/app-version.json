@@ -1,0 +1,8 @@
+{
+  "version": "1.0",
+  "minimum": "1.0",
+  "message": "A new version of the SajiloRent app is available with fixes and improvements.",
+  "apk": "/downloads/SajiloRent-v1.0.apk",
+  "exe": "https://github.com/shahdeepu07-source/SajiloRent/releases/download/v1.0.0/SajiloRent-windows-v1.0.0.exe",
+  "web": "https://sajilorent.onrender.com"
+}

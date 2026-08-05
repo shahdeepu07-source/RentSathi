@@ -1013,6 +1013,10 @@ app.get('/register.html', (req, res) => {
 app.get('/payment-result.html', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'payment-result.html'));
 });
+app.get('/app-version.json', (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    res.sendFile(path.join(__dirname, '..', 'public', 'app-version.json'));
+});
 app.get('/admin.html', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
 });
