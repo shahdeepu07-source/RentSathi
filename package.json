@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "nodemon server/index.js",
-    "import:pg": "node scripts/import-to-postgres.mjs"
+    "import:pg": "node scripts/import-to-postgres.mjs",
+    "backup": "node scripts/backup.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",

@@ -10,4 +10,5 @@ desktop/release/
 desktop/out/
 android/.idea/
 android/keystore/
+backups/
 desktop/node_modules/
