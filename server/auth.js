@@ -420,6 +420,41 @@ router.post('/reset-password', async (req, res) => {
 });
 
 // ──────────────────────────────────────────────────────────────
+// CHANGE MY PASSWORD (any signed-in user)
+// ──────────────────────────────────────────────────────────────
+router.post('/change-password', async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader) return res.status(401).json({ error: 'No token provided' });
+        const token = authHeader.split(' ')[1];
+        let decoded;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET);
+        } catch {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+        const { currentPassword, newPassword } = req.body;
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ error: 'Current and new password required' });
+        }
+        if (newPassword.length < 4) {
+            return res.status(400).json({ error: 'New password must be at least 4 characters' });
+        }
+        const users = await getUsers(true);
+        const user = users.find(u => u.id === decoded.userId);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        const valid = await bcrypt.compare(currentPassword, user.password);
+        if (!valid) return res.status(401).json({ error: 'Current password is incorrect' });
+        user.password = await bcrypt.hash(newPassword, 10);
+        await saveUsers(users);
+        res.json({ success: true, message: 'Password updated' });
+    } catch (err) {
+        console.error('💥 Change password error:', err);
+        res.status(500).json({ error: 'Failed to change password' });
+    }
+});
+
+// ──────────────────────────────────────────────────────────────
 // GET current user
 // ──────────────────────────────────────────────────────────────
 router.get('/me', async (req, res) => {
