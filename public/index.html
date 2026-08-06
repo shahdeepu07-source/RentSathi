@@ -1558,13 +1558,14 @@ function updateSubscriptionTab() {
   const status = user.subscription_status || 'active';
   const badge = document.getElementById('subStatusBadge');
   badge.textContent = status.charAt(0).toUpperCase() + status.slice(1);
-  badge.className = 'badge ' + (status === 'active' ? 'badge-paid' : status === 'trial' ? 'badge-unpaid' : 'badge-balance-zero');
+  badge.className = 'badge ' + (status === 'active' || status === 'paid' ? 'badge-paid' : status === 'trial' ? 'badge-unpaid' : 'badge-balance-zero');
 
-  document.getElementById('subTenantCount').textContent = document.querySelectorAll('#tenantTable tr').length - 1 || 0;
-
-  if (user.trial_end) {
-    document.getElementById('subNextDue').textContent = new Date(user.trial_end).toLocaleDateString();
-  }
+  const plan = user.subscription_plan || '';
+  const infinite = plan === 'admin' || (user.role !== 'owner' && status === 'paid' && !user.trial_end);
+  document.getElementById('subPlanName').textContent = plan === 'admin' ? 'Admin' : plan === 'full' ? 'Full-service' : plan === 'self' ? 'Self-service' : 'Starter';
+  document.getElementById('subBillingCycle').textContent = infinite ? '∞' : (user.billing_cycle === 'yearly' ? 'Yearly' : user.billing_cycle === 'monthly' ? 'Monthly' : '—');
+  document.getElementById('subNextDue').textContent = infinite ? '∞' : (user.trial_end ? new Date(user.trial_end).toLocaleDateString() : '—');
+  document.getElementById('subTenantCount').textContent = infinite ? '∞' : (document.querySelectorAll('#tenantTable tr').length - 1 || 0);
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

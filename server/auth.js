@@ -169,6 +169,9 @@ router.post('/login', async (req, res) => {
                 role: user.role,
                 fullName: user.fullName || '',
                 subscription_status: user.subscription_status,
+                subscription_plan: user.subscription_plan || null,
+                billing_cycle: user.billing_cycle || null,
+                subscription_tenants: user.subscription_tenants ?? null,
                 trial_end: user.trial_end,
                 houses: user.houses
             }
@@ -483,6 +486,9 @@ router.get('/me', async (req, res) => {
             email: user.email || '',
             address: user.address || '',
             subscription_status: user.subscription_status,
+            subscription_plan: user.subscription_plan || null,
+            billing_cycle: user.billing_cycle || null,
+            subscription_tenants: user.subscription_tenants ?? null,
             trial_end: user.trial_end,
             houses: user.houses
         });

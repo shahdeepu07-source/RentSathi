@@ -981,17 +981,28 @@ app.post('/api/subscription/requests/:id/respond', async (req, res) => {
 
         if (status === 'approved') {
             const users = await getUsers(false);
-            const owner = users.find(u => u.username === reqs[idx].username && u.role === 'owner');
+            const owner = users.find(u => String(u.id) === String(reqs[idx].userId)) || users.find(u => u.username === reqs[idx].username);
             if (owner) {
                 const now = new Date();
-                const next = new Date(now);
-                next.setMonth(next.getMonth() + (reqs[idx].cycle === 'yearly' ? 12 : 1));
-                owner.subscription_status = 'paid';
-                owner.subscription_plan = reqs[idx].plan || 'self';
-                if (reqs[idx].tenants) owner.subscription_tenants = reqs[idx].tenants;
-                owner.billing_cycle = reqs[idx].cycle || 'monthly';
-                owner.trial_end = next.toISOString();
-                owner.subscription_approved_at = new Date().toISOString();
+                const isStaff = owner.role !== 'owner';
+                if (isStaff) {
+                    // Staff accounts (admin/superadmin) are on a permanent plan
+                    owner.subscription_status = 'paid';
+                    owner.subscription_plan = 'admin';
+                    owner.billing_cycle = '∞';
+                    owner.subscription_tenants = null;
+                    owner.trial_end = null;
+                    owner.subscription_approved_at = now.toISOString();
+                } else {
+                    const next = new Date(now);
+                    next.setMonth(next.getMonth() + (reqs[idx].cycle === 'yearly' ? 12 : 1));
+                    owner.subscription_status = 'paid';
+                    owner.subscription_plan = reqs[idx].plan || 'self';
+                    if (reqs[idx].tenants) owner.subscription_tenants = reqs[idx].tenants;
+                    owner.billing_cycle = reqs[idx].cycle || 'monthly';
+                    owner.trial_end = next.toISOString();
+                    owner.subscription_approved_at = now.toISOString();
+                }
 
                 // Record the manual invoice once (idempotent per request)
                 if (reqs[idx].via === 'manual' && !reqs[idx].paymentId) {
@@ -1000,10 +1011,10 @@ app.post('/api/subscription/requests/:id/respond', async (req, res) => {
                         pid: `MAN-${reqs[idx].id}`,
                         username: reqs[idx].username,
                         userId: reqs[idx].userId,
-                        plan: reqs[idx].plan || 'self',
-                        cycle: reqs[idx].cycle || 'monthly',
-                        tenants: reqs[idx].tenants || 1,
-                        amount: reqs[idx].amount || 0,
+                        plan: isStaff ? 'admin' : (reqs[idx].plan || 'self'),
+                        cycle: isStaff ? '∞' : (reqs[idx].cycle || 'monthly'),
+                        tenants: isStaff ? null : (reqs[idx].tenants || 1),
+                        amount: isStaff ? 0 : (reqs[idx].amount || 0),
                         status: 'paid',
                         method: 'manual',
                         createdAt: now,
