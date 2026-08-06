@@ -518,11 +518,17 @@
           <option value="pending">Pending</option>
           <option value="failed">Failed</option>
         </select>
+        <select id="revPlanFilter">
+          <option value="">All Plans</option>
+          <option value="self">Self-service</option>
+          <option value="full">Full-service</option>
+          <option value="admin">Admin</option>
+        </select>
       </div>
       <div class="table-wrapper">
         <table>
-          <thead><tr><th>Invoice</th><th>User</th><th>Plan</th><th>Cycle</th><th>Tenants</th><th>Amount</th><th>Status</th><th>Date</th><th>Ref ID</th></tr></thead>
-          <tbody id="revTable"><tr><td colspan="9" class="text-muted" style="text-align:center;">Loading...</td></tr></tbody>
+          <thead><tr><th>Invoice</th><th>User</th><th>Plan</th><th>Cycle</th><th>Tenants</th><th>Amount</th><th>Status</th><th>Date</th><th>Ref ID</th><th>PDF</th></tr></thead>
+          <tbody id="revTable"><tr><td colspan="10" class="text-muted" style="text-align:center;">Loading...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -785,13 +791,13 @@
                     <div>
                         <div style="font-weight:600;font-size:.9rem;">${escHtml(r.username)} <span class="badge" style="font-size:.68rem;">${escHtml(r.plan === 'full' ? 'Full-service' : 'Self-service')}</span> ${r.via === 'manual' ? '<span class="badge badge-pending" style="font-size:.68rem;">🗂 Manual</span>' : '<span class="badge" style="font-size:.68rem;">💳 eSewa</span>'}</div>
                         <div style="font-size:.75rem;color:var(--text-muted);">${new Date(r.createdAt).toLocaleString()}${r.via === 'manual' ? ' &middot; <span style="font-weight:600;color:var(--warn);">Rs ' + (r.amount || 0).toLocaleString('en-IN') + '</span> &middot; ' + (r.cycle === 'yearly' ? 'Yearly' : 'Monthly') + ' &middot; ' + (r.tenants || 1) + ' tenants' : (r.tenants ? ' &middot; ' + r.tenants + ' tenants &middot; Rs ' + (r.amount || 0).toLocaleString('en-IN') : '')}${r.paymentNote ? ' &middot; ' + escHtml(r.paymentNote) : ''}${r.notes ? ' &middot; ' + escHtml(r.notes) : ''}</div>
-                        ${r.screenshot ? `<div style="margin-top:6px;"><img src="${escAttr(r.screenshot)}" onclick="window.open('${escAttr(r.screenshot)}')" title="Open payment screenshot" style="height:64px;border-radius:6px;border:1px solid var(--border);cursor:zoom-in;"> <span style="font-size:.7rem;color:var(--text-muted);vertical-align:top;">payment SS</span></div>` : ''}
+                        ${r.screenshot ? `<div style="margin-top:6px;"><img src="${escAttr(r.screenshot)}" onclick="openShot(this)" title="View payment screenshot" style="height:64px;border-radius:6px;border:1px solid var(--border);cursor:zoom-in;"> <span style="font-size:.7rem;color:var(--text-muted);vertical-align:top;">payment SS</span></div>` : ''}
                     </div>
                     ${r.status === 'pending' ? `
                     <div style="display:flex;gap:8px;">
                         <button class="btn-success" style="font-size:.75rem;padding:6px 14px;" onclick="respondUpgrade(${r.id},'approved')">Approve</button>
                         <button class="btn-danger" style="font-size:.75rem;padding:6px 14px;" onclick="respondUpgrade(${r.id},'declined')">Decline</button>
-                    </div>` : `<span class="badge ${r.paid || r.paymentId || (r.via === 'manual' && r.status === 'approved') ? 'badge-paid' : (r.status === 'approved' ? 'badge-sub-active' : r.status === 'declined' ? 'badge-balance-zero' : 'badge-pending')}" style="font-size:.75rem;">${r.paid || r.paymentId || (r.via === 'manual' && r.status === 'approved') ? 'Paid ✓' : r.status === 'pending_payment' ? 'Awaiting payment' : escHtml(r.status)}</span>`}
+                    </div>` : `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${r.status === 'approved' ? `<button class="btn-outline" style="font-size:.75rem;padding:6px 12px;" onclick="revertUpgrade(${r.id})">↩ Undo</button>` : ''}<span class="badge ${r.paid || r.paymentId || (r.via === 'manual' && r.status === 'approved') ? 'badge-paid' : (r.status === 'approved' ? 'badge-sub-active' : r.status === 'reverted' ? 'badge-pending' : r.status === 'declined' ? 'badge-balance-zero' : 'badge-pending')}" style="font-size:.75rem;">${r.paid || r.paymentId || (r.via === 'manual' && r.status === 'approved') ? 'Paid ✓' : r.status === 'pending_payment' ? 'Awaiting payment' : escHtml(r.status)}</span></div>`}
                 </div>`).join('');
         } catch (e) {
             el.innerHTML = '<p style="color:var(--text-muted);font-size:.85rem;margin:0;">Failed to load requests.</p>';
@@ -804,6 +810,47 @@
             loadUpgradeRequests();
         } catch (e) { showToast(e.message, 'error'); }
     }
+    async function revertUpgrade(id) {
+        if (!confirm('Undo this upgrade? The owner will be reverted to trial and the manual invoice removed from revenue.')) return;
+        try {
+            await api('POST', '/subscription/requests/' + id + '/revert', {});
+            showToast('Upgrade reverted');
+            loadUpgradeRequests();
+        } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    // ─── Screenshot lightbox (in-app, zoomable) ───
+    window.openShot = function (img) {
+        const overlay = document.getElementById('shotOverlay');
+        const view = document.getElementById('shotImg');
+        view.src = img.src;
+        view.style.transform = 'scale(1)';
+        view.style.cursor = 'zoom-in';
+        overlay.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    };
+    window.closeShot = function () {
+        const overlay = document.getElementById('shotOverlay');
+        overlay.style.display = 'none';
+        document.getElementById('shotImg').src = '';
+        document.body.style.overflow = '';
+    };
+    (function () {
+        const view = document.getElementById('shotImg');
+        let zoom = 1;
+        view.addEventListener('click', () => {
+            zoom = zoom >= 2.5 ? 1 : (zoom >= 1 ? 2.5 : 1.5);
+            view.style.transform = `scale(${zoom})`;
+            view.style.cursor = zoom > 1 ? 'zoom-out' : 'zoom-in';
+        });
+        view.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            zoom = Math.min(5, Math.max(1, zoom + (e.deltaY < 0 ? 0.25 : -0.25)));
+            view.style.transform = `scale(${zoom})`;
+            view.style.cursor = zoom > 1 ? 'zoom-out' : 'zoom-in';
+        }, { passive: false });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.getElementById('shotOverlay').style.display === 'flex') closeShot(); });
+    })();
 
     // ═══════════════════════════════════════════════════════════
     // REVENUE & INVOICES
@@ -838,13 +885,15 @@
     function renderPayments() {
         const search = (document.getElementById('revSearch').value || '').toLowerCase();
         const status = document.getElementById('revStatusFilter').value;
+        const plan = document.getElementById('revPlanFilter').value;
         const rows = allPayments.slice().reverse().filter(p =>
             (status ? p.status === status : true) &&
+            (plan ? p.plan === plan : true) &&
             (!search || (p.username || '').toLowerCase().includes(search) || (p.pid || '').toLowerCase().includes(search))
         );
         const tbody = document.getElementById('revTable');
         if (!rows.length) {
-            tbody.innerHTML = `<tr><td colspan="9" class="text-muted" style="text-align:center;">No invoices found.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="10" class="text-muted" style="text-align:center;">No invoices found.</td></tr>`;
             return;
         }
         const badgeMap = { paid: 'badge-paid', pending: 'badge-pending', failed: 'badge-failed' };
@@ -860,11 +909,68 @@
                 <td><span class="badge ${badgeMap[p.status] || 'badge-pending'}">${escHtml(p.status)}</span></td>
                 <td>${p.verifiedAt ? new Date(p.verifiedAt).toLocaleDateString() : (p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '—')}</td>
                 <td>${p.refId ? escHtml(p.refId) : '—'}</td>
+                <td><button onclick="downloadInvoicePDF('${escAttr(p.pid)}')" title="Download invoice PDF" style="background:none;border:none;cursor:pointer;font-size:1rem;">⬇️</button></td>
             </tr>`).join('');
     }
 
     document.getElementById('revSearch').addEventListener('input', renderPayments);
     document.getElementById('revStatusFilter').addEventListener('change', renderPayments);
+    document.getElementById('revPlanFilter').addEventListener('change', renderPayments);
+
+    // ─── Invoice PDF download ───
+    let jspdfPromise = null;
+    function loadJsPdf() {
+        if (window.jspdf && window.jspdf.jsPDF) return Promise.resolve();
+        if (!jspdfPromise) {
+            jspdfPromise = new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+                s.onload = () => (window.jspdf && window.jspdf.jsPDF ? resolve() : reject(new Error('Failed to load PDF library')));
+                s.onerror = () => { jspdfPromise = null; reject(new Error('Could not load PDF library. Check your internet connection.')); };
+                document.head.appendChild(s);
+            });
+        }
+        return jspdfPromise;
+    }
+
+    window.downloadInvoicePDF = async function (pid) {
+        const p = allPayments.find(x => x.pid === pid);
+        if (!p) { showToast('Invoice not found', 'error'); return; }
+        try { await loadJsPdf(); } catch (e) { showToast(e.message, 'error'); return; }
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const planLabel = { self: 'Self-service', full: 'Full-service' };
+        const dateStr = p.verifiedAt ? new Date(p.verifiedAt).toLocaleDateString() : (p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '—');
+        doc.setFontSize(22); doc.setFont(undefined, 'bold');
+        doc.text('SajiloRent', 14, 22);
+        doc.setFontSize(10); doc.setFont(undefined, 'normal'); doc.setTextColor(120);
+        doc.text('House & tenant billing made easy', 14, 29);
+        doc.setTextColor(0); doc.setDrawColor(200); doc.line(14, 34, 196, 34);
+        doc.setFontSize(16); doc.setFont(undefined, 'bold'); doc.text('PAYMENT INVOICE', 14, 46);
+        doc.setFontSize(10); doc.setFont(undefined, 'normal');
+        const rows = [
+            ['Invoice ID', p.pid],
+            ['Date', dateStr],
+            ['User', p.username || '—'],
+            ['Plan', planLabel[p.plan] || p.plan || '—'],
+            ['Billing cycle', p.cycle || '—'],
+            ['Tenants', String(p.tenants || 1)],
+            ['Amount', 'Rs ' + (p.amount || 0).toLocaleString('en-IN')],
+            ['Status', (p.status || '').toUpperCase()],
+            ['Reference', p.refId || '—']
+        ];
+        let y = 58;
+        rows.forEach(([k, v]) => {
+            doc.setTextColor(90); doc.setFont(undefined, 'bold'); doc.text(k, 14, y);
+            doc.setTextColor(0); doc.setFont(undefined, 'normal'); doc.text(String(v), 70, y);
+            y += 9;
+        });
+        doc.setDrawColor(200); doc.line(14, y + 4, 196, y + 4);
+        doc.setFontSize(9); doc.setTextColor(120);
+        doc.text('Generated by SajiloRent · sajilorent.onrender.com', 14, y + 12);
+        doc.save('Invoice_' + p.pid + '.pdf');
+        showToast('Invoice PDF downloaded');
+    };
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // USERS
@@ -1496,5 +1602,15 @@
 if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => {}); }); }
 </script>
 <script src="/install-widget.js"></script>
+<!-- Screenshot lightbox (in-app zoomable viewer) -->
+<div id="shotOverlay" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.88);align-items:center;justify-content:center;flex-direction:column;padding:20px;">
+  <div style="width:100%;max-width:900px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+    <span style="color:#fff;font-size:.8rem;">Click image to zoom &middot; Scroll to zoom &middot; Esc to close</span>
+    <button onclick="closeShot()" style="background:none;border:none;color:#fff;font-size:1.6rem;cursor:pointer;line-height:1;" title="Close">&times;</button>
+  </div>
+  <div style="overflow:auto;max-width:100%;max-height:85vh;border-radius:8px;background:#111;" id="shotScroller">
+    <img id="shotImg" src="" alt="Payment screenshot" style="display:block;max-width:100%;cursor:zoom-in;transition:transform .2s ease;">
+  </div>
+</div>
 </body>
 </html>

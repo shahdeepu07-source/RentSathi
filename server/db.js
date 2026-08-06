@@ -283,7 +283,10 @@ export async function renameHouse(oldName, newName) {
 
 export async function deleteHousePermanent(houseId) {
     if (DB_ENABLED) {
-        await pool.query('DELETE FROM tenants WHERE house_id = $1', [houseId]);
+        await inTx(async (c) => {
+            await c.query('DELETE FROM tenants WHERE house_id = $1', [houseId]);
+            await c.query('DELETE FROM houses WHERE name = $1', [houseId]);
+        });
         return;
     }
     try {

@@ -180,6 +180,12 @@
         .support-status.ok { display:block; color:#16a34a; }
         .support-status.error { display:block; color:var(--danger); }
         .support-note { font-size:.78rem; color:var(--muted); margin-top:12px; }
+        .faq-item { border:1px solid var(--border); border-radius:10px; margin-bottom:8px; overflow:hidden; background:var(--white); }
+        .faq-item summary { cursor:pointer; padding:13px 16px; font-size:.9rem; font-weight:600; list-style:none; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+        .faq-item summary::-webkit-details-marker { display:none; }
+        .faq-item summary::after { content:'+'; font-size:1.15rem; color:var(--muted); transition:transform .2s; }
+        .faq-item[open] summary::after { transform:rotate(45deg); }
+        .faq-a { padding:0 16px 14px; font-size:.85rem; color:var(--muted); line-height:1.65; }
         @media (max-width:760px) { .support-grid { grid-template-columns:1fr; } }
 
         /* ─── Footer ─── */
@@ -720,6 +726,15 @@
                     <button type="submit" class="btn btn-primary">Send message</button>
                     <p class="support-note">Messages go straight to the SajiloRent support team. We usually reply within 24 hours.</p>
                 </form>
+            </div>
+            <div class="support-card" style="grid-column:1/-1;">
+                <h4>❓ Frequently asked questions</h4>
+                <details class="faq-item"><summary>How do I get started?</summary><div class="faq-a">Create an account on the login page — you get a 30-day free trial. Add your house, then add tenants, then generate your first bill. Everything works during the trial.</div></details>
+                <details class="faq-item"><summary>Is SajiloRent free?</summary><div class="faq-a">New owners get a 30-day free trial with the full feature set. After the trial, choose <strong>Self-service</strong> or <strong>Full-service</strong> (monthly or yearly) and upgrade from your account — the SuperAdmin approves the plan.</div></details>
+                <details class="faq-item"><summary>How do tenants see their bills?</summary><div class="faq-a">Each tenant gets a login. In the app they open the <strong>Bills</strong> tab to see the current bill, full breakdown, and previous months, and can download or print any bill.</div></details>
+                <details class="faq-item"><summary>What payment methods are accepted?</summary><div class="faq-a">Upgrade payments are accepted by bank/eSewa transfer with a screenshot uploaded in the app. Online payment through the app is coming soon.</div></details>
+                <details class="faq-item"><summary>I deleted a tenant or house by mistake. Can I recover it?</summary><div class="faq-a">Yes — deleted items go to the <strong>Trash</strong> in the Admin panel and can be restored anytime before they are permanently deleted.</div></details>
+                <details class="faq-item"><summary>Is my data safe?</summary><div class="faq-a">Your data is stored securely on the server and is only visible to you, your tenants, and the support team when needed.</div></details>
             </div>
         </div>
     </section>

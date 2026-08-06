@@ -304,6 +304,20 @@ app.post('/api/houses/:id/delete', async (req, res) => {
         }
         const ownership = await getOwnership();
         if (!ownership[houseId]) {
+            // Orphan house: store file exists but no ownership record
+            // (e.g. left behind by an old failed delete). Auto-register it
+            // under the requester so it can be trashed and removed normally.
+            if (await houseExists(houseId)) {
+                ownership[houseId] = {
+                    owner_id: req.user.userId,
+                    created_by: req.user.userId,
+                    created_at: new Date().toISOString(),
+                    deleted: true,
+                    deleted_at: new Date().toISOString()
+                };
+                await saveOwnership(ownership);
+                return res.json({ success: true });
+            }
             return res.status(404).json({ error: 'House not found' });
         }
         if (ownership[houseId].deleted) {
@@ -358,7 +372,20 @@ app.delete('/api/admin/trash/houses/permanent/:houseId', async (req, res) => {
         return res.status(403).json({ error: 'You do not have permission to manage M_house' });
     }
     const ownership = await getOwnership();
-    if (!ownership[houseId] || !ownership[houseId].deleted) {
+    if (!ownership[houseId]) {
+        // Orphan house file with no ownership record — remove the file directly.
+        if (await houseExists(houseId)) {
+            try {
+                await deleteHousePermanent(houseId);
+                return res.json({ success: true });
+            } catch (err) {
+                console.error('Error permanently deleting orphan house:', err);
+                return res.status(500).json({ error: 'Failed to permanently delete house' });
+            }
+        }
+        return res.status(404).json({ error: 'Deleted house not found' });
+    }
+    if (!ownership[houseId].deleted) {
         return res.status(404).json({ error: 'Deleted house not found' });
     }
     const access = await accessibleHouses(req.user, true);
@@ -1094,6 +1121,47 @@ app.post('/api/subscription/requests/:id/respond', async (req, res) => {
     } catch (err) {
         console.error('Error responding to upgrade request:', err);
         res.status(500).json({ error: 'Failed to respond' });
+    }
+});
+
+// Undo an approved upgrade: revert the owner back to trial and remove the
+// manual invoice record so revenue no longer counts it.
+app.post('/api/subscription/requests/:id/revert', async (req, res) => {
+    if (req.user.role !== 'superadmin') return res.status(403).json({ error: 'SuperAdmin access required' });
+    try {
+        const reqs = await getUpgradeRequests();
+        const idx = reqs.findIndex(r => r.id === parseInt(req.params.id));
+        if (idx === -1) return res.status(404).json({ error: 'Request not found' });
+        if (reqs[idx].status !== 'approved') return res.status(400).json({ error: 'Only approved requests can be reverted' });
+        const users = await getUsers(false);
+        const owner = users.find(u => String(u.id) === String(reqs[idx].userId)) || users.find(u => u.username === reqs[idx].username);
+        if (owner) {
+            const trialEnd = new Date();
+            trialEnd.setDate(trialEnd.getDate() + 30);
+            owner.subscription_status = 'trial';
+            owner.subscription_plan = null;
+            owner.subscription_tenants = null;
+            owner.billing_cycle = 'monthly';
+            owner.trial_end = trialEnd.toISOString();
+            owner.subscription_approved_at = null;
+        }
+        if (reqs[idx].paymentId) {
+            const payments = await getPayments();
+            const payIdx = payments.findIndex(p => p.pid === reqs[idx].paymentId);
+            if (payIdx !== -1) {
+                payments.splice(payIdx, 1);
+                await savePayments(payments);
+            }
+            reqs[idx].paymentId = null;
+        }
+        reqs[idx].status = 'reverted';
+        reqs[idx].revertedAt = new Date().toISOString();
+        await saveUsers(users);
+        await saveUpgradeRequests(reqs);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error reverting upgrade request:', err);
+        res.status(500).json({ error: 'Failed to revert upgrade' });
     }
 });
 

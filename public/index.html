@@ -152,6 +152,13 @@
     .made-by-kali { position:fixed; bottom:12px; right:16px; z-index:999; display:flex; align-items:center; gap:6px; color:#6b7280; font-size:0.7rem; font-family:'SF Mono','Fira Code','Cascadia Code',monospace; letter-spacing:0.8px; opacity:0.5; transition:opacity 0.3s; pointer-events:none; }
     .made-by-kali span { color:var(--accent); font-weight:600; opacity:0.85; }
 
+    .faq-item { border:1px solid var(--border,#e5e7eb); border-radius:8px; margin-bottom:8px; overflow:hidden; background:var(--card,#fff); }
+    .faq-item summary { cursor:pointer; padding:12px 14px; font-size:.88rem; font-weight:600; color:var(--text,#111); list-style:none; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+    .faq-item summary::-webkit-details-marker { display:none; }
+    .faq-item summary::after { content:'+'; font-size:1.1rem; color:var(--text-muted,#64748b); transition:transform .2s; }
+    .faq-item[open] summary::after { transform:rotate(45deg); }
+    .faq-a { padding:0 14px 12px; font-size:.83rem; color:var(--text-muted,#64748b); line-height:1.6; }
+
     .pro-bill { background:#fff; color:#111; padding:35px 40px; border-radius:6px; font-family:'Helvetica Neue',Arial,sans-serif; box-shadow:0 4px 20px rgba(0,0,0,0.15); }
     .pb-head { text-align:center; margin-bottom:28px; padding-bottom:18px; border-bottom:3px solid #000; }
     .pb-head h2 { font-size:2rem; font-weight:800; letter-spacing:3px; margin:0; text-transform:uppercase; }
@@ -847,6 +854,17 @@
         <button type="submit" class="btn-primary">Send message</button>
       </form>
     </div>
+    <div class="section-card">
+      <h3 style="margin-bottom:12px;">❓ Frequently asked questions</h3>
+      <details class="faq-item"><summary>How do I get started after registering?</summary><div class="faq-a">After your first login you get a 30-day free trial. Open the <strong>Houses</strong> tab to add your house, then add tenants in the <strong>Tenants</strong> tab. You can start generating bills immediately — no payment needed during the trial.</div></details>
+      <details class="faq-item"><summary>How do I generate a bill for a tenant?</summary><div class="faq-a">Go to the <strong>Billing</strong> tab, select the house and tenant, pick the month, enter the current meter reading and any deduction, then click <strong>Generate Bill</strong>. The tenant sees the bill instantly in their app and can download it as an image or PDF.</div></details>
+      <details class="faq-item"><summary>How is the bill amount calculated?</summary><div class="faq-a">Total = electricity units × 15 (rate per unit) + room rent + water charge + waste charge + previous due, minus any deduction you apply. You can add a notice note that appears on the bill.</div></details>
+      <details class="faq-item"><summary>My trial ended. What happens now?</summary><div class="faq-a">Once your trial ends you will not be able to log in until you get a subscription. Go to the login page and sign in to see the <strong>Subscription / upgrade</strong> area, choose <strong>Self-service</strong> or <strong>Full-service</strong>, pick monthly or yearly, and submit with your payment screenshot. The SuperAdmin approves it and your plan is activated.</div></details>
+      <details class="faq-item"><summary>How many tenants can I add?</summary><div class="faq-a">Your plan has a tenant limit that is shown in your subscription area (the demo accounts allow up to 50). If you reach the limit you will be asked to upgrade to a larger plan.</div></details>
+      <details class="faq-item"><summary>How do I record a payment from a tenant?</summary><div class="faq-a">Open a tenant's bill and click <strong>Record payment</strong>. Choose the payment type (full, partial or other), enter the amount if partial, and it is marked on the bill with a remark.</div></details>
+      <details class="faq-item"><summary>I deleted something by mistake. Can I get it back?</summary><div class="faq-a">Deleted tenants and houses go to the <strong>Trash</strong> tab (SuperAdmin / Admin panel) where they can be restored. Items are only permanently gone when you use the permanent-delete button there.</div></details>
+      <details class="faq-item"><summary>How do I change my password or account details?</summary><div class="faq-a">Use the <strong>Change password</strong> link at the bottom of the sidebar. Your name and contact details can be updated from your profile settings; for anything else, contact support.</div></details>
+    </div>
   </div>
 
   <div style="height:40px;"></div>
@@ -866,6 +884,7 @@
     <div id="printArea" class="pro-bill"></div>
     <div style="margin-top:16px;display:flex;gap:10px;">
       <button onclick="downloadBillImage()" class="btn-success" style="flex:1;padding:12px;">📸 Download Image</button>
+      <button onclick="downloadBillPDF()" class="btn-primary" style="flex:1;padding:12px;">⬇️ Download PDF</button>
       <button onclick="closeBillModal()" class="btn-danger" style="flex:1;padding:12px;">Close</button>
     </div>
   </div>
@@ -1507,6 +1526,42 @@ window.downloadBillImage = async function() {
       link.click();
     })
     .finally(() => el.classList.remove('pb-export'));
+};
+
+// ─── Download bill as PDF (single page sized to the bill) ───
+let jspdfPromise = null;
+function loadJsPdf() {
+  if (window.jspdf && window.jspdf.jsPDF) return Promise.resolve();
+  if (!jspdfPromise) {
+    jspdfPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      s.onload = () => (window.jspdf && window.jspdf.jsPDF ? resolve() : reject(new Error('Failed to load PDF library')));
+      s.onerror = () => { jspdfPromise = null; reject(new Error('Could not load PDF library. Check your internet connection.')); };
+      document.head.appendChild(s);
+    });
+  }
+  return jspdfPromise;
+}
+
+window.downloadBillPDF = async function() {
+  const el = document.getElementById('printArea');
+  const m = document.getElementById('bMonth').value;
+  const y = document.getElementById('bYear').value.trim();
+  const month = (m && y ? m + '_' + y : m || y || 'Statement');
+  try { await loadHtml2Canvas(); } catch (err) { alert(err.message); return; }
+  try { await loadJsPdf(); } catch (err) { alert(err.message); return; }
+  el.classList.add('pb-export');
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  try {
+    const canvas = await html2canvas(el, { scale: 3, width: 794, windowWidth: 794, backgroundColor: '#ffffff', logging: false });
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'px', format: [794, canvas.height] });
+    doc.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 794, canvas.height);
+    doc.save(`Bill_${month}.pdf`);
+  } finally {
+    el.classList.remove('pb-export');
+  }
 };
 
 // ─── Payment ──────────────────────────────────────────────
