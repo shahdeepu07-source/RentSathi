@@ -326,8 +326,8 @@
     </div>
     <div id="upg-price"></div>
     <div id="upg-msg" style="color:var(--danger,#dc2626);font-size:.85rem;"></div>
-    <button id="upg-pay" disabled onclick="submitCheckout()">eSewa — update coming soon</button>
-    <p id="upg-esewa-note" style="font-size:.72rem;color:var(--text-muted,#64748b);margin:8px 0 0;text-align:center;">Online payment is being updated. For now pay by eSewa QR below and send the payment screenshot.</p>
+    <button id="upg-pay" onclick="submitCheckout()">Pay with eSewa →</button>
+    <p id="upg-esewa-note" style="font-size:.72rem;color:var(--text-muted,#64748b);margin:8px 0 0;text-align:center;">You will be redirected to the secure eSewa page to complete payment. Prefer manual? Pay by eSewa QR below and send the payment screenshot.</p>
     <button type="button" id="upg-continue" onclick="upgGoStep(2)" style="width:100%;margin-top:14px;padding:13px;border:none;border-radius:8px;background:var(--accent-soft,rgba(37,99,235,.12));color:var(--accent,#2563eb);font-weight:700;font-size:.95rem;cursor:pointer;">Pay by eSewa QR →</button>
     <div id="upg-step2" style="display:none;margin-top:16px;">
       <div id="upg-qr-box" style="text-align:center;padding:14px;border:1px dashed var(--border,#cbd5e1);border-radius:10px;">
@@ -373,7 +373,7 @@
     var per = cyc === 'yearly' ? '/yr' : '/mo';
     document.getElementById('upg-price').innerHTML = 'Rs ' + t.rate + ' per tenant per month x ' + t.months + ' month(s)<br><b>Total: Rs ' + t.amt.toLocaleString('en-IN') + '</b> ' + (cyc === 'yearly' ? '/year (2 months free)' : '/month');
     document.getElementById('upg-qr-amt').textContent = 'Rs ' + t.amt.toLocaleString('en-IN');
-    document.getElementById('upg-pay').textContent = 'eSewa — update coming soon';
+    document.getElementById('upg-pay').textContent = 'Pay with eSewa →';
   }
   function openUpgradeModal() {
     document.getElementById('upg-msg').textContent = '';
