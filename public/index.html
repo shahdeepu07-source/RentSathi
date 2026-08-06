@@ -384,8 +384,29 @@
   async function submitCheckout() {
     var msg = document.getElementById('upg-msg');
     msg.textContent = '';
-    msg.textContent = 'eSewa online payment is temporarily unavailable. Please use "Request manual approval" below and we will activate your subscription once payment is received.';
-    return;
+    try {
+      var res = await fetch(API_BASE + '/subscription/checkout', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+        body: JSON.stringify({
+          plan: document.getElementById('upg-plan').value,
+          cycle: document.getElementById('upg-cycle').value,
+          tenants: parseInt(document.getElementById('upg-tenants').value, 10)
+        })
+      });
+      var data = await res.json().catch(function () { return {}; });
+      if (!res.ok) { msg.textContent = data.error || 'Failed to create checkout.'; return; }
+      var form = document.createElement('form');
+      form.method = 'POST'; form.action = data.url; form.style.display = 'none';
+      for (var k in data.params) {
+        var inp = document.createElement('input');
+        inp.type = 'hidden'; inp.name = k; inp.value = data.params[k];
+        form.appendChild(inp);
+      }
+      document.body.appendChild(form);
+      form.submit();
+    } catch (e) {
+      msg.textContent = 'Network error. Please try again.';
+    }
   }
   async function submitUpgradeRequest(ev) {
     if (ev) ev.preventDefault();

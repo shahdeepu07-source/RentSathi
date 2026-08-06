@@ -1,12 +1,13 @@
 # eSewa Sandbox Walkthrough (no PAN needed)
 
-SajiloRent is wired to the **eSewa test gateway** (`uat.esewa.com.np`). The test
-merchant is already built in, so you can run the *entire* buy-a-subscription
-flow today with **no real money and no company documents** (no PAN, no
-registration, no bank account).
+SajiloRent is wired to the **eSewa ePay v2 test gateway**
+(`rc-epay.esewa.com.np`). The test merchant is already built in, so you can
+run the *entire* buy-a-subscription flow today with **no real money and no
+company documents** (no PAN, no registration, no bank account).
 
-- Test merchant ID: `EPAYTEST`
+- Test merchant ID (`product_code`): `EPAYTEST`
 - Test secret: `8gBm/:&EnhH.1/q`
+- Test OTP on the sandbox checkout: `123456`
 
 You only need PAN/company docs later, **when** you want real money to reach you
 (see "Going live" at the end).
@@ -16,8 +17,9 @@ You only need PAN/company docs later, **when** you want real money to reach you
 ## 1. What happens to the money? Nothing.
 
 Every payment in sandbox mode is simulated. The eSewa sandbox shows you its
-test payment page; you pick any test "wallet"/"bank", pretend to pay, and
-eSewa calls back into SajiloRent to confirm. No real charge, no settlement.
+test payment page; you log in with any test credential (OTP `123456`),
+pretend to pay, and eSewa calls back into SajiloRent to confirm. No real
+charge, no settlement.
 
 ## 2. Sandbox configuration (already done)
 
@@ -35,22 +37,36 @@ them — so the app works even on a fresh checkout with no env vars.
 1. Owner dashboard → "Upgrade Plan" → pick plan, cycle, tenants → the modal
    shows the tiered price (see `computeAmount`: self/full, monthly/1mo,
    yearly/10mo) → **Pay with eSewa**.
-2. `POST /api/subscription/checkout` (`server/index.js:998`) creates:
-   - a **payment record** (status `pending`) in the payments store, and
+2. `POST /api/subscription/checkout` (`server/index.js`) creates:
+   - a **payment record** (status `pending`, `pid` = `SR-<userid>-<ts>`) in
+     the payments store, and
    - an **upgrade request** (`pending_payment`, `via: 'esewa'`).
-   It responds `{ url, params }` where `url` is the gateway endpoint and
-   `params` are the signed form fields (`amt`, `tAmt`, `pid`, `scd`, `su`, `fu`).
-3. The browser POSTs that hidden form to `https://uat.esewa.com.np/epay/main`
-   (`server/esewa.js` `paymentEndpoint`). eSewa opens its test checkout.
-4. eSewa redirects to our public callback
-   - success: `/api/subscription/esewa/success?refId=..&pid=..&amt=..`
-   - failure: `/api/subscription/esewa/failure?pid=..`
-5. On success, the server verifies against eSewa's
-   `https://uat.esewa.com.np/epay/transrec` (`verifyTransaction`) to confirm
-   the exact `pid + refId + amount` settled — a forged callback is rejected.
-6. Verified → invoice marked `paid`, upgrade request approved, the owner's
-   `subscription_status` flips to `paid` with plan/cycle/tenants saved, and the
-   browser lands on `payment-result.html?status=success`.
+   It responds `{ url, params }` where `url` is the v2 form endpoint
+   (`https://rc-epay.esewa.com.np/api/epay/main/v2/form`) and `params` are the
+   signed fields: `amount`, `tax_amount`, `total_amount`, `transaction_uuid`
+   (our `pid`), `product_code`, `product_service_charge`,
+   `product_delivery_charge`, `success_url`, `failure_url`,
+   `signed_field_names` = `total_amount,transaction_uuid,product_code`, and
+   `signature` = base64(HMAC-SHA256(secret,
+   `total_amount=..,transaction_uuid=..,product_code=..`)).
+3. The browser POSTs that hidden form to the gateway
+   (`server/esewa.js` `paymentEndpoint`). eSewa opens its test checkout and
+   redirects back to our public callbacks with a base64 `data` payload:
+   - success: `/api/subscription/esewa/success?data=<base64 JSON>`
+   - failure: `/api/subscription/esewa/failure?data=<base64 JSON>`
+4. On success the server:
+   - decodes `data` and verifies the payload `signature` (HMAC-SHA256 over
+     the values of `signed_field_names` in order) — a forged callback is
+     rejected,
+   - matches `transaction_uuid` to the payment and `total_amount` to the
+     invoice,
+   - confirms with eSewa's status lookup
+     `https://rc-epay.esewa.com.np/api/epay/transaction/status/?product_code=..&transaction_uuid=..&total_amount=..`
+     that status is `COMPLETE` with the exact amount.
+5. Verified → invoice marked `paid` (with `refId` = `transaction_code`), the
+   upgrade request is approved, the owner's `subscription_status` flips to
+   `paid` with plan/cycle/tenants saved, and the browser lands on
+   `payment-result.html?status=success`.
 
 ## 4. Try it now (5-minute demo)
 
@@ -59,8 +75,8 @@ them — so the app works even on a fresh checkout with no env vars.
 3. Open the **Upgrade Plan** box and pick e.g. Self-service, Monthly, 1 tenant
    (should show Rs 100).
 4. Click **Pay with eSewa**.
-5. On the eSewa test page, pick "Test ..." credentials if it asks, or just
-   complete with any test payment — it will look like a real wallet.
+5. On the eSewa test page, log in with the sandbox test credential (OTP
+   `123456`) and complete the payment — it will look like a real wallet.
 6. eSewa redirects back → you should see the green **payment successful** page.
 7. As SuperAdmin, open **Revenue & Invoices**: the invoice shows
    `SR-<userid>-<ts>`, plan, cycle, amount, `paid`, and the eSewa ref ID.
@@ -74,8 +90,8 @@ actions until they pay).
 Two paths, both supported:
 
 - **Automatic**: eSewa success callback flips status to `paid` instantly.
-- **Manual**: if a payment is approved offline, SuperAdmin → Users →
-  manage subscription → **Activate** sets status `active`.
+- **Manual**: SuperAdmin approves the offline/manual upgrade request — the
+  owner is activated and a `MAN-<reqid>` invoice is recorded.
 
 An owner with status `expired` can still log in but every write action shows
 the "Your subscription has ended" popup until status is back to `active` or

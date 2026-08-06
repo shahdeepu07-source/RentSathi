@@ -10,7 +10,7 @@ import { verifyToken } from './middleware.js';
 import { createUser } from './auth.js';
 import { resolveDataDir } from './paths.js';
 import { getUsers, saveUsers, getOwnership, saveOwnership, readTenants, writeTenants, listHouseIds, houseExists, renameHouse, deleteHousePermanent, getNotifs, saveNotifs, getUpgradeRequests, saveUpgradeRequests, getPayments, savePayments } from './db.js';
-import { computeAmount, paymentForm, paymentEndpoint, verifyTransaction } from './esewa.js';
+import { computeAmount, paymentForm, paymentEndpoint, verifyResponseData, checkTransactionStatus } from './esewa.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,20 +26,29 @@ app.use(cookieParser());
 // ─── Public eSewa callbacks (eSewa redirects the browser here with NO
 // bearer token, so these must be registered before the auth middleware) ──
 app.get('/api/subscription/esewa/success', async (req, res) => {
-    const { refId, pid, amt } = req.query;
+    const { data } = req.query;
+    if (!data) return res.redirect('/payment-result.html?status=missing');
     try {
+        const cb = verifyResponseData(data);
+        if (!cb) return res.redirect('/payment-result.html?status=failed');
+        const pid = cb.transaction_uuid;
         const payments = await getPayments();
         const p = payments.find(x => x.pid === pid);
         if (!p) return res.redirect('/payment-result.html?status=missing');
-        if (parseInt(amt, 10) !== p.amount) return res.redirect('/payment-result.html?status=amount_mismatch');
+        if (parseInt(cb.total_amount, 10) !== p.amount) {
+            p.status = 'failed';
+            await savePayments(payments);
+            return res.redirect('/payment-result.html?status=amount_mismatch');
+        }
 
-        const ok = await verifyTransaction({ pid, refId, amt: String(p.amount) });
-        if (!ok) {
+        const st = await checkTransactionStatus({ transaction_uuid: pid, total_amount: String(p.amount) });
+        if (!st || st.status !== 'COMPLETE' || parseInt(st.total_amount, 10) !== p.amount) {
             p.status = 'failed';
             await savePayments(payments);
             return res.redirect('/payment-result.html?status=failed');
         }
 
+        const refId = cb.transaction_code || st.ref_id || null;
         p.status = 'paid';
         p.refId = refId;
         p.verifiedAt = new Date().toISOString();
@@ -73,11 +82,15 @@ app.get('/api/subscription/esewa/success', async (req, res) => {
 });
 
 app.get('/api/subscription/esewa/failure', async (req, res) => {
-    const { pid } = req.query;
+    const { data } = req.query;
     try {
-        const payments = await getPayments();
-        const p = payments.find(x => x.pid === pid);
-        if (p) { p.status = 'failed'; await savePayments(payments); }
+        const cb = verifyResponseData(data);
+        const pid = cb && cb.transaction_uuid;
+        if (pid) {
+            const payments = await getPayments();
+            const p = payments.find(x => x.pid === pid);
+            if (p) { p.status = 'failed'; await savePayments(payments); }
+        }
     } catch (err) { console.error('eSewa failure callback error:', err); }
     res.redirect('/payment-result.html?status=failed');
 });

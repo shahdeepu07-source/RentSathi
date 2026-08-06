@@ -1,19 +1,22 @@
-// ─── eSewa EPay v1 integration ────────────────────────────────
-// Classic EPay flow: the client POSTs a hidden payment form to the eSewa
-// gateway, the customer pays there, and eSewa redirects back to our
-// success/failure URLs. The callback is only trusted after being verified
-// server-side against the transaction lookup endpoint (transrec) using the
-// merchant key (secret), so a forged callback cannot confirm a payment.
+// ─── eSewa ePay v2 integration ────────────────────────────────
+// ePay v2 flow: the client POSTs a signed hidden payment form to the
+// eSewa gateway; the customer pays there; eSewa redirects back to our
+// success/failure URLs with a base64-encoded `data` payload containing a
+// signed JSON response. The callback is only trusted after (1) the HMAC
+// signature on the payload verifies and (2) the transaction status lookup
+// confirms status=COMPLETE with the exact amount.
 //
 // Sandbox (test mode, no real money):
-//   - gateway base: https://uat.esewa.com.np
-//   - public test merchant: scd = EPAYTEST, secret = 8gBm/:&EnhH.1/q
-// Live payments require a registered eSewa merchant (scd + secret).
+//   - gateway base: https://rc-epay.esewa.com.np
+//   - public test merchant: product_code = EPAYTEST, secret = 8gBm/:&EnhH.1/q
+// Live payments require a registered eSewa merchant (product code + secret).
+
+import { createHmac } from 'node:crypto';
 
 const MODE = (process.env.ESEWA_MODE || 'sandbox').trim().toLowerCase();
 export const ESEWA_GATEWAY = MODE === 'live'
-    ? 'https://esewa.com.np'
-    : 'https://uat.esewa.com.np';
+    ? 'https://epay.esewa.com.np'
+    : 'https://rc-epay.esewa.com.np';
 
 export const ESEWA_SCD = (process.env.ESEWA_SCD || 'EPAYTEST').trim();
 export const ESEWA_SECRET = (process.env.ESEWA_SECRET || '8gBm/:&EnhH.1/q').trim();
@@ -46,44 +49,77 @@ export function computeAmount({ plan, cycle, tenants }) {
     return { amt: rate * tenants * months, rate, months };
 }
 
-// Payment URL the browser form should POST to.
-export function paymentEndpoint() {
-    return `${ESEWA_GATEWAY}/epay/main`;
+// base64 HMAC-SHA256 of `message` using the merchant secret.
+export function hmacSha256Base64(secret, message) {
+    return createHmac('sha256', secret).update(message).digest('base64');
 }
 
-// Build the hidden-form params for the gateway.
+// Payment URL the browser form should POST to.
+export function paymentEndpoint() {
+    return `${ESEWA_GATEWAY}/api/epay/main/v2/form`;
+}
+
+// Build the hidden-form params for the gateway (ePay v2).
 export function paymentForm({ pid, amt }) {
+    const total = String(amt);
+    const successUrl = `${process.env.BASE_URL || 'https://sajilorent.onrender.com'}/api/subscription/esewa/success`;
+    const failureUrl = `${process.env.BASE_URL || 'https://sajilorent.onrender.com'}/api/subscription/esewa/failure`;
+    const signature = hmacSha256Base64(ESEWA_SECRET,
+        `total_amount=${total},transaction_uuid=${pid},product_code=${ESEWA_SCD}`);
     return {
-        amt: String(amt),
-        psc: '0',
-        pdc: '0',
-        txAmt: '0',
-        tAmt: String(amt),
-        pid,
-        scd: ESEWA_SCD,
-        su: `${process.env.BASE_URL || 'https://sajilorent.onrender.com'}/api/subscription/esewa/success`,
-        fu: `${process.env.BASE_URL || 'https://sajilorent.onrender.com'}/api/subscription/esewa/failure`
+        amount: total,
+        tax_amount: '0',
+        total_amount: total,
+        transaction_uuid: pid,
+        product_code: ESEWA_SCD,
+        product_service_charge: '0',
+        product_delivery_charge: '0',
+        success_url: successUrl,
+        failure_url: failureUrl,
+        signed_field_names: 'total_amount,transaction_uuid,product_code',
+        signature
     };
 }
 
-// Verify a completed payment with eSewa. Returns true only when eSewa
-// confirms the exact amount was settled for this pid+refId.
-export async function verifyTransaction({ pid, refId, amt }) {
-    if (!pid || !refId || !amt) return false;
-    const url = `${ESEWA_GATEWAY}/epay/transrec?amt=${encodeURIComponent(amt)}&scd=${encodeURIComponent(ESEWA_SCD)}&pid=${encodeURIComponent(pid)}&rid=${encodeURIComponent(refId)}`;
+// Decode + verify the base64 `data` payload eSewa appends to our success/
+// failure URLs. Returns the parsed object when the signature is valid,
+// otherwise null (never trust an unverifiable callback).
+export function verifyResponseData(dataParam) {
+    if (!dataParam) return null;
+    let raw;
+    try {
+        raw = Buffer.from(dataParam, 'base64').toString('utf8');
+    } catch {
+        return null;
+    }
+    let obj;
+    try {
+        obj = JSON.parse(raw);
+    } catch {
+        return null;
+    }
+    const fields = obj.signed_field_names;
+    if (!fields || typeof fields !== 'string' || !obj.signature) return null;
+    const names = fields.split(',');
+    if (!names.every(f => Object.prototype.hasOwnProperty.call(obj, f))) return null;
+    const message = names.map(f => String(obj[f])).join(',');
+    const expected = hmacSha256Base64(ESEWA_SECRET, message);
+    if (expected !== obj.signature) return null;
+    return obj;
+}
+
+// Server-to-server status lookup for a transaction.
+// Returns { status, total_amount, ref_id, ... } or null on failure.
+export async function checkTransactionStatus({ transaction_uuid, total_amount }) {
+    if (!transaction_uuid) return null;
+    const url = `${ESEWA_GATEWAY}/api/epay/transaction/status/?product_code=${encodeURIComponent(ESEWA_SCD)}&transaction_uuid=${encodeURIComponent(transaction_uuid)}&total_amount=${encodeURIComponent(String(total_amount))}`;
     try {
         const r = await fetch(url, { signal: AbortSignal.timeout(15000) });
-        const text = await r.text();
-        const body = text.trim();
-        // eSewa responds with plain text ("Success"/"Failure"/etc.) or JSON.
-        if (body.includes('Success')) return true;
-        try {
-            const j = JSON.parse(body);
-            return j?.response_code === 0 || j?.response_code === '0' || String(j?.status || '').toLowerCase() === 'success';
-        } catch { /* not JSON */ }
-        return false;
+        if (!r.ok) return null;
+        const j = await r.json();
+        return j && typeof j === 'object' ? j : null;
     } catch (err) {
-        console.error('eSewa verification error:', err.message);
-        return false;
+        console.error('eSewa status lookup error:', err.message);
+        return null;
     }
 }
