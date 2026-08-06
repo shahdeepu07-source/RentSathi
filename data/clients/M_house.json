@@ -21,7 +21,12 @@
         "note": "",
         "total": 14606,
         "createdAt": "2026-05-02T15:17:07.950Z",
-        "id": 1784744167938
+        "id": 1784744167938,
+        "paid_status": true,
+        "payment_type": "equal",
+        "payment_amount": 14606,
+        "payment_reason": "Cleared - balance equalized",
+        "paid_at": "2026-08-06T19:19:20.042Z"
       },
       {
         "name": "Ranjita Tamang",
@@ -39,7 +44,12 @@
         "note": "",
         "total": 14430,
         "createdAt": "2026-05-17T16:20:11.857Z",
-        "id": 1784744167381
+        "id": 1784744167381,
+        "paid_status": true,
+        "payment_type": "equal",
+        "payment_amount": 14430,
+        "payment_reason": "Cleared - balance equalized",
+        "paid_at": "2026-08-06T19:19:20.042Z"
       },
       {
         "name": "Ranjita Tamang",
@@ -57,7 +67,12 @@
         "note": "",
         "total": 14420,
         "createdAt": "2026-06-17T02:53:09.267Z",
-        "id": 1784744171025
+        "id": 1784744171025,
+        "paid_status": true,
+        "payment_type": "equal",
+        "payment_amount": 14420,
+        "payment_reason": "Cleared - balance equalized",
+        "paid_at": "2026-08-06T19:19:20.042Z"
       },
       {
         "name": "Ranjita Tamang",
@@ -75,9 +90,15 @@
         "note": "",
         "total": 14405,
         "createdAt": "2026-07-18T03:18:40.329Z",
-        "id": 1784744166943
+        "id": 1784744166943,
+        "paid_status": true,
+        "payment_type": "equal",
+        "payment_amount": 14405,
+        "payment_reason": "Cleared - balance equalized",
+        "paid_at": "2026-08-06T19:19:20.042Z"
       }
-    ]
+    ],
+    "balance": 0
   },
   {
     "id": 2,
@@ -98,7 +119,12 @@
         "due": 0,
         "ded": 0,
         "total": 14772,
-        "id": 1784744170618
+        "id": 1784744170618,
+        "paid_status": true,
+        "payment_type": "equal",
+        "payment_amount": 14772,
+        "payment_reason": "Cleared - balance equalized",
+        "paid_at": "2026-08-06T19:19:20.042Z"
       },
       {
         "name": "Bandhana",
@@ -116,7 +142,12 @@
         "note": "",
         "total": 13976,
         "createdAt": "2026-05-17T16:20:58.764Z",
-        "id": 1784744170396
+        "id": 1784744170396,
+        "paid_status": true,
+        "payment_type": "equal",
+        "payment_amount": 13976,
+        "payment_reason": "Cleared - balance equalized",
+        "paid_at": "2026-08-06T19:19:20.042Z"
       },
       {
         "name": "Bandhana",
@@ -134,7 +165,12 @@
         "note": "",
         "total": 14495,
         "createdAt": "2026-06-17T02:54:18.452Z",
-        "id": 1784744172079
+        "id": 1784744172079,
+        "paid_status": true,
+        "payment_type": "equal",
+        "payment_amount": 14495,
+        "payment_reason": "Cleared - balance equalized",
+        "paid_at": "2026-08-06T19:19:20.042Z"
       },
       {
         "name": "Bandhana",
@@ -152,9 +188,15 @@
         "note": "",
         "total": 14345,
         "createdAt": "2026-07-18T03:19:40.203Z",
-        "id": 1784744166719
+        "id": 1784744166719,
+        "paid_status": true,
+        "payment_type": "equal",
+        "payment_amount": 14345,
+        "payment_reason": "Cleared - balance equalized",
+        "paid_at": "2026-08-06T19:19:20.042Z"
       }
-    ]
+    ],
+    "balance": 0
   },
   {
     "id": 3,
@@ -178,7 +220,12 @@
         "note": "",
         "total": 13612,
         "createdAt": "2026-05-17T16:24:45.321Z",
-        "id": 1784744166125
+        "id": 1784744166125,
+        "paid_status": true,
+        "payment_type": "equal",
+        "payment_amount": 13612,
+        "payment_reason": "Cleared - balance equalized",
+        "paid_at": "2026-08-06T19:19:20.042Z"
       },
       {
         "name": "Sachin",
@@ -196,7 +243,12 @@
         "note": "",
         "total": 13735,
         "createdAt": "2026-06-17T02:55:51.076Z",
-        "id": 1784744173482
+        "id": 1784744173482,
+        "paid_status": true,
+        "payment_type": "equal",
+        "payment_amount": 13735,
+        "payment_reason": "Cleared - balance equalized",
+        "paid_at": "2026-08-06T19:19:20.042Z"
       },
       {
         "name": "Sachin",
@@ -214,9 +266,15 @@
         "note": "पय्मेंट गरेपक्षि स्क्रीन्शोत पठाइदिने गर्नुस ",
         "total": 13690,
         "createdAt": "2026-07-18T03:23:37.617Z",
-        "id": 1784744173394
+        "id": 1784744173394,
+        "paid_status": true,
+        "payment_type": "equal",
+        "payment_amount": 13690,
+        "payment_reason": "Cleared - balance equalized",
+        "paid_at": "2026-08-06T19:19:20.042Z"
       }
-    ]
+    ],
+    "balance": 0
   },
   {
     "id": 4,
@@ -237,7 +295,12 @@
         "due": 0,
         "ded": 20,
         "total": 13699,
-        "id": 1784744172713
+        "id": 1784744172713,
+        "paid_status": true,
+        "payment_type": "equal",
+        "payment_amount": 13699,
+        "payment_reason": "Cleared - balance equalized",
+        "paid_at": "2026-08-06T19:19:20.042Z"
       },
       {
         "name": "Shova K.C",
@@ -255,7 +318,12 @@
         "note": "",
         "total": 13980,
         "createdAt": "2026-05-17T16:27:46.586Z",
-        "id": 1784744173234
+        "id": 1784744173234,
+        "paid_status": true,
+        "payment_type": "equal",
+        "payment_amount": 13980,
+        "payment_reason": "Cleared - balance equalized",
+        "paid_at": "2026-08-06T19:19:20.042Z"
       },
       {
         "name": "Shova K.C",
@@ -273,7 +341,12 @@
         "note": "",
         "total": 14190,
         "createdAt": "2026-06-17T03:01:18.016Z",
-        "id": 1784744171678
+        "id": 1784744171678,
+        "paid_status": true,
+        "payment_type": "equal",
+        "payment_amount": 14190,
+        "payment_reason": "Cleared - balance equalized",
+        "paid_at": "2026-08-06T19:19:20.042Z"
       },
       {
         "name": "Shova K.C",
@@ -291,9 +364,15 @@
         "note": "",
         "total": 13515,
         "createdAt": "2026-07-18T03:26:52.831Z",
-        "id": 1784744173121
+        "id": 1784744173121,
+        "paid_status": true,
+        "payment_type": "equal",
+        "payment_amount": 13515,
+        "payment_reason": "Cleared - balance equalized",
+        "paid_at": "2026-08-06T19:19:20.042Z"
       }
-    ]
+    ],
+    "balance": 0
   },
   {
     "id": 5,
@@ -314,7 +393,12 @@
         "due": 98,
         "ded": 0,
         "total": 13674,
-        "id": 1784744173750
+        "id": 1784744173750,
+        "paid_status": true,
+        "payment_type": "equal",
+        "payment_amount": 13674,
+        "payment_reason": "Cleared - balance equalized",
+        "paid_at": "2026-08-06T19:19:20.042Z"
       },
       {
         "name": "Bike Workshop",
@@ -332,7 +416,12 @@
         "note": "",
         "total": 13750,
         "createdAt": "2026-05-17T16:30:30.740Z",
-        "id": 1784744167419
+        "id": 1784744167419,
+        "paid_status": true,
+        "payment_type": "equal",
+        "payment_amount": 13750,
+        "payment_reason": "Cleared - balance equalized",
+        "paid_at": "2026-08-06T19:19:20.042Z"
       },
       {
         "name": "Bike Workshop",
@@ -350,7 +439,12 @@
         "note": "",
         "total": 14275,
         "createdAt": "2026-06-17T03:04:57.878Z",
-        "id": 1784744168686
+        "id": 1784744168686,
+        "paid_status": true,
+        "payment_type": "equal",
+        "payment_amount": 14275,
+        "payment_reason": "Cleared - balance equalized",
+        "paid_at": "2026-08-06T19:19:20.042Z"
       },
       {
         "name": "Bike Workshop",
@@ -368,9 +462,15 @@
         "note": "",
         "total": 27935,
         "createdAt": "2026-07-18T04:13:48.569Z",
-        "id": 1784744167692
+        "id": 1784744167692,
+        "paid_status": true,
+        "payment_type": "equal",
+        "payment_amount": 27935,
+        "payment_reason": "Cleared - balance equalized",
+        "paid_at": "2026-08-06T19:19:20.042Z"
       }
-    ]
+    ],
+    "balance": 0
   },
   {
     "id": 1777734952832,
@@ -378,6 +478,6 @@
     "rent_amount": 10000,
     "last_reading": 100,
     "history": [],
-    "balance": -11260
+    "balance": 0
   }
 ]
