@@ -2,9 +2,26 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import 'dotenv/config';
-import { getUsers, saveUsers } from './db.js';
+import { getUsers, saveUsers, getOwnership, listHouseIds, readTenants } from './db.js';
 
 const router = express.Router();
+
+// Total active (non-deleted) tenants across all houses owned by a user
+export async function countActiveTenants(userId) {
+    try {
+        const ownership = await getOwnership();
+        const allHouses = await listHouseIds();
+        const owned = allHouses.filter(h => !ownership[h]?.deleted && String(ownership[h]?.owner_id) === String(userId));
+        let count = 0;
+        for (const h of owned) {
+            const ts = await readTenants(h);
+            if (Array.isArray(ts)) count += ts.filter(t => !t.deleted).length;
+        }
+        return count;
+    } catch {
+        return 0;
+    }
+}
 
 // ──────────────────────────────────────────────────────────────
 // INIT – Seed Admin & SuperAdmin
@@ -172,6 +189,7 @@ router.post('/login', async (req, res) => {
                 subscription_plan: user.subscription_plan || null,
                 billing_cycle: user.billing_cycle || null,
                 subscription_tenants: user.subscription_tenants ?? null,
+                tenant_count: user.role === 'owner' ? await countActiveTenants(user.id) : 0,
                 trial_end: user.trial_end,
                 houses: user.houses
             }
@@ -489,6 +507,7 @@ router.get('/me', async (req, res) => {
             subscription_plan: user.subscription_plan || null,
             billing_cycle: user.billing_cycle || null,
             subscription_tenants: user.subscription_tenants ?? null,
+            tenant_count: user.role === 'owner' ? await countActiveTenants(user.id) : 0,
             trial_end: user.trial_end,
             houses: user.houses
         });

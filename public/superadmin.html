@@ -357,8 +357,8 @@
       </div>
       <div class="table-wrapper">
         <table>
-          <thead><tr><th>Username</th><th>Full Name</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody id="usersTable"><tr><td colspan="5" class="text-muted" style="text-align:center;">Loading...</td></tr></tbody>
+          <thead><tr><th>Username</th><th>Full Name</th><th>Role</th><th>Plan</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="usersTable"><tr><td colspan="6" class="text-muted" style="text-align:center;">Loading...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -852,11 +852,13 @@
         );
         const tbody = document.getElementById('usersTable');
         if (!filtered.length) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-muted" style="text-align:center;">No users found</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" class="text-muted" style="text-align:center;">No users found</td></tr>`;
             return;
         }
         const badgeMap = { admin:'badge-admin', owner:'badge-owner', tenant:'badge-tenant', superadmin:'badge-superadmin' };
-        const subBadge = { active:'badge-sub-active', inactive:'badge-sub-inactive', cancelled:'badge-sub-cancelled' };
+        const subBadge = { active:'badge-sub-active', paid:'badge-paid', inactive:'badge-sub-inactive', cancelled:'badge-sub-cancelled', trial:'badge-unpaid', expired:'badge-balance-zero' };
+        const planBadge = { admin:'badge-superadmin', full:'badge-sub-active', self:'badge-sub-active' };
+        const planLabel = { admin:'Admin', full:'Full-service', self:'Self-service' };
         tbody.innerHTML = filtered.map(u => {
             let actionsHtml = '';
             actionsHtml += `<button onclick="editUser(${u.id})" title="Edit">✏️</button>`;
@@ -864,10 +866,14 @@
             if (u.role !== 'superadmin') actionsHtml += `<button onclick="resetPassword(${u.id})" title="Reset Password">🔑</button>`;
             if (u.role !== 'superadmin') actionsHtml += `<button onclick="deleteUser(${u.id})" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>`;
             const subStatus = u.subscription_status || 'active';
+            const plan = u.subscription_plan || (u.role === 'admin' || u.role === 'superadmin' ? 'admin' : '');
+            const quota = u.subscription_tenants == null ? '∞' : u.subscription_tenants;
+            const planCell = plan ? `<span class="badge ${planBadge[plan] || ''}" title="Tenant limit: ${quota}">${planLabel[plan] || plan}</span>` : '<span class="text-muted">—</span>';
             return `<tr>
                 <td><strong>${u.username}</strong></td>
                 <td>${u.fullName || '—'}</td>
                 <td><span class="badge ${badgeMap[u.role] || ''}">${u.role}</span></td>
+                <td>${planCell}</td>
                 <td><span class="badge ${subBadge[subStatus] || 'badge-sub-active'}">${subStatus}</span></td>
                 <td><div class="actions">${actionsHtml}</div></td>
             </tr>`;

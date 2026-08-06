@@ -498,6 +498,27 @@ app.post('/api/tenants', async (req, res) => {
     try {
         const hasAccess = await checkOwnership(houseId, req.user);
         if (!hasAccess) return res.status(403).json({ error: 'Access denied' });
+        // Tenant quota: owners on a paid plan cannot exceed their tenant limit
+        if (req.user.role === 'owner') {
+            const users = await getUsers(false);
+            const u = users.find(x => String(x.id) === String(req.user.userId));
+            const limit = u && u.subscription_tenants != null ? u.subscription_tenants : Infinity;
+            if (Number.isFinite(limit)) {
+                let count = 0;
+                const houses = await accessibleHouses(req.user);
+                for (const h of houses) {
+                    count += (await readTenants(h)).filter(t => !t.deleted).length;
+                }
+                if (count >= limit) {
+                    return res.status(403).json({
+                        code: 'TENANT_LIMIT_REACHED',
+                        tenants: count,
+                        limit,
+                        error: `Your plan covers ${limit} tenants. Upgrade to add more.`
+                    });
+                }
+            }
+        }
         const { name, rent_amount, last_reading, tenant_username, tenant_password, tenant_fullName, tenant_phone, tenant_email, tenant_address } = req.body;
         if (!name || rent_amount == null) return res.status(400).json({ error: 'Name and rent required' });
         const tenants = await readTenants(houseId);

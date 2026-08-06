@@ -558,6 +558,10 @@
       </form>
     </div>
     <div class="section-card">
+      <div id="tenantLimitBanner" style="display:none;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;margin-bottom:14px;background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.25);border-radius:8px;flex-wrap:wrap;">
+        <span id="tenantLimitBannerText" style="font-size:.85rem;font-weight:600;color:#dc2626;"></span>
+        <button type="button" class="btn-primary" style="padding:8px 16px;font-size:.8rem;" onclick="openUpgradeModal()">⬆️ Upgrade Plan</button>
+      </div>
       <div class="table-wrapper">
         <table>
           <thead><tr><th>Name</th><th>Rent</th><th>Reading</th><th>Balance</th><th>Actions</th></tr></thead>
@@ -709,6 +713,16 @@
           <div style="display:flex;justify-content:space-between;padding:10px 0;">
             <span style="color:var(--text-muted);">Tenants</span>
             <span style="font-weight:600;" id="subTenantCount">0</span>
+          </div>
+          <div id="subUsageWrap" style="display:none;">
+            <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--text-muted);margin-bottom:4px;">
+              <span id="subUsageLabel">0 of 0 used</span>
+              <span id="subUsagePct">0%</span>
+            </div>
+            <div style="height:8px;background:rgba(0,0,0,.08);border-radius:99px;overflow:hidden;">
+              <div id="subUsageBar" style="height:100%;width:0%;background:var(--accent,#2563eb);border-radius:99px;transition:width .3s ease;"></div>
+            </div>
+            <div id="subUsageHint" style="display:none;margin-top:8px;font-size:.75rem;color:var(--warn,#d97706);"></div>
           </div>
         </div>
       </div>
@@ -911,6 +925,10 @@ async function api(method, url, data) {
       refreshUserFromServer();
       showSubscriptionPopup();
     }
+    if (res.status === 403 && body && body.code === 'TENANT_LIMIT_REACHED') {
+      showToast(body.error + ' You can upgrade your plan anytime.', 'error');
+      openUpgradeModal();
+    }
     throw new Error((body && body.error) || (await res.text()) || 'Request failed');
   }
   return res.json();
@@ -1030,6 +1048,7 @@ async function loadTenants() {
     renderTenantSelect();
     renderHistory();
     renderOverview();
+    updateTenantLimitBanner();
   } catch (e) {
     console.error('loadTenants error:', e);
     tenants = [];
@@ -1037,6 +1056,7 @@ async function loadTenants() {
     renderTenantSelect();
     renderHistory();
     renderOverview();
+    updateTenantLimitBanner();
   }
 }
 
@@ -1097,6 +1117,11 @@ window.saveTenant = async () => {
   const email = document.getElementById('tEmail').value.trim();
   const address = document.getElementById('tAddress').value.trim();
   if (!name || !rent) { alert('Name and rent required'); return; }
+  if (!id && user.role === 'owner' && user.subscription_tenants != null && (user.tenant_count || 0) >= user.subscription_tenants) {
+    showToast('You have reached your tenant limit of ' + user.subscription_tenants + '. Upgrade to add more.', 'error');
+    openUpgradeModal();
+    return;
+  }
   const data = { name, rent_amount: rent, last_reading: reading, phone, email, address };
   const createUser = document.getElementById('createTenantUser').checked;
   if (createUser) {
@@ -1123,6 +1148,8 @@ window.saveTenant = async () => {
     document.getElementById('tUsername').value = '';
     document.getElementById('tPassword').value = '';
     await loadTenants();
+    refreshUserFromServer();
+    updateTenantLimitBanner();
   } catch (err) { alert('Error: ' + err.message); }
 };
 
@@ -1561,11 +1588,49 @@ function updateSubscriptionTab() {
   badge.className = 'badge ' + (status === 'active' || status === 'paid' ? 'badge-paid' : status === 'trial' ? 'badge-unpaid' : 'badge-balance-zero');
 
   const plan = user.subscription_plan || '';
-  const infinite = plan === 'admin' || (user.role !== 'owner' && status === 'paid' && !user.trial_end);
+  const limit = user.subscription_tenants != null ? user.subscription_tenants : Infinity;
+  const usage = user.tenant_count || 0;
+  const infinite = plan === 'admin' || !Number.isFinite(limit);
   document.getElementById('subPlanName').textContent = plan === 'admin' ? 'Admin' : plan === 'full' ? 'Full-service' : plan === 'self' ? 'Self-service' : 'Starter';
   document.getElementById('subBillingCycle').textContent = infinite ? '∞' : (user.billing_cycle === 'yearly' ? 'Yearly' : user.billing_cycle === 'monthly' ? 'Monthly' : '—');
   document.getElementById('subNextDue').textContent = infinite ? '∞' : (user.trial_end ? new Date(user.trial_end).toLocaleDateString() : '—');
-  document.getElementById('subTenantCount').textContent = infinite ? '∞' : (document.querySelectorAll('#tenantTable tr').length - 1 || 0);
+  document.getElementById('subTenantCount').textContent = infinite ? '∞' : (usage + ' / ' + limit);
+
+  const wrap = document.getElementById('subUsageWrap');
+  if (!infinite) {
+    wrap.style.display = 'block';
+    document.getElementById('subUsageLabel').textContent = usage + ' of ' + limit + ' tenants used';
+    const pct = Math.min(100, Math.round((usage / limit) * 100));
+    document.getElementById('subUsagePct').textContent = pct + '%';
+    const bar = document.getElementById('subUsageBar');
+    bar.style.width = pct + '%';
+    bar.style.background = pct >= 100 ? '#dc2626' : pct >= 80 ? 'var(--warn,#d97706)' : 'var(--accent,#2563eb)';
+    const hint = document.getElementById('subUsageHint');
+    if (pct >= 100) {
+      hint.style.display = 'block';
+      hint.textContent = 'You have reached your tenant limit. Upgrade to add more.';
+    } else if (pct >= 80) {
+      hint.style.display = 'block';
+      hint.textContent = 'You are close to your tenant limit.';
+    } else {
+      hint.style.display = 'none';
+    }
+  } else {
+    wrap.style.display = 'none';
+  }
+  updateTenantLimitBanner();
+}
+
+function updateTenantLimitBanner() {
+  const banner = document.getElementById('tenantLimitBanner');
+  if (!banner) return;
+  const limit = user.subscription_tenants != null ? user.subscription_tenants : Infinity;
+  const usage = user.tenant_count || 0;
+  const atLimit = Number.isFinite(limit) && usage >= limit;
+  banner.style.display = atLimit ? 'flex' : 'none';
+  if (atLimit) {
+    document.getElementById('tenantLimitBannerText').textContent = `You have used all ${limit} tenants on your plan.`;
+  }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
