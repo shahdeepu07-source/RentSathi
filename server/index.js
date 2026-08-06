@@ -1267,6 +1267,10 @@ app.get('/robots.txt', (req, res) => {
     res.type('text/plain');
     res.sendFile(path.join(__dirname, '..', 'public', 'robots.txt'));
 });
+app.get('/google1e6a0d4569332a7b.html', (req, res) => {
+    res.type('text/html');
+    res.sendFile(path.join(__dirname, '..', 'public', 'google1e6a0d4569332a7b.html'));
+});
 app.get('/sitemap.xml', (req, res) => {
     res.type('application/xml');
     res.sendFile(path.join(__dirname, '..', 'public', 'sitemap.xml'));
