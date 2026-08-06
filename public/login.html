@@ -9,6 +9,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="SajiloRent">
   <script>if (new URLSearchParams(location.search).get('view') === 'app') document.documentElement.classList.add('app-mode');</script>
+  <script>try { if (localStorage.getItem('sajiloTheme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark'); } catch (e) {}</script>
 
     <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
     <link rel="manifest" href="/assets/manifest.webmanifest">
@@ -33,6 +34,19 @@
             --accent:#2563eb; --accent-dark:#1d4ed8; --border:#e5e7eb; --subtle:#f8fafc; --white:#ffffff;
             --card:#ffffff; --shadow-1:0 1px 2px rgba(16,24,40,.05); --shadow-2:0 8px 24px rgba(16,24,40,.08); --shadow-3:0 20px 50px rgba(0,0,0,.35);
         }
+        [data-theme="dark"] {
+            --text:#e2e8f0; --muted:#94a3b8; --muted-2:#64748b; --border:#1e293b; --subtle:#0f172a; --white:#111827; --card:#111827;
+            --shadow-1:0 1px 2px rgba(0,0,0,.45); --shadow-2:0 8px 24px rgba(0,0,0,.5); --shadow-3:0 20px 50px rgba(0,0,0,.6);
+        }
+        [data-theme="dark"] .site-header { background:rgba(11,17,32,.9); }
+        [data-theme="dark"] .made-by-kali { color:#64748b; }
+        .theme-toggle { display:flex; align-items:center; justify-content:center; width:38px; height:38px; border-radius:10px; border:1px solid var(--border); background:var(--white); color:var(--muted); cursor:pointer; transition:all .2s; }
+        .theme-toggle:hover { color:var(--accent); border-color:var(--accent); }
+        .theme-toggle svg { width:17px; height:17px; }
+        .theme-toggle .ico-sun { display:none; }
+        [data-theme="dark"] .theme-toggle .ico-sun { display:block; }
+        [data-theme="dark"] .theme-toggle .ico-moon { display:none; }
+        html.app-mode .theme-toggle { display:none; }
         * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter',system-ui,sans-serif; }
         body { background:var(--white); color:var(--text); line-height:1.6; -webkit-font-smoothing:antialiased; }
         a { text-decoration:none; color:inherit; }
@@ -366,6 +380,10 @@
             <a href="#support">Support</a>
         </nav>
         <div class="header-cta">
+            <button type="button" id="themeToggle" class="theme-toggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+                <svg class="ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                <svg class="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            </button>
             <a href="#login-area" class="btn btn-primary">Sign in</a>
         </div>
     </div>
@@ -983,6 +1001,20 @@
 
     // Landing page is always the first stop; sign in when ready.
 </script>
-<script src="/install-widget.js"></script>
+<script>
+    (function () {
+        var root = document.documentElement;
+        var btn = document.getElementById('themeToggle');
+        if (!btn) return;
+        function apply(dark) {
+            if (dark) root.setAttribute('data-theme', 'dark');
+            else root.removeAttribute('data-theme');
+            try { localStorage.setItem('sajiloTheme', dark ? 'dark' : 'light'); } catch (e) {}
+        }
+        btn.addEventListener('click', function () {
+            apply(!root.hasAttribute('data-theme'));
+        });
+    })();
+</script>
 </body>
 </html>
