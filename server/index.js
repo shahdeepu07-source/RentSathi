@@ -929,21 +929,30 @@ app.delete('/api/admin/trash/tenants/permanent/:tenantId', async (req, res) => {
 
 // ─── Subscription / upgrade requests ─────────────────────────
 app.post('/api/subscription/request', async (req, res) => {
-    const { plan, notes } = req.body;
-    if (!plan) return res.status(400).json({ error: 'Plan is required' });
+    const { plan, notes, cycle, tenants } = req.body;
+    if (!['self', 'full'].includes(plan)) return res.status(400).json({ error: 'Plan is required' });
+    const cyc = cycle === 'yearly' ? 'yearly' : 'monthly';
+    const n = tenants === undefined || tenants === null ? 1 : parseInt(tenants, 10);
+    if (!Number.isInteger(n) || n < 1 || n > 200) return res.status(400).json({ error: 'Tenants must be 1–200' });
     try {
+        const { amt } = computeAmount({ plan, cycle: cyc, tenants: n });
         const reqs = await getUpgradeRequests();
         reqs.push({
             id: Date.now(),
             username: req.user.username,
+            userId: req.user.userId,
             role: req.user.role,
             plan,
+            cycle: cyc,
+            tenants: n,
+            amount: amt,
+            via: 'manual',
             notes: notes || '',
             status: 'pending',
             createdAt: new Date().toISOString()
         });
         await saveUpgradeRequests(reqs);
-        res.status(201).json({ success: true });
+        res.status(201).json({ success: true, amount: amt, cycle: cyc, tenants: n });
     } catch (err) {
         console.error('Error creating upgrade request:', err);
         res.status(500).json({ error: 'Failed to submit request' });
@@ -969,7 +978,6 @@ app.post('/api/subscription/requests/:id/respond', async (req, res) => {
         if (idx === -1) return res.status(404).json({ error: 'Request not found' });
         reqs[idx].status = status;
         reqs[idx].respondedAt = new Date().toISOString();
-        await saveUpgradeRequests(reqs);
 
         if (status === 'approved') {
             const users = await getUsers(false);
@@ -984,9 +992,31 @@ app.post('/api/subscription/requests/:id/respond', async (req, res) => {
                 owner.billing_cycle = reqs[idx].cycle || 'monthly';
                 owner.trial_end = next.toISOString();
                 owner.subscription_approved_at = new Date().toISOString();
+
+                // Record the manual invoice once (idempotent per request)
+                if (reqs[idx].via === 'manual' && !reqs[idx].paymentId) {
+                    const payments = await getPayments();
+                    const payRec = {
+                        pid: `MAN-${reqs[idx].id}`,
+                        username: reqs[idx].username,
+                        userId: reqs[idx].userId,
+                        plan: reqs[idx].plan || 'self',
+                        cycle: reqs[idx].cycle || 'monthly',
+                        tenants: reqs[idx].tenants || 1,
+                        amount: reqs[idx].amount || 0,
+                        status: 'paid',
+                        method: 'manual',
+                        createdAt: now,
+                        verifiedAt: now
+                    };
+                    payments.push(payRec);
+                    await savePayments(payments);
+                    reqs[idx].paymentId = payRec.pid;
+                }
                 await saveUsers(users);
             }
         }
+        await saveUpgradeRequests(reqs);
         res.json({ success: true });
     } catch (err) {
         console.error('Error responding to upgrade request:', err);
