@@ -759,7 +759,8 @@
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
                     <div>
                         <div style="font-weight:600;font-size:.9rem;">${escHtml(r.username)} <span class="badge" style="font-size:.68rem;">${escHtml(r.plan === 'full' ? 'Full-service' : 'Self-service')}</span> ${r.via === 'manual' ? '<span class="badge badge-pending" style="font-size:.68rem;">🗂 Manual</span>' : '<span class="badge" style="font-size:.68rem;">💳 eSewa</span>'}</div>
-                        <div style="font-size:.75rem;color:var(--text-muted);">${new Date(r.createdAt).toLocaleString()}${r.via === 'manual' ? ' &middot; <span style="font-weight:600;color:var(--warn);">Rs ' + (r.amount || 0).toLocaleString('en-IN') + '</span> &middot; ' + (r.cycle === 'yearly' ? 'Yearly' : 'Monthly') + ' &middot; ' + (r.tenants || 1) + ' tenants' : (r.tenants ? ' &middot; ' + r.tenants + ' tenants &middot; Rs ' + (r.amount || 0).toLocaleString('en-IN') : '')}${r.notes ? ' &middot; ' + escHtml(r.notes) : ''}</div>
+                        <div style="font-size:.75rem;color:var(--text-muted);">${new Date(r.createdAt).toLocaleString()}${r.via === 'manual' ? ' &middot; <span style="font-weight:600;color:var(--warn);">Rs ' + (r.amount || 0).toLocaleString('en-IN') + '</span> &middot; ' + (r.cycle === 'yearly' ? 'Yearly' : 'Monthly') + ' &middot; ' + (r.tenants || 1) + ' tenants' : (r.tenants ? ' &middot; ' + r.tenants + ' tenants &middot; Rs ' + (r.amount || 0).toLocaleString('en-IN') : '')}${r.paymentNote ? ' &middot; ' + escHtml(r.paymentNote) : ''}${r.notes ? ' &middot; ' + escHtml(r.notes) : ''}</div>
+                        ${r.screenshot ? `<div style="margin-top:6px;"><img src="${escAttr(r.screenshot)}" onclick="window.open('${escAttr(r.screenshot)}')" title="Open payment screenshot" style="height:64px;border-radius:6px;border:1px solid var(--border);cursor:zoom-in;"> <span style="font-size:.7rem;color:var(--text-muted);vertical-align:top;">payment SS</span></div>` : ''}
                     </div>
                     ${r.status === 'pending' ? `
                     <div style="display:flex;gap:8px;">
@@ -1392,6 +1393,9 @@
         const d = document.createElement('div');
         d.textContent = s;
         return d.innerHTML;
+    }
+    function escAttr(s) {
+        return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

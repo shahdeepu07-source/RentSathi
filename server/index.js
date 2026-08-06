@@ -20,7 +20,7 @@ const DATA_DIR = await resolveDataDir();
 const RATE = 15;
 const app = express();
 
-app.use(express.json());
+app.use(express.json({ limit: '8mb' }));
 app.use(cookieParser());
 
 // ─── Public eSewa callbacks (eSewa redirects the browser here with NO
@@ -962,11 +962,18 @@ app.delete('/api/admin/trash/tenants/permanent/:tenantId', async (req, res) => {
 
 // ─── Subscription / upgrade requests ─────────────────────────
 app.post('/api/subscription/request', async (req, res) => {
-    const { plan, notes, cycle, tenants } = req.body;
+    const { plan, notes, cycle, tenants, screenshot, paymentNote } = req.body;
     if (!['self', 'full'].includes(plan)) return res.status(400).json({ error: 'Plan is required' });
     const cyc = cycle === 'yearly' ? 'yearly' : 'monthly';
     const n = tenants === undefined || tenants === null ? 1 : parseInt(tenants, 10);
     if (!Number.isInteger(n) || n < 1 || n > 200) return res.status(400).json({ error: 'Tenants must be 1–200' });
+    let ss = null;
+    if (screenshot) {
+        if (typeof screenshot !== 'string' || !/^data:image\//.test(screenshot) || screenshot.length > 6 * 1024 * 1024) {
+            return res.status(400).json({ error: 'Screenshot must be an image under 4 MB' });
+        }
+        ss = screenshot;
+    }
     try {
         const { amt } = computeAmount({ plan, cycle: cyc, tenants: n });
         const reqs = await getUpgradeRequests();
@@ -981,11 +988,13 @@ app.post('/api/subscription/request', async (req, res) => {
             amount: amt,
             via: 'manual',
             notes: notes || '',
+            paymentNote: paymentNote || '',
+            screenshot: ss,
             status: 'pending',
             createdAt: new Date().toISOString()
         });
         await saveUpgradeRequests(reqs);
-        res.status(201).json({ success: true, amount: amt, cycle: cyc, tenants: n });
+        res.status(201).json({ success: true, amount: amt, cycle: cyc, tenants: n, screenshot: !!ss });
     } catch (err) {
         console.error('Error creating upgrade request:', err);
         res.status(500).json({ error: 'Failed to submit request' });
@@ -1050,6 +1059,7 @@ app.post('/api/subscription/requests/:id/respond', async (req, res) => {
                         amount: isStaff ? 0 : (reqs[idx].amount || 0),
                         status: 'paid',
                         method: 'manual',
+                        screenshot: reqs[idx].screenshot || null,
                         createdAt: now,
                         verifiedAt: now
                     };

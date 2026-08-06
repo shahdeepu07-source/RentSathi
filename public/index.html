@@ -301,10 +301,7 @@
   #upg-price b { font-size:1.05rem; }
   #upg-pay { width:100%; padding:13px; border:none; border-radius:8px; background:var(--accent,#2563eb); color:#fff; font-weight:700; font-size:.95rem; cursor:pointer; }
   #upg-pay:disabled { opacity:.6; cursor:not-allowed; }
-  #upg-or { text-align:center; font-size:.75rem; color:var(--text-muted,#64748b); margin:12px 0; }
-  #upg-manual-link { display:block; text-align:center; font-size:.8rem; color:var(--accent,#2563eb); cursor:pointer; text-decoration:underline; }
-  #upg-manual { display:none; }
-  #upg-manual.show { display:block; }
+  #upg-step2 { border-top:1px solid var(--border,#e5e7eb); padding-top:4px; }
   #upg-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:12px; }
   #upg-actions button { padding:8px 16px; border-radius:6px; border:1px solid var(--border,#e5e7eb); background:var(--card,#fff); color:var(--text,#111); cursor:pointer; font-weight:600; }
   #upg-actions button[type="submit"] { background:var(--accent,#2563eb); border-color:var(--accent,#2563eb); color:#fff; }
@@ -329,17 +326,26 @@
     </div>
     <div id="upg-price"></div>
     <div id="upg-msg" style="color:var(--danger,#dc2626);font-size:.85rem;"></div>
-    <button id="upg-pay" onclick="submitCheckout()">Pay with eSewa</button>
-    <p id="upg-esewa-note" style="font-size:.72rem;color:var(--text-muted,#64748b);margin:8px 0 0;text-align:center;">You'll be redirected to eSewa to complete the payment.</p>
-    <div id="upg-or">or</div>
-    <a id="upg-manual-link" onclick="toggleManual()">No eSewa? Request manual approval</a>
-    <div id="upg-manual">
-      <div class="f-group" style="margin-top:12px;"><label>Notes (optional)</label>
-        <textarea id="upg-notes" rows="3" placeholder="Houses, tenant count, anything we should know"></textarea>
+    <button id="upg-pay" disabled onclick="submitCheckout()">eSewa — update coming soon</button>
+    <p id="upg-esewa-note" style="font-size:.72rem;color:var(--text-muted,#64748b);margin:8px 0 0;text-align:center;">Online payment is being updated. For now pay by eSewa QR below and send the payment screenshot.</p>
+    <button type="button" id="upg-continue" onclick="upgGoStep(2)" style="width:100%;margin-top:14px;padding:13px;border:none;border-radius:8px;background:var(--accent-soft,rgba(37,99,235,.12));color:var(--accent,#2563eb);font-weight:700;font-size:.95rem;cursor:pointer;">Pay by eSewa QR →</button>
+    <div id="upg-step2" style="display:none;margin-top:16px;">
+      <div id="upg-qr-box" style="text-align:center;padding:14px;border:1px dashed var(--border,#cbd5e1);border-radius:10px;">
+        <img id="upg-qr" src="assets/esewa-qr.png" alt="eSewa QR" style="width:200px;height:200px;border-radius:8px;object-fit:contain;background:#fff;">
+        <div style="font-size:.8rem;color:var(--text-muted,#64748b);margin-top:8px;">Scan this QR in the eSewa app and pay Rs <b id="upg-qr-amt">0</b></div>
+        <div style="font-size:.8rem;margin-top:4px;">eSewa ID: <b id="upg-qr-id">98XXXXXXXX</b></div>
+      </div>
+      <div class="f-group" style="margin-top:14px;"><label>Payment screenshot (required)</label>
+        <input type="file" id="upg-ss" accept="image/*" onchange="document.getElementById('upg-ss-name').textContent = this.files[0] ? this.files[0].name + ' (' + Math.round(this.files[0].size / 1024) + ' KB)' : ''">
+        <div id="upg-ss-name" style="font-size:.72rem;color:var(--text-muted,#64748b);margin-top:4px;"></div>
+        <div style="font-size:.7rem;color:var(--text-muted,#64748b);margin-top:4px;">SS of the payment history in your eSewa app (payment made to the QR above).</div>
+      </div>
+      <div class="f-group"><label>Notes (optional)</label>
+        <textarea id="upg-notes" rows="2" placeholder="Houses, tenant count, anything we should know"></textarea>
       </div>
       <div id="upg-actions">
-        <button type="button" onclick="document.getElementById('upg-overlay').classList.remove('active')">Cancel</button>
-        <button type="submit" onclick="submitUpgradeRequest(event)">Send request</button>
+        <button type="button" onclick="upgGoStep(1)">← Back</button>
+        <button type="submit" onclick="submitUpgradeRequest(event)">Send request with screenshot</button>
       </div>
     </div>
   </div>
@@ -366,20 +372,28 @@
     var cyc = document.getElementById('upg-cycle').value;
     var per = cyc === 'yearly' ? '/yr' : '/mo';
     document.getElementById('upg-price').innerHTML = 'Rs ' + t.rate + ' per tenant per month x ' + t.months + ' month(s)<br><b>Total: Rs ' + t.amt.toLocaleString('en-IN') + '</b> ' + (cyc === 'yearly' ? '/year (2 months free)' : '/month');
-    document.getElementById('upg-pay').textContent = 'Pay with eSewa — Rs ' + t.amt.toLocaleString('en-IN') + ' ' + per;
+    document.getElementById('upg-qr-amt').textContent = 'Rs ' + t.amt.toLocaleString('en-IN');
+    document.getElementById('upg-pay').textContent = 'eSewa — update coming soon';
   }
   function openUpgradeModal() {
     document.getElementById('upg-msg').textContent = '';
-    toggleManual(true);
+    upgGoStep(1);
     upgRefresh();
     document.getElementById('upg-overlay').classList.add('active');
   }
-  function toggleManual(forceHide) {
-    var manual = document.getElementById('upg-manual');
-    var link = document.getElementById('upg-manual-link');
-    var goManual = (forceHide === undefined || forceHide === null) ? !manual.classList.contains('show') : !forceHide;
-    if (goManual) { manual.classList.add('show'); link.style.display = 'none'; }
-    else { manual.classList.remove('show'); link.style.display = 'block'; }
+  function upgGoStep(step) {
+    var step1 = step === 1;
+    document.getElementById('upg-step2').style.display = step1 ? 'none' : 'block';
+    var cont = document.getElementById('upg-continue');
+    cont.style.display = step1 ? 'block' : 'none';
+    document.getElementById('upg-esewa-note').style.display = step1 ? 'block' : 'none';
+    if (!step1) { upgRefresh(); }
+  }
+  function upgReadScreenshot(file, cb) {
+    var reader = new FileReader();
+    reader.onload = function () { cb(null, reader.result); };
+    reader.onerror = function () { cb(new Error('Could not read the image file.')); };
+    reader.readAsDataURL(file);
   }
   async function submitCheckout() {
     var msg = document.getElementById('upg-msg');
@@ -416,16 +430,25 @@
     var notes = document.getElementById('upg-notes').value.trim();
     var msg = document.getElementById('upg-msg');
     msg.textContent = '';
+    var file = document.getElementById('upg-ss').files[0];
+    if (!file) { msg.textContent = 'Please attach the payment screenshot (SS) of your eSewa history.'; return; }
+    if (file.size > 3 * 1024 * 1024) { msg.textContent = 'Screenshot is too large (max 3 MB).'; return; }
+    if (!/^image\//.test(file.type)) { msg.textContent = 'Please attach an image file.'; return; }
     try {
+      var screenshot = await new Promise(function (resolve, reject) {
+        upgReadScreenshot(file, function (err, dataUrl) { err ? reject(err) : resolve(dataUrl); });
+      });
       var res = await fetch(API_BASE + '/subscription/request', {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
-        body: JSON.stringify({ plan: plan, cycle: cycle, tenants: parseInt(tenants, 10), notes: notes })
+        body: JSON.stringify({ plan: plan, cycle: cycle, tenants: parseInt(tenants, 10), notes: notes, screenshot: screenshot, paymentNote: 'Paid via eSewa QR' })
       });
       var data = await res.json().catch(function () { return {}; });
       if (!res.ok) { msg.textContent = data.error || 'Failed to submit request.'; return; }
       document.getElementById('upg-overlay').classList.remove('active');
       document.getElementById('upg-notes').value = '';
-      showToast('Upgrade request sent');
+      document.getElementById('upg-ss').value = '';
+      document.getElementById('upg-ss-name').textContent = '';
+      showToast('Upgrade request sent with payment screenshot');
     } catch (e) {
       msg.textContent = 'Network error. Please try again.';
     }

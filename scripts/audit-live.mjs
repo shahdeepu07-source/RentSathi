@@ -46,15 +46,18 @@ async function changePassword(token, cur, nw) {
 }
 { const l = await login('admin', '5545'); const t = l.body.token; const wrong = await changePassword(t, 'bad', 'x1234'); ok('change-pw wrong current 401', wrong.status === 401); const good = await changePassword(t, '5545', 'audit000'); ok('change-pw success 200', good.status === 200); const re = await login('admin', 'audit000'); ok('login with new pw', re.status === 200); await changePassword(re.body.token, 'audit000', '5545'); const back = await login('admin', '5545'); ok('restored pw', back.status === 200); }
 
-// 5. Manual upgrade request + superadmin respond
+// 5. Manual upgrade request (with payment screenshot) + superadmin respond
 { const l = await login('admin', '5545'); const t = l.body.token;
-  const m = await j(await fetch(BASE + '/api/subscription/request', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + t }, body: JSON.stringify({ plan: 'full', notes: 'audit-manual' }) }));
+  const ss = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+  const bad = await j(await fetch(BASE + '/api/subscription/request', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + t }, body: JSON.stringify({ plan: 'full', notes: 'audit-manual', screenshot: 'http://evil' }) }));
+  ok('bad screenshot rejected 400', bad.status === 400, `got ${bad.status}`);
+  const m = await j(await fetch(BASE + '/api/subscription/request', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + t }, body: JSON.stringify({ plan: 'full', notes: 'audit-manual', screenshot: ss, paymentNote: 'Paid via eSewa QR' }) }));
   ok('manual request 201', m.status === 201, `got ${m.status}`);
   const s = await login('Super_Admin', 'Kali_5545'); const st = s.body.token;
   const list = await j(await fetch(BASE + '/api/subscription/requests', { headers: { 'Authorization': 'Bearer ' + st } }));
   ok('superadmin sees requests 200', list.status === 200);
-  const mine = (list.body || []).filter(r => r.notes === 'audit-manual');
-  ok('manual request present', mine.length > 0);
+  const mine = (list.body || []).filter(r => r.notes === 'audit-manual' && r.screenshot);
+  ok('manual request present with screenshot', mine.length > 0);
   const id = mine[0] && mine[0].id;
   if (id) { const resp = await j(await fetch(BASE + `/api/subscription/requests/${id}/respond`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + st }, body: JSON.stringify({ status: 'declined' }) })); ok('respond 200', resp.status === 200); }
 }
