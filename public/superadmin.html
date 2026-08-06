@@ -691,9 +691,20 @@
     }
     const API_BASE = '/api';
     let authToken = token;
-    document.getElementById('sidebarUser').textContent = user.username;
-    document.getElementById('tbUser').textContent = user.username;
-    document.getElementById('dashSub').textContent = 'Welcome, ' + user.username;
+    const displayName = user.fullName || user.username;
+    document.getElementById('sidebarUser').textContent = displayName;
+    document.getElementById('tbUser').textContent = displayName;
+    document.getElementById('dashSub').textContent = 'Welcome, ' + displayName;
+
+    fetch(API_BASE + '/auth/me', { headers: { Authorization: 'Bearer ' + authToken } })
+        .then(r => r.json())
+        .then(d => {
+            const n = (d && (d.fullName || d.username)) || displayName;
+            document.getElementById('sidebarUser').textContent = n;
+            document.getElementById('tbUser').textContent = n;
+            document.getElementById('dashSub').textContent = 'Welcome, ' + n;
+        })
+        .catch(() => {});
 
     function logout() {
         localStorage.removeItem('token'); localStorage.removeItem('user');
@@ -837,6 +848,7 @@
     };
     (function () {
         const view = document.getElementById('shotImg');
+        if (!view) return;
         let zoom = 1;
         view.addEventListener('click', () => {
             zoom = zoom >= 2.5 ? 1 : (zoom >= 1 ? 2.5 : 1.5);
@@ -849,7 +861,10 @@
             view.style.transform = `scale(${zoom})`;
             view.style.cursor = zoom > 1 ? 'zoom-out' : 'zoom-in';
         }, { passive: false });
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.getElementById('shotOverlay').style.display === 'flex') closeShot(); });
+        document.addEventListener('keydown', (e) => {
+            const overlay = document.getElementById('shotOverlay');
+            if (e.key === 'Escape' && overlay && overlay.style.display === 'flex') closeShot();
+        });
     })();
 
     // ═══════════════════════════════════════════════════════════

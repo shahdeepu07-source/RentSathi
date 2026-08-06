@@ -617,11 +617,22 @@
     const API_BASE = '/api';
     let authToken = token;
     const isSuperAdmin = user.role === 'superadmin';
-    document.getElementById('sidebarUser').textContent = user.username;
+    const displayName = user.fullName || user.username;
+    document.getElementById('sidebarUser').textContent = displayName;
     document.getElementById('sidebarRole').textContent = isSuperAdmin ? 'SuperAdmin' : 'Admin';
-    document.getElementById('tbUser').textContent = user.username;
+    document.getElementById('tbUser').textContent = displayName;
     document.getElementById('tbRole').textContent = isSuperAdmin ? 'SuperAdmin' : 'Admin';
-    document.getElementById('dashSub').textContent = 'Welcome, ' + user.username;
+    document.getElementById('dashSub').textContent = 'Welcome, ' + displayName;
+
+    fetch(API_BASE + '/auth/me', { headers: { Authorization: 'Bearer ' + authToken } })
+        .then(r => r.json())
+        .then(d => {
+            const n = (d && (d.fullName || d.username)) || displayName;
+            document.getElementById('sidebarUser').textContent = n;
+            document.getElementById('tbUser').textContent = n;
+            document.getElementById('dashSub').textContent = 'Welcome, ' + n;
+        })
+        .catch(() => {});
 
     function logout() {
         localStorage.removeItem('token'); localStorage.removeItem('user');
@@ -737,7 +748,6 @@
             if (canDelete) actionsHtml += `<button onclick="deleteUser(${u.id})" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>`;
 
             let displayName = u.fullName || '—';
-            if (u.role === 'superadmin' && !isSuperAdmin) displayName = '***';
             const subStatus = u.subscription_status || 'active';
 
             return `<tr>
