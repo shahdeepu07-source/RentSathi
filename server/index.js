@@ -1263,6 +1263,14 @@ app.get('/apple-touch-icon.png', (req, res) => {
 app.get('/sw.js', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'sw.js'));
 });
+app.get('/robots.txt', (req, res) => {
+    res.type('text/plain');
+    res.sendFile(path.join(__dirname, '..', 'public', 'robots.txt'));
+});
+app.get('/sitemap.xml', (req, res) => {
+    res.type('application/xml');
+    res.sendFile(path.join(__dirname, '..', 'public', 'sitemap.xml'));
+});
 app.get('/install-widget.js', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'install-widget.js'));
 });

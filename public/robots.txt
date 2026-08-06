@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /superadmin.html
+Disallow: /admin.html
+Disallow: /downloads/
+Disallow: /payment-result.html
+
+Sitemap: https://sajilorent.onrender.com/sitemap.xml
