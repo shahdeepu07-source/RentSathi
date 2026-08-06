@@ -1,15 +1,26 @@
 import express from 'express';
+import { promises as fs } from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import 'dotenv/config';
-import { getUsers, saveUsers, getOwnership, listHouseIds, readTenants } from './db.js';
+import { getUsers, saveUsers, getOwnership, listHouseIds, readTenants, getNotifs, saveNotifs } from './db.js';
 import { readDemoPasswords, appendAudit, ensureDemoStore } from './seed-demo.js';
 
 const router = express.Router();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // Rate limiting for password reveal: 5 attempts per 60s, lockout after 10
 // consecutive failures (15 min). TEST/DEMO feature only.
 const revealState = new Map();
+
+// Public support inbox: data/support-requests.json (kept out of the houses
+// data dir on purpose — see listHouseIds()).
+const SUPPORT_FILE = path.join(__dirname, '..', 'data', 'support-requests.json');
+const supportLimits = new Map(); // ip -> [timestamps]
 
 // Total active (non-deleted) tenants across all houses owned by a user
 export async function countActiveTenants(userId) {
@@ -519,6 +530,116 @@ router.get('/me', async (req, res) => {
     } catch (err) {
         console.error('💥 Get user error:', err);
         res.status(500).json({ error: 'Failed to get user' });
+    }
+});
+
+// ──────────────────────────────────────────────────────────────
+// PUBLIC: Support inquiry (app & web help desk)
+// No login required — anyone can ask for help. Rate-limited to 5
+// submissions per IP per hour. Each inquiry is stored and also pushed to
+// the SuperAdmin notification strip.
+// ──────────────────────────────────────────────────────────────
+async function readSupportRequests() {
+    try {
+        const raw = await fs.readFile(SUPPORT_FILE, 'utf8');
+        return JSON.parse(raw);
+    } catch {
+        return [];
+    }
+}
+
+router.post('/support', async (req, res) => {
+    try {
+        const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown').split(',')[0].trim();
+        const now = Date.now();
+        const hits = (supportLimits.get(ip) || []).filter(t => now - t < 3600000);
+        if (hits.length >= 5) {
+            return res.status(429).json({ error: 'Too many messages. Please try again later.' });
+        }
+        const { name, contact, topic, message } = req.body || {};
+        if (!name || !String(name).trim() || String(name).trim().length > 80) {
+            return res.status(400).json({ error: 'Please provide your name (max 80 characters).' });
+        }
+        if (!message || !String(message).trim() || String(message).trim().length < 10 || String(message).trim().length > 1000) {
+            return res.status(400).json({ error: 'Message must be between 10 and 1000 characters.' });
+        }
+        if (contact && String(contact).trim().length > 120) {
+            return res.status(400).json({ error: 'Contact is too long (max 120 characters).' });
+        }
+        if (topic && String(topic).trim().length > 60) {
+            return res.status(400).json({ error: 'Topic is too long (max 60 characters).' });
+        }
+        hits.push(now);
+        supportLimits.set(ip, hits);
+
+        const entry = {
+            id: Date.now(),
+            name: String(name).trim(),
+            contact: String(contact || '').trim(),
+            topic: String(topic || '').trim(),
+            message: String(message).trim(),
+            ip,
+            created_at: new Date().toISOString()
+        };
+        const all = await readSupportRequests();
+        all.push(entry);
+        if (all.length > 500) all.splice(0, all.length - 500);
+        await fs.mkdir(path.dirname(SUPPORT_FILE), { recursive: true }).catch(() => {});
+        await fs.writeFile(SUPPORT_FILE, JSON.stringify(all, null, 2));
+
+        // Notify the SuperAdmin strip
+        try {
+            const notifs = await getNotifs();
+            notifs.push({
+                id: Date.now(),
+                sender_id: 0,
+                sender_name: 'Support form',
+                sender_role: 'public',
+                target_role: 'superadmin',
+                target_roles: ['superadmin'],
+                house_id: null,
+                title: `Support request from ${entry.name}`,
+                message: `${entry.message}${entry.contact ? '  — reply at ' + entry.contact : ''}${entry.topic ? ' [' + entry.topic + ']' : ''}`,
+                priority: 'normal',
+                is_active: true,
+                created_at: entry.created_at,
+                expires_at: null
+            });
+            await saveNotifs(notifs);
+        } catch (err) {
+            console.error('Support notification failed:', err.message);
+        }
+
+        console.log(`Support inquiry from ${entry.name}: "${entry.message.slice(0, 60)}"`);
+        res.status(201).json({ success: true, id: entry.id });
+    } catch (err) {
+        console.error('💥 Support endpoint error:', err);
+        res.status(500).json({ error: 'Failed to send message' });
+    }
+});
+
+// ──────────────────────────────────────────────────────────────
+// ADMIN / SUPERADMIN: List support inquiries
+// ──────────────────────────────────────────────────────────────
+router.get('/admin/support', async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader) return res.status(401).json({ error: 'No token provided' });
+        const token = authHeader.split(' ')[1];
+        let decoded;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET);
+        } catch {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+        if (!['admin', 'superadmin'].includes(decoded.role)) {
+            return res.status(403).json({ error: 'Admin or SuperAdmin access required' });
+        }
+        const all = await readSupportRequests();
+        res.json(all.slice().reverse());
+    } catch (err) {
+        console.error('💥 Support list error:', err);
+        res.status(500).json({ error: 'Failed to load support requests' });
     }
 });
 

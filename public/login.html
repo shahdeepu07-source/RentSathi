@@ -165,6 +165,23 @@
         .mock-pill { display:inline-block; padding:2px 9px; border-radius:999px; font-size:.68rem; font-weight:600; background:rgba(37,99,235,.12); color:var(--accent); }
         .mock-pill.paid { background:rgba(34,197,94,.12); color:#16a34a; }
 
+        /* ─── Support ─── */
+        .support-grid { display:grid; grid-template-columns:1fr 1.4fr; gap:26px; align-items:start; }
+        .support-card { background:var(--white); border:1px solid var(--border); border-radius:14px; padding:26px; box-shadow:var(--shadow-1); }
+        .support-card h4 { font-size:1.05rem; font-weight:700; margin-bottom:14px; }
+        .support-card ul { list-style:none; margin:0; }
+        .support-card ul li { display:flex; align-items:flex-start; gap:9px; color:var(--text); font-size:.9rem; margin-bottom:11px; }
+        .support-card ul li::before { content:"✓"; color:#16a34a; font-weight:700; flex-shrink:0; }
+        .support-field { margin-bottom:14px; }
+        .support-field label { display:block; font-size:.82rem; font-weight:600; color:var(--text); margin-bottom:6px; }
+        .support-field input, .support-field select, .support-field textarea { width:100%; padding:11px 12px; border:1px solid var(--border); border-radius:9px; font-size:.9rem; background:var(--white); color:var(--text); }
+        .support-field input:focus, .support-field select:focus, .support-field textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,.12); }
+        .support-status { font-size:.85rem; margin-bottom:12px; display:none; }
+        .support-status.ok { display:block; color:#16a34a; }
+        .support-status.error { display:block; color:var(--danger); }
+        .support-note { font-size:.78rem; color:var(--muted); margin-top:12px; }
+        @media (max-width:760px) { .support-grid { grid-template-columns:1fr; } }
+
         /* ─── Footer ─── */
         .site-footer { background:var(--navy); color:#cbd5e1; padding:64px 0 28px; }
         .footer-grid { display:grid; grid-template-columns:1.5fr 1fr 1fr 1fr; gap:36px; margin-bottom:44px; }
@@ -329,6 +346,7 @@
             <a href="#benefits">Benefits</a>
             <a href="#security">Security</a>
             <a href="#app">Preview</a>
+            <a href="#support">Support</a>
         </nav>
         <div class="header-cta">
             <a href="#login-area" class="btn btn-primary">Sign in</a>
@@ -644,12 +662,64 @@
                         </div>
                         <div class="mock-table">
                             <div class="mock-row head"><span>Tenant</span><span>House</span><span>Amount</span><span>Status</span></div>
-                            <div class="mock-row"><span>Ram Shrestha</span><span>M_house</span><span>Rs 12,500</span><span><span class="mock-pill paid">Paid</span></span></div>
-                            <div class="mock-row"><span>Sita Gurung</span><span>M_house</span><span>Rs 12,500</span><span><span class="mock-pill">Due</span></span></div>
-                            <div class="mock-row"><span>Hari Bahadur</span><span>Kaish_hosue</span><span>Rs 9,800</span><span><span class="mock-pill paid">Paid</span></span></div>
+                            <div class="mock-row"><span>Ram Shrestha</span><span>admin_house</span><span>Rs 12,500</span><span><span class="mock-pill paid">Paid</span></span></div>
+                            <div class="mock-row"><span>Sita Gurung</span><span>admin_house</span><span>Rs 12,500</span><span><span class="mock-pill">Due</span></span></div>
+                            <div class="mock-row"><span>Hari Bahadur</span><span>Kaish_house</span><span>Rs 9,800</span><span><span class="mock-pill paid">Paid</span></span></div>
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── Support ─── -->
+    <section class="section" id="support">
+        <div class="container">
+            <div class="sec-head">
+                <div class="sec-label">Support</div>
+                <h2>Questions about the app or website?</h2>
+                <p>Need help with billing, tenants, houses, your account or anything else — send us a message and we'll get back to you.</p>
+            </div>
+            <div class="support-grid">
+                <div class="support-card">
+                    <h4>What can you help with?</h4>
+                    <ul>
+                        <li>Getting started with your house</li>
+                        <li>Login, accounts &amp; passwords</li>
+                        <li>Bills, payments &amp; upgrades</li>
+                        <li>Managing tenants and houses</li>
+                        <li>App &amp; website issues</li>
+                    </ul>
+                </div>
+                <form class="support-card" id="supportForm" onsubmit="event.preventDefault(); submitSupport();">
+                    <div class="support-field">
+                        <label for="sup-name">Your name *</label>
+                        <input type="text" id="sup-name" required maxlength="80" placeholder="e.g., Sita Gurung">
+                    </div>
+                    <div class="support-field">
+                        <label for="sup-contact">Phone or email (for reply)</label>
+                        <input type="text" id="sup-contact" maxlength="120" placeholder="98XXXXXXXX or you@email.com">
+                    </div>
+                    <div class="support-field">
+                        <label for="sup-topic">Topic</label>
+                        <select id="sup-topic">
+                            <option value="">General question</option>
+                            <option>Getting started</option>
+                            <option>Login / account</option>
+                            <option>Billing / payments / upgrade</option>
+                            <option>Houses / tenants</option>
+                            <option>App / website problem</option>
+                            <option>Feature request</option>
+                        </select>
+                    </div>
+                    <div class="support-field">
+                        <label for="sup-message">Message *</label>
+                        <textarea id="sup-message" required minlength="10" maxlength="1000" rows="4" placeholder="How can we help?"></textarea>
+                    </div>
+                    <div id="sup-msg" class="support-status"></div>
+                    <button type="submit" class="btn btn-primary">Send message</button>
+                    <p class="support-note">Messages go straight to the SajiloRent support team. We usually reply within 24 hours.</p>
+                </form>
             </div>
         </div>
     </section>
@@ -672,6 +742,7 @@
                     <li><a href="#how">How it works</a></li>
                     <li><a href="#benefits">Benefits</a></li>
                     <li><a href="#app">Preview</a></li>
+                    <li><a href="#support">Support</a></li>
                 </ul>
             </div>
             <div>
@@ -764,6 +835,35 @@
             render();
         });
     })();
+</script>
+<script>
+    /* Support form (public help desk) */
+    function submitSupport() {
+        var box = document.getElementById('sup-msg');
+        box.textContent = '';
+        var payload = {
+            name: document.getElementById('sup-name').value.trim(),
+            contact: document.getElementById('sup-contact').value.trim(),
+            topic: document.getElementById('sup-topic').value,
+            message: document.getElementById('sup-message').value.trim()
+        };
+        if (!payload.name || !payload.message) { box.textContent = 'Please fill in your name and message.'; box.className = 'support-status error'; return; }
+        fetch('/api/auth/support', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(function (res) {
+            return res.json().then(function (d) { return { ok: res.ok, d: d }; });
+        }).then(function (r) {
+            if (!r.ok) { box.textContent = r.d.error || 'Something went wrong. Please try again.'; box.className = 'support-status error'; return; }
+            box.textContent = 'Thank you! Your message has been sent — we will get back to you soon.';
+            box.className = 'support-status ok';
+            document.getElementById('supportForm').reset();
+        }).catch(function () {
+            box.textContent = 'Network error. Please try again.';
+            box.className = 'support-status error';
+        });
+    }
 </script>
 <script>
     const API_BASE = '/api';

@@ -277,6 +277,7 @@
     <a data-tab="tab-history"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>  <span>History</span></a>
     <a data-tab="tab-notices"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l3 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M16 8a5 5 0 0 1 0 8"/></svg>  <span>Notices</span></a>
     <a data-tab="tab-subscription"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>  <span>Subscription</span></a>
+    <a data-tab="tab-support"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>  <span>Support</span></a>
   </div>
   <div class="sidebar-footer">
     <div class="user-name" id="sidebarUser"></div>
@@ -805,10 +806,46 @@
           <button class="btn-primary" style="width:100%;padding:14px;" onclick="openUpgradeModal()">⬆️ Upgrade Plan</button>
           <button class="btn-outline" style="width:100%;padding:14px;" onclick="showToast('Manage billing details coming soon!')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Manage Billing</button>
           <div style="margin-top:8px;padding:12px;background:rgba(239,68,68,0.08);border-radius:8px;border:1px solid rgba(239,68,68,0.2);">
-            <p style="font-size:0.8rem;color:var(--text-muted);">Need help? Contact support for plan changes, cancellations, or billing inquiries.</p>
+            <p style="font-size:0.8rem;color:var(--text-muted);">Need help? <a href="#" style="color:var(--accent,#2563eb);font-weight:600;" onclick="event.preventDefault(); switchTab('tab-support');">Contact support</a> for plan changes, cancellations, or billing inquiries.</p>
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ═══ SUPPORT ═══ -->
+  <div class="tab-panel" id="tab-support">
+    <div class="main-header">
+      <div>
+        <h1>Support</h1>
+        <div class="sub">Questions or need help with the app?</div>
+      </div>
+    </div>
+    <div class="section-card">
+      <h3 style="margin-bottom:8px;">🙋 Need help?</h3>
+      <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:16px;">Send us a message about billing, tenants, houses, your account or any app/website problem. We usually reply within 24 hours.</p>
+      <form id="supportForm" onsubmit="event.preventDefault(); submitAppSupport();">
+        <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+          <div class="form-group"><label>Your name *</label><input type="text" id="sup-name" required maxlength="80"></div>
+          <div class="form-group"><label>Phone or email (for reply)</label><input type="text" id="sup-contact" maxlength="120"></div>
+        </div>
+        <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+          <div class="form-group"><label>Topic</label>
+            <select id="sup-topic">
+              <option value="">General question</option>
+              <option>Getting started</option>
+              <option>Login / account</option>
+              <option>Billing / payments / upgrade</option>
+              <option>Houses / tenants</option>
+              <option>App / website problem</option>
+              <option>Feature request</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group"><label>Message *</label><textarea id="sup-message" rows="4" required minlength="10" maxlength="1000" placeholder="How can we help?"></textarea></div>
+        <div id="sup-msg" style="font-size:0.85rem;margin-bottom:10px;display:none;"></div>
+        <button type="submit" class="btn-primary">Send message</button>
+      </form>
     </div>
   </div>
 
@@ -961,6 +998,44 @@ let currentHouseId = '';
 document.getElementById('sidebarUser').textContent = user.username;
 document.getElementById('tbUser').textContent = user.username;
 document.getElementById('dashSub').textContent = 'Welcome, ' + user.username;
+
+// Prefill support form with the signed-in user's details
+(function () {
+  const nameEl = document.getElementById('sup-name');
+  if (nameEl && user) {
+    nameEl.value = user.fullName || user.username;
+    const contactEl = document.getElementById('sup-contact');
+    if (contactEl && user.phone) contactEl.value = user.phone;
+  }
+})();
+
+window.submitAppSupport = async function () {
+  const box = document.getElementById('sup-msg');
+  box.style.display = 'none';
+  const payload = {
+    name: document.getElementById('sup-name').value.trim(),
+    contact: document.getElementById('sup-contact').value.trim(),
+    topic: document.getElementById('sup-topic').value,
+    message: document.getElementById('sup-message').value.trim()
+  };
+  if (!payload.name || !payload.message) { box.textContent = 'Please fill in your name and message.'; box.style.display = 'block'; box.style.color = 'var(--danger,#dc2626)'; return; }
+  try {
+    const res = await fetch(API_BASE + '/auth/support', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    const data = await res.json().catch(function () { return {}; });
+    if (!res.ok) { box.textContent = data.error || 'Something went wrong. Please try again.'; box.style.display = 'block'; box.style.color = 'var(--danger,#dc2626)'; return; }
+    box.textContent = '✅ Message sent! We will get back to you soon.';
+    box.style.display = 'block';
+    box.style.color = 'var(--success,#16a34a)';
+    document.getElementById('sup-message').value = '';
+    document.getElementById('sup-topic').value = '';
+  } catch (e) {
+    box.textContent = 'Network error. Please try again.';
+    box.style.display = 'block';
+    box.style.color = 'var(--danger,#dc2626)';
+  }
+};
 
 function logout() {
   localStorage.removeItem('token'); localStorage.removeItem('user');
@@ -1855,6 +1930,7 @@ loadNotices();
   <a data-tab="tab-history"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>History</span></a>
   <a data-tab="tab-notices"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l3 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M16 8a5 5 0 0 1 0 8"/></svg><span>Notices</span></a>
   <a data-tab="tab-subscription"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg><span>Sub</span></a>
+  <a data-tab="tab-support"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Help</span></a>
 </nav>
 <script>
 if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => {}); }); }
