@@ -1,7 +1,7 @@
 {
   "name": "sajilorent-desktop",
   "productName": "SajiloRent",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "SajiloRent - rental management (Windows desktop app)",
   "main": "main.js",
   "scripts": {

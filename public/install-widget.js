@@ -8,9 +8,9 @@
   if (window.self !== window.top) return;
 
   var CONFIG = {
-    version: "1.0",
-    apk: "/downloads/SajiloRent-v1.0.apk",
-    exe: "https://github.com/shahdeepu07-source/SajiloRent/releases/download/v1.0.0/SajiloRent-windows-v1.0.0.exe",
+    version: "1.1",
+    apk: "/downloads/SajiloRent-v1.1.apk",
+    exe: "/downloads/SajiloRent-windows-v1.1.0.exe",
     androidNote: "APK for Android phones & tablets",
     windowsNote: "Windows app (loads the live site)",
     iosNote: "No iOS app yet - open in Safari, tap Share, then \u201cAdd to Home Screen\u201d"
