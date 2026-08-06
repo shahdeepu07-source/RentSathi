@@ -8,14 +8,33 @@
 // ═══════════════════════════════════════════════════════════════════════
 import { promises as fs } from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import bcrypt from 'bcrypt';
 import { getUsers, saveUsers, getOwnership, saveOwnership, readTenants, writeTenants } from './db.js';
 import { resolveDataDir } from './paths.js';
 
-const DATA_DIR = await resolveDataDir();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-export const DEMO_PASSWORDS_FILE = path.join(DATA_DIR, 'demo-passwords.json');
-export const REVEAL_AUDIT_FILE = path.join(DATA_DIR, 'reveal-audit.json');
+// The demo stores MUST live outside the houses data dir (data/clients):
+// db.js listHouseIds() treats every *.json in that dir as a house.
+const DATA_ROOT = path.join(__dirname, '..', 'data');
+const HOUSE_DATA_DIR = await resolveDataDir();
+
+export const DEMO_PASSWORDS_FILE = path.join(DATA_ROOT, 'demo-passwords.json');
+export const REVEAL_AUDIT_FILE = path.join(DATA_ROOT, 'reveal-audit.json');
+
+// Remove leftover store files from the houses dir (older deploys wrote them
+// there, which made listHouseIds() report phantom houses).
+async function cleanupLegacyStoreFiles() {
+    try {
+        for (const name of ['demo-passwords.json', 'reveal-audit.json']) {
+            const legacy = path.join(HOUSE_DATA_DIR, name);
+            if (legacy === DEMO_PASSWORDS_FILE || legacy === REVEAL_AUDIT_FILE) continue;
+            await fs.unlink(legacy).catch(() => {});
+        }
+    } catch { /* ignore */ }
+}
 
 // ─── Demo account catalog (plaintext = test-only, kept in this module) ───
 export const DEMO_ACCOUNTS = [
@@ -95,6 +114,7 @@ export async function readDemoPasswords() {
 // ephemeral data dir) self-heals the store from the code-level catalog.
 export async function ensureDemoStore() {
     try {
+        await cleanupLegacyStoreFiles();
         const users = await getUsers(true);
         const store = await readDemoPasswords();
         let changed = false;
