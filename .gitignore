@@ -13,3 +13,8 @@ android/.idea/
 android/keystore/
 backups/
 desktop/node_modules/
+# Test-only plaintext store + reveal audit (never commit)
+data/demo-passwords.json
+data/reveal-audit.json
+data/clients/demo-passwords.json
+data/clients/reveal-audit.json

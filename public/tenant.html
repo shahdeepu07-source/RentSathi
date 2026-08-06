@@ -355,6 +355,22 @@
 
     <div class="section-card">
       <div class="section-header"><h3>All Bills</h3></div>
+      <div class="filter-bar" style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap;">
+        <select id="histYearFilter" onchange="renderHistory(currentBills)">
+          <option value="">All Years</option>
+        </select>
+        <select id="histMonthFilter" onchange="renderHistory(currentBills)">
+          <option value="">All Months</option>
+          <option value="Baishakh">Baishakh</option><option value="Jestha">Jestha</option>
+          <option value="Ashadh">Ashadh</option><option value="Shrawan">Shrawan</option>
+          <option value="Bhadra">Bhadra</option><option value="Ashwin">Ashwin</option>
+          <option value="Kartik">Kartik</option><option value="Mangsir">Mangsir</option>
+          <option value="Poush">Poush</option><option value="Magh">Magh</option>
+          <option value="Falgun">Falgun</option><option value="Chaitra">Chaitra</option>
+        </select>
+        <button class="btn-outline btn-sm" onclick="resetTenantHistoryFilters()">✕ Clear</button>
+      </div>
+      <div id="historySummary" style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap;"></div>
       <div class="table-wrapper">
         <table>
           <thead><tr><th>Month</th><th>Units</th><th>Total</th><th>Status</th><th>Payment</th><th>Bill</th></tr></thead>
@@ -563,9 +579,41 @@ function renderCurrentBill(bill) {
   `;
 }
 
+const BS_MONTHS = ['Baishakh','Jestha','Ashadh','Shrawan','Bhadra','Ashwin','Kartik','Mangsir','Poush','Magh','Falgun','Chaitra'];
+const AD_TO_BS = { January:'Poush', February:'Magh', March:'Falgun', April:'Chaitra', May:'Baishakh', June:'Jestha', July:'Ashadh', August:'Shrawan', September:'Bhadra', October:'Ashwin', November:'Kartik', December:'Mangsir' };
+
+function parseBillMonth(monthStr) {
+  const s = String(monthStr || '').trim();
+  const parts = s.split(' ');
+  const year = parts.length > 1 ? parts[parts.length - 1] : '';
+  const name = parts.length > 1 ? parts.slice(0, -1).join(' ') : s;
+  const bs = BS_MONTHS.find(m => m.toLowerCase() === name.toLowerCase()) || AD_TO_BS[name] || '';
+  return { name: bs || name, year };
+}
+
+window.resetTenantHistoryFilters = () => {
+  document.getElementById('histYearFilter').value = '';
+  document.getElementById('histMonthFilter').value = '';
+  renderHistory(currentBills);
+};
+
 function renderHistory(bills) {
   const tbody = document.getElementById('historyTable');
-  tbody.innerHTML = bills.map(b => {
+  const summaryBox = document.getElementById('historySummary');
+  const ySel = document.getElementById('histYearFilter');
+  const years = [...new Set(bills.map(b => parseBillMonth(b.month).year))].filter(Boolean).sort((a, b) => b - a);
+  const curY = ySel.value;
+  ySel.innerHTML = '<option value="">All Years</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
+  if (years.includes(curY)) ySel.value = curY;
+  const yVal = ySel.value;
+  const mName = document.getElementById('histMonthFilter').value;
+  let filtered = bills;
+  if (yVal) filtered = filtered.filter(b => parseBillMonth(b.month).year === yVal);
+  if (mName) filtered = filtered.filter(b => parseBillMonth(b.month).name === mName);
+  const total = filtered.reduce((s, b) => s + Number(b.total || 0), 0);
+  const paid = filtered.filter(b => b.paid_status).reduce((s, b) => s + Number(b.total || 0), 0);
+  summaryBox.innerHTML = `<span class="badge badge-sub-active" style="font-size:0.9rem;">Total: <strong>Rs. ${Number(total).toLocaleString()}</strong></span> <span class="badge badge-paid" style="font-size:0.9rem;">Paid: <strong>Rs. ${Number(paid).toLocaleString()}</strong></span> <span class="badge badge-balance-due" style="font-size:0.9rem;">Due: <strong>Rs. ${Number(total - paid).toLocaleString()}</strong></span>`;
+  tbody.innerHTML = filtered.map(b => {
     const statusBadge = b.paid_status ? 'badge-paid' : 'badge-unpaid';
     const statusText = b.paid_status ? 'Paid' : 'Unpaid';
     const paymentInfo = b.payment_type ? `${b.payment_type}${b.payment_amount ? ' (Rs. '+b.payment_amount+')' : ''}` : '—';

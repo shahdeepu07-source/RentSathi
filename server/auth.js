@@ -3,8 +3,13 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import 'dotenv/config';
 import { getUsers, saveUsers, getOwnership, listHouseIds, readTenants } from './db.js';
+import { readDemoPasswords, appendAudit, ensureDemoStore } from './seed-demo.js';
 
 const router = express.Router();
+
+// Rate limiting for password reveal: 5 attempts per 60s, lockout after 10
+// consecutive failures (15 min). TEST/DEMO feature only.
+const revealState = new Map();
 
 // Total active (non-deleted) tenants across all houses owned by a user
 export async function countActiveTenants(userId) {
@@ -518,6 +523,73 @@ router.get('/me', async (req, res) => {
 });
 
 // ──────────────────────────────────────────────────────────────
+// SUPERADMIN: Reveal stored (test-only) plaintext password
+// Requires the SuperAdmin to re-enter their own password on every call.
+// Backed by data/demo-passwords.json, which only ever contains the demo
+// catalog accounts — never arbitrary production users.
+// ──────────────────────────────────────────────────────────────
+router.post('/reveal-password', async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader) return res.status(401).json({ error: 'No token provided' });
+        const token = authHeader.split(' ')[1];
+        let decoded;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET);
+        } catch {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+        if (decoded.role !== 'superadmin') {
+            return res.status(403).json({ error: 'SuperAdmin access required' });
+        }
+        const { superadminPassword, targetUserId } = req.body;
+        if (!superadminPassword || !targetUserId) {
+            return res.status(400).json({ error: 'superadminPassword and targetUserId required' });
+        }
+        const users = await getUsers(true);
+        const sa = users.find(u => u.id === decoded.userId);
+        if (!sa) return res.status(404).json({ error: 'SuperAdmin account not found' });
+
+        const now = Date.now();
+        const st = revealState.get(sa.id) || { fails: 0, window: [], lockUntil: 0 };
+        if (st.lockUntil > now) {
+            const mins = Math.ceil((st.lockUntil - now) / 60000);
+            return res.status(429).json({ error: `Too many failed attempts. Locked for ${mins} more min.` });
+        }
+        st.window = st.window.filter(t => now - t < 60000);
+        if (st.window.length >= 5) {
+            return res.status(429).json({ error: 'Too many attempts. Try again in a minute.' });
+        }
+        const valid = await bcrypt.compare(superadminPassword, sa.password);
+        if (!valid) {
+            st.fails += 1;
+            st.window.push(now);
+            if (st.fails >= 10) { st.fails = 0; st.lockUntil = now + 15 * 60000; }
+            revealState.set(sa.id, st);
+            await appendAudit({ at: new Date().toISOString(), who: sa.username, whoId: sa.id, target: String(targetUserId), ok: false });
+            return res.status(401).json({ error: 'Invalid SuperAdmin password' });
+        }
+        st.fails = 0;
+        st.lockUntil = 0;
+        revealState.set(sa.id, st);
+
+        const target = users.find(u => u.id === parseInt(targetUserId));
+        if (!target) return res.status(404).json({ error: 'User not found' });
+        const store = await readDemoPasswords();
+        const plain = store[target.username];
+        if (!plain) {
+            await appendAudit({ at: new Date().toISOString(), who: sa.username, whoId: sa.id, target: target.username, targetId: target.id, ok: false, reason: 'no-stored-password' });
+            return res.status(404).json({ error: 'No stored password for this account (not a demo account)' });
+        }
+        await appendAudit({ at: new Date().toISOString(), who: sa.username, whoId: sa.id, target: target.username, targetId: target.id, ok: true });
+        res.json({ username: target.username, password: plain });
+    } catch (err) {
+        console.error('💥 Reveal password error:', err);
+        res.status(500).json({ error: 'Reveal failed' });
+    }
+});
+
+// ──────────────────────────────────────────────────────────────
 // EXPORT createUser helper
 // ──────────────────────────────────────────────────────────────
 export async function createUser(username, password, role = 'tenant', extra = {}) {
@@ -549,5 +621,6 @@ export async function createUser(username, password, role = 'tenant', extra = {}
 // INIT
 // ──────────────────────────────────────────────────────────────
 await ensureAdminsExist();
+ensureDemoStore().then(() => console.log('✅ Demo password store ready (test-only)'));
 
 export default router;

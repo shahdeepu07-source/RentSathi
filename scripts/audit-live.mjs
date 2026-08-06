@@ -73,5 +73,44 @@ import { getUpgradeRequests, saveUpgradeRequests } from '../server/db.js';
   await saveUpgradeRequests(clean);
   ok('cleaned audit rows', clean.length <= all.length); }
 
+// 8. Demo seed (idempotent) + reveal-password (SuperAdmin re-auth) flow
+{ const s = await login('Super_Admin', 'Kali_5545'); const st = s.body.token;
+  const seed1 = await j(await fetch(BASE + '/api/admin/seed-demo', { method: 'POST', headers: { 'Authorization': 'Bearer ' + st } }));
+  ok('seed-demo 200', seed1.status === 200, `got ${seed1.status}`);
+  ok('seed created demo data', seed1.body && seed1.body.created && seed1.body.created.users >= 0 && seed1.body.created.houses >= 0);
+  const seed2 = await j(await fetch(BASE + '/api/admin/seed-demo', { method: 'POST', headers: { 'Authorization': 'Bearer ' + st } }));
+  ok('seed idempotent (0 created 2nd run)', seed2.body && seed2.body.created.users === 0 && seed2.body.created.houses === 0, `got ${JSON.stringify(seed2.body && seed2.body.created)}`);
+  const users = await j(await fetch(BASE + '/api/admin/users', { headers: { 'Authorization': 'Bearer ' + st } }));
+  const t = (users.body || []).find(u => u.username === 't_sita');
+  ok('seeded tenant t_sita exists', !!t);
+  if (t) {
+    const wrong = await j(await fetch(BASE + '/api/auth/reveal-password', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + st }, body: JSON.stringify({ superadminPassword: 'nope', targetUserId: t.id }) }));
+    ok('reveal wrong superadmin pw 401', wrong.status === 401, `got ${wrong.status}`);
+    const good = await j(await fetch(BASE + '/api/auth/reveal-password', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + st }, body: JSON.stringify({ superadminPassword: 'Kali_5545', targetUserId: t.id }) }));
+    ok('reveal correct pw returns Sita@2081', good.status === 200 && good.body.password === 'Sita@2081', `got ${good.status} ${good.body && good.body.password}`);
+  }
+  const own = await login('demo_owner1', 'Sunny@2081');
+  ok('demo owner login works', own.status === 200, `got ${own.status}`);
+  const ownerReveal = await j(await fetch(BASE + '/api/auth/reveal-password', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + own.body.token }, body: JSON.stringify({ superadminPassword: 'Sunny@2081', targetUserId: t && t.id }) }));
+  ok('reveal non-superadmin 403', ownerReveal.status === 403, `got ${ownerReveal.status}`);
+}
+
+// 9. Duplicate bill guard (same tenant + same BS month → 409)
+{ const l = await login('admin', '5545'); const t = l.body.token;
+  const name = 'AuditDup-' + Date.now();
+  await fetch(BASE + '/api/houses', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + t }, body: JSON.stringify({ name }) });
+  await fetch(BASE + `/api/tenants?houseId=${name}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + t }, body: JSON.stringify({ name: 'Dup Tester', rent_amount: 5000, last_reading: 0 }) });
+  const ts = await j(await fetch(BASE + `/api/tenants?houseId=${name}`, { headers: { 'Authorization': 'Bearer ' + t } }));
+  const ten = (ts.body || []).find(x => x.name === 'Dup Tester');
+  if (ten) {
+    const body = JSON.stringify({ id: ten.id, curr: 100, water: 0, waste: 0, due: 0, ded: 0, month: 'Shrawan 2099', dedReason: '', note: '' });
+    const b1 = await j(await fetch(BASE + `/api/calculate?houseId=${name}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + t }, body }));
+    ok('first bill 200', b1.status === 200, `got ${b1.status}`);
+    const b2 = await j(await fetch(BASE + `/api/calculate?houseId=${name}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + t }, body }));
+    ok('duplicate bill 409', b2.status === 409, `got ${b2.status}`);
+  }
+  await fetch(BASE + `/api/houses/${name}/delete`, { method: 'POST', headers: { 'Authorization': 'Bearer ' + t } });
+}
+
 console.log(`AUDIT RESULT: ${acc.pass} passed, ${acc.fail} failed`);
 process.exit(acc.fail ? 1 : 0);

@@ -611,6 +611,30 @@
   </div>
 </div>
 
+<!-- Show Password Modal (SuperAdmin re-auth; test/demo only) -->
+<div class="modal-overlay" id="revealModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>👁 Show Password</h3>
+      <span class="modal-close" onclick="closeModal('revealModal')">×</span>
+    </div>
+    <div class="form-group">
+      <label id="revealTargetLabel">Account</label>
+    </div>
+    <form id="revealForm">
+      <div class="form-group">
+        <label>SuperAdmin password</label>
+        <input type="password" id="revealSuperPassword" required placeholder="Re-enter to reveal">
+      </div>
+      <div id="revealResult" style="margin:10px 0;"></div>
+      <div class="form-actions">
+        <button type="button" class="btn-outline" onclick="closeModal('revealModal')">Cancel</button>
+        <button type="submit" class="btn-warn">Reveal</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- Edit Notice Modal -->
 <div class="modal-overlay" id="editNoticeModal">
   <div class="modal">
@@ -863,6 +887,7 @@
         tbody.innerHTML = filtered.map(u => {
             let actionsHtml = '';
             actionsHtml += `<button onclick="editUser(${u.id})" title="Edit">✏️</button>`;
+            actionsHtml += `<button onclick="showPassword(${u.id}, '${u.username}')" title="Show Password (SuperAdmin only)">👁</button>`;
             if (u.role === 'owner') actionsHtml += `<button onclick="manageSubscription(${u.id})" title="Subscription">📅</button>`;
             if (u.role !== 'superadmin') actionsHtml += `<button onclick="resetPassword(${u.id})" title="Reset Password">🔑</button>`;
             if (u.role !== 'superadmin') actionsHtml += `<button onclick="deleteUser(${u.id})" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>`;
@@ -1194,6 +1219,42 @@
             }
         } catch (e) {
             showToast('Incorrect password.', 'error');
+        }
+    });
+
+    // ─── Show Password (SuperAdmin re-auth; test/demo only) ─────
+    let revealTarget = null;
+    window.showPassword = (userId, username) => {
+        revealTarget = { userId, username };
+        document.getElementById('revealTargetLabel').textContent = `Account: ${username}`;
+        document.getElementById('revealSuperPassword').value = '';
+        document.getElementById('revealResult').innerHTML = '';
+        openModal('revealModal');
+    };
+    document.getElementById('revealForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const pw = document.getElementById('revealSuperPassword').value.trim();
+        const box = document.getElementById('revealResult');
+        if (!pw || !revealTarget) return;
+        box.innerHTML = '<span class="text-muted">Checking…</span>';
+        try {
+            const res = await fetch('/api/auth/reveal-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+                body: JSON.stringify({ superadminPassword: pw, targetUserId: revealTarget.userId })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Reveal failed');
+            box.innerHTML = `<div style="background:var(--bg-card,#0f172a);border:1px dashed var(--border,#334155);border-radius:8px;padding:10px;">
+                <div class="text-muted" style="font-size:0.85rem;">${escHtml(data.username)}</div>
+                <div style="display:flex;gap:8px;align-items:center;margin-top:4px;">
+                    <code id="revealedPw" style="font-size:1.05rem;letter-spacing:1px;">${escHtml(data.password)}</code>
+                    <button type="button" class="btn-outline btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('revealedPw').textContent)">📋 Copy</button>
+                </div>
+            </div>`;
+            document.getElementById('revealSuperPassword').value = '';
+        } catch (err) {
+            box.innerHTML = `<span style="color:var(--danger,#ef4444);font-size:0.9rem;">${escHtml(err.message)}</span>`;
         }
     });
 

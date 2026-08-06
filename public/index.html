@@ -677,8 +677,28 @@
         <h1>Bill History</h1>
         <div class="sub">All billing records</div>
       </div>
+      <button class="btn-outline" onclick="exportHistoryCSV()">⬇️ Export CSV</button>
     </div>
     <div class="section-card">
+      <div class="filter-bar" style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap;">
+        <select id="histTenantFilter" onchange="renderHistory()">
+          <option value="">All Tenants</option>
+        </select>
+        <select id="histYearFilter" onchange="renderHistory()">
+          <option value="">All Years</option>
+        </select>
+        <select id="histMonthFilter" onchange="renderHistory()">
+          <option value="">All Months</option>
+          <option value="Baishakh">Baishakh</option><option value="Jestha">Jestha</option>
+          <option value="Ashadh">Ashadh</option><option value="Shrawan">Shrawan</option>
+          <option value="Bhadra">Bhadra</option><option value="Ashwin">Ashwin</option>
+          <option value="Kartik">Kartik</option><option value="Mangsir">Mangsir</option>
+          <option value="Poush">Poush</option><option value="Magh">Magh</option>
+          <option value="Falgun">Falgun</option><option value="Chaitra">Chaitra</option>
+        </select>
+        <button class="btn-outline btn-sm" onclick="resetHistoryFilters()">✕ Clear Filters</button>
+      </div>
+      <div id="historySummary" style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap;"></div>
       <div class="table-wrapper">
         <table>
           <thead><tr><th>Tenant</th><th>Month</th><th>Units</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
@@ -1440,14 +1460,82 @@ document.getElementById('paymentForm').addEventListener('submit', async (e) => {
 });
 
 // ─── History ──────────────────────────────────────────────
+const BS_MONTHS = ['Baishakh','Jestha','Ashadh','Shrawan','Bhadra','Ashwin','Kartik','Mangsir','Poush','Magh','Falgun','Chaitra'];
+const AD_TO_BS = { January:'Poush', February:'Magh', March:'Falgun', April:'Chaitra', May:'Baishakh', June:'Jestha', July:'Ashadh', August:'Shrawan', September:'Bhadra', October:'Ashwin', November:'Kartik', December:'Mangsir' };
+
+// Approximate current BS (Bikram Sambat) month + year.
+function currentBS() {
+  const now = new Date();
+  const doy = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+  let year = now.getFullYear() + 57;
+  if (doy < 104) year -= 1;
+  let days = doy - 104;
+  if (days < 0) days += 365;
+  const offsets = [0,31,62,93,124,154,185,215,246,276,307,337];
+  let idx = 0;
+  for (let i = 0; i < offsets.length; i++) { if (offsets[i] <= days) idx = i; }
+  return { name: BS_MONTHS[idx], year };
+}
+
+function parseBillMonth(monthStr) {
+  const s = String(monthStr || '').trim();
+  const parts = s.split(' ');
+  const year = parts.length > 1 ? parts[parts.length - 1] : '';
+  const name = parts.length > 1 ? parts.slice(0, -1).join(' ') : s;
+  const bs = BS_MONTHS.find(m => m.toLowerCase() === name.toLowerCase()) || AD_TO_BS[name] || '';
+  return { name: bs || name, year };
+}
+
+function getHistoryRows() {
+  const houseId = currentHouseId || document.getElementById('globalHouseSelect').value;
+  let rows = [];
+  if (!houseId) return rows;
+  tenants.forEach(t => {
+    if (t.history && t.history.length) t.history.forEach((h, i) => rows.push({...h, tid: t.id, idx: i, tName: t.name}));
+  });
+  rows.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  return rows;
+}
+
 function renderHistory() {
   const tbody = document.getElementById('historyTable');
   const houseId = currentHouseId || document.getElementById('globalHouseSelect').value;
-  if (!houseId) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">No house selected</td></tr>`; return; }
-  let rows = [];
-  tenants.forEach(t => { if (t.history && t.history.length) { t.history.forEach((h, i) => rows.push({...h, tid: t.id, idx: i, tName: t.name})); } });
-  rows.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">No bills</td></tr>`; return; }
+  const summaryBox = document.getElementById('historySummary');
+  if (!houseId) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">No house selected</td></tr>`;
+    if (summaryBox) summaryBox.innerHTML = '';
+    return;
+  }
+  let rows = getHistoryRows();
+
+  // Populate tenant + year filter options (keep selection if still valid)
+  const tFilter = document.getElementById('histTenantFilter');
+  const yFilter = document.getElementById('histYearFilter');
+  const curT = tFilter.value, curY = yFilter.value;
+  const tenantNames = [...new Set(rows.map(r => r.tName))].sort();
+  tFilter.innerHTML = '<option value="">All Tenants</option>' + tenantNames.map(n => `<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('');
+  if (tenantNames.includes(curT)) tFilter.value = curT;
+  const years = [...new Set(rows.map(r => parseBillMonth(r.month).year))].filter(Boolean).sort((a, b) => b - a);
+  yFilter.innerHTML = '<option value="">All Years</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
+  if (years.includes(curY)) yFilter.value = curY;
+
+  const tName = tFilter.value;
+  const yVal = yFilter.value;
+  const mName = document.getElementById('histMonthFilter').value;
+  if (tName) rows = rows.filter(r => r.tName === tName);
+  if (yVal) rows = rows.filter(r => parseBillMonth(r.month).year === yVal);
+  if (mName) rows = rows.filter(r => parseBillMonth(r.month).name === mName);
+
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">No bills</td></tr>`;
+    summaryBox.innerHTML = '';
+    return;
+  }
+  const total = rows.reduce((s, h) => s + Number(h.total || 0), 0);
+  const paid = rows.filter(h => h.paid_status).reduce((s, h) => s + Number(h.total || 0), 0);
+  const due = total - paid;
+  const chip = (label, val, cls) => `<span class="badge ${cls}" style="font-size:0.9rem;">${label}: <strong>Rs. ${Number(val).toLocaleString()}</strong></span>`;
+  summaryBox.innerHTML = `${chip('Total Billed', total, 'badge-sub-active')} ${chip('Paid', paid, 'badge-paid')} ${chip('Due', due, 'badge-balance-due')} <span class="badge" style="font-size:0.9rem;background:var(--bg-card,#0f172a);border:1px solid var(--border,#334155);color:var(--text-muted);">${rows.length} bill${rows.length === 1 ? '' : 's'}</span>`;
   tbody.innerHTML = rows.map(h => `<tr>
     <td>${h.tName}</td>
     <td>${h.month}</td>
@@ -1463,6 +1551,35 @@ function renderHistory() {
     </td>
   </tr>`).join('');
 }
+
+window.resetHistoryFilters = () => {
+  document.getElementById('histTenantFilter').value = '';
+  document.getElementById('histYearFilter').value = '';
+  document.getElementById('histMonthFilter').value = '';
+  renderHistory();
+};
+
+window.exportHistoryCSV = () => {
+  const rows = getHistoryRows();
+  const tName = document.getElementById('histTenantFilter').value;
+  const yVal = document.getElementById('histYearFilter').value;
+  const mName = document.getElementById('histMonthFilter').value;
+  let filtered = rows;
+  if (tName) filtered = filtered.filter(r => r.tName === tName);
+  if (yVal) filtered = filtered.filter(r => parseBillMonth(r.month).year === yVal);
+  if (mName) filtered = filtered.filter(r => parseBillMonth(r.month).name === mName);
+  if (!filtered.length) { alert('No bills to export'); return; }
+  const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const head = ['Tenant','Month','Units','Electricity','Rent','Water','Waste','Previous Due','Deduction','Total','Status'];
+  const lines = filtered.map(h => [h.tName, h.month, h.units, h.electricity, h.rent, h.water, h.waste, h.due, h.ded, h.total, h.paid_status ? 'Paid' : 'Unpaid'].map(esc).join(','));
+  const csv = [head.map(esc).join(','), ...lines].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `bills-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
 
 window.redoBill = async (tid, idx) => {
   if (!currentHouseId) { alert('No house selected'); return; }
@@ -1686,12 +1803,24 @@ function switchTab(tabId) {
   const link = document.querySelector(`.sidebar-nav a[data-tab="${tabId}"]`) || document.querySelector(`.tabbar a[data-tab="${tabId}"]`);
   if (link) link.classList.add('active');
   document.getElementById(tabId).classList.add('active');
+  if (tabId === 'tab-billing') autoDateBillForm();
+  if (tabId === 'tab-history') renderHistory();
+}
+
+// Auto-date the billing form to the current BS (Bikram Sambat) month/year.
+function autoDateBillForm() {
+  const mSel = document.getElementById('bMonth');
+  const yIn = document.getElementById('bYear');
+  const cur = currentBS();
+  if (mSel && !mSel.value) mSel.value = cur.name;
+  if (yIn && !yIn.value.trim()) yIn.value = String(cur.year);
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // INIT
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 loadHouses();
+autoDateBillForm();
 loadNotices();
 
 // ─── Mobile: auto-label table cells for stacked-card layout ───

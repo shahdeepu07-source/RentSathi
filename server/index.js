@@ -11,6 +11,7 @@ import { createUser } from './auth.js';
 import { resolveDataDir } from './paths.js';
 import { getUsers, saveUsers, getOwnership, saveOwnership, readTenants, writeTenants, listHouseIds, houseExists, renameHouse, deleteHousePermanent, getNotifs, saveNotifs, getUpgradeRequests, saveUpgradeRequests, getPayments, savePayments } from './db.js';
 import { computeAmount, paymentForm, paymentEndpoint, verifyResponseData, checkTransactionStatus } from './esewa.js';
+import { seedDemoData } from './seed-demo.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -672,6 +673,12 @@ app.post('/api/calculate', async (req, res) => {
             paid_status: false,
             createdAt: new Date().toISOString()
         };
+        const dup = (tenant.history || []).find(b =>
+            String(b.month || '').trim().toLowerCase() === String(bill.month || '').trim().toLowerCase()
+        );
+        if (dup) {
+            return res.status(409).json({ error: `Bill for ${bill.month} already exists. Delete it first to regenerate.` });
+        }
         tenant.last_reading = Number(curr);
         if (!tenant.history) tenant.history = [];
         tenant.history.push(bill);
@@ -804,6 +811,18 @@ app.get('/api/admin/users', async (req, res) => {
     } catch (err) {
         console.error('Error fetching users:', err);
         res.status(500).json({ error: 'Failed to fetch users' });
+    }
+});
+
+// ─── SuperAdmin: seed demo/test data (idempotent) ──────────────
+app.post('/api/admin/seed-demo', async (req, res) => {
+    if (req.user.role !== 'superadmin') return res.status(403).json({ error: 'SuperAdmin access required' });
+    try {
+        const summary = await seedDemoData();
+        res.json({ success: true, ...summary });
+    } catch (err) {
+        console.error('Error seeding demo data:', err);
+        res.status(500).json({ error: 'Seeding failed: ' + err.message });
     }
 });
 
