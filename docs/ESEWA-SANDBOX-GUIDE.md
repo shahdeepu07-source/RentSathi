@@ -1,5 +1,13 @@
 # eSewa Sandbox Walkthrough (no PAN needed)
 
+> **Status note (current):** the eSewa sandbox's Google reCAPTCHA quota is
+> exhausted ("This site is exceeding reCAPTCHA Enterprise free quota"), so the
+> sandbox login page cannot complete payments right now. The **Pay with eSewa**
+> button in the app is therefore stubbed as *"eSewa — update coming soon"* and
+> the live demo path is the **QR + screenshot manual flow** below. The eSewa v2
+> integration code remains fully wired and tested; re-enable the button
+> (`upg-pay` in `public/index.html`) when the sandbox recovers or for live mode.
+
 SajiloRent is wired to the **eSewa ePay v2 test gateway**
 (`rc-epay.esewa.com.np`). The test merchant is already built in, so you can
 run the *entire* buy-a-subscription flow today with **no real money and no
@@ -13,6 +21,17 @@ You only need PAN/company docs later, **when** you want real money to reach you
 (see "Going live" at the end).
 
 ---
+
+## 0. Current live path: QR + screenshot manual payment
+
+1. Owner dashboard → Upgrade Plan → pick plan/cycle/tenants → **Pay by eSewa QR →**.
+2. The owner's personal eSewa QR (`public/assets/esewa-qr.png` — replace it
+   with your real QR screenshot; edit the eSewa ID text in `index.html` if
+   needed) plus the exact amount is shown.
+3. The owner pays via the eSewa app, attaches a screenshot (SS) of their
+   payment history, and sends the request.
+4. SuperAdmin → upgrade requests → sees the thumbnail (click to zoom), notes
+   and amount → **Approve** → owner activated, `MAN-<id>` invoice recorded.
 
 ## 1. What happens to the money? Nothing.
 
