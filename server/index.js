@@ -27,15 +27,14 @@ app.use(cookieParser());
 // bearer token, so these must be registered before the auth middleware) ──
 app.get('/api/subscription/esewa/success', async (req, res) => {
     const { data } = req.query;
-    if (!data) return res.redirect('/payment-result.html?status=missing');
     try {
         const cb = verifyResponseData(data);
-        if (!cb) return res.redirect('/payment-result.html?status=failed');
-        const pid = cb.transaction_uuid;
+        const pid = (cb && cb.transaction_uuid) || req.query.pid;
+        if (!pid) return res.redirect('/payment-result.html?status=missing');
         const payments = await getPayments();
         const p = payments.find(x => x.pid === pid);
         if (!p) return res.redirect('/payment-result.html?status=missing');
-        if (parseInt(cb.total_amount, 10) !== p.amount) {
+        if (cb && parseInt(cb.total_amount, 10) !== p.amount) {
             p.status = 'failed';
             await savePayments(payments);
             return res.redirect('/payment-result.html?status=amount_mismatch');
@@ -85,7 +84,7 @@ app.get('/api/subscription/esewa/failure', async (req, res) => {
     const { data } = req.query;
     try {
         const cb = verifyResponseData(data);
-        const pid = cb && cb.transaction_uuid;
+        const pid = (cb && cb.transaction_uuid) || req.query.pid;
         if (pid) {
             const payments = await getPayments();
             const p = payments.find(x => x.pid === pid);

@@ -62,8 +62,11 @@ export function paymentEndpoint() {
 // Build the hidden-form params for the gateway (ePay v2).
 export function paymentForm({ pid, amt }) {
     const total = String(amt);
-    const successUrl = `${process.env.BASE_URL || 'https://sajilorent.onrender.com'}/api/subscription/esewa/success`;
-    const failureUrl = `${process.env.BASE_URL || 'https://sajilorent.onrender.com'}/api/subscription/esewa/failure`;
+    const base = process.env.BASE_URL || 'https://sajilorent.onrender.com';
+    // The `pid` query param gives the callbacks a way to match the payment
+    // even when eSewa omits the signed `data` payload (e.g. user cancels).
+    const successUrl = `${base}/api/subscription/esewa/success?pid=${encodeURIComponent(pid)}`;
+    const failureUrl = `${base}/api/subscription/esewa/failure?pid=${encodeURIComponent(pid)}`;
     const signature = hmacSha256Base64(ESEWA_SECRET,
         `total_amount=${total},transaction_uuid=${pid},product_code=${ESEWA_SCD}`);
     return {

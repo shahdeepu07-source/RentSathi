@@ -60,6 +60,7 @@ function fakeEsewaData({ transaction_uuid, total_amount, status = 'COMPLETE', tr
     const expSig = sign(`total_amount=${expAmt},transaction_uuid=${pid},product_code=EPAYTEST`);
     console.log('request signature OK:', params.signature === expSig);
     console.log('signed_field_names OK:', params.signed_field_names === 'total_amount,transaction_uuid,product_code');
+    console.log('callback URLs carry pid:', params.success_url.includes('pid=') && params.failure_url.includes('pid='));
     if (String(params.total_amount) !== String(expAmt) || params.signature !== expSig) { console.log('ABORT: bad checkout'); process.exit(1); }
 }
 
@@ -73,10 +74,12 @@ function fakeEsewaData({ transaction_uuid, total_amount, status = 'COMPLETE', tr
 }
 
 // 4. garbage / tampered callback -> signature mismatch -> must fail
+//    (redirects to status=missing when no pid fallback is present, failed otherwise)
 {
     const r = await j(await fetch(BASE + `/api/subscription/esewa/success?data=${encodeURIComponent('bm90IGpzb24=')}`, { redirect: 'manual' }));
-    console.log('garbage callback:', r.status, '->', String(r.body).includes('status=failed') ? 'rejected' : 'ACCEPTED');
-    if (r.status !== 302 || !String(r.body).includes('status=failed')) { console.log('ABORT: garbage NOT rejected'); process.exit(1); }
+    const rejected = String(r.body).includes('status=failed') || String(r.body).includes('status=missing');
+    console.log('garbage callback:', r.status, '->', rejected ? 'rejected' : 'ACCEPTED');
+    if (r.status !== 302 || !rejected) { console.log('ABORT: garbage NOT rejected'); process.exit(1); }
 }
 
 // 5. payment state: row exists and was marked failed (no phantom paid)
@@ -89,6 +92,29 @@ function fakeEsewaData({ transaction_uuid, total_amount, status = 'COMPLETE', tr
     const rows = (r.body || []).filter(p => p.pid === pid);
     console.log('payment row:', JSON.stringify(rows));
     if (!rows.length || rows[0].status !== 'failed') { console.log('ABORT: payment not failed'); process.exit(1); }
+}
+
+// 5b. failure callback with NO data but ?pid= (eSewa cancel omits data)
+//     -> fallback must still match the payment and mark it failed
+{
+    const { getPayments, savePayments } = await import('../server/db.js');
+    await savePayments((await getPayments()).map(p => p.pid === pid ? { ...p, status: 'pending' } : p));
+    const r = await j(await fetch(BASE + `/api/subscription/esewa/failure?pid=${encodeURIComponent(pid)}`, { redirect: 'manual' }));
+    console.log('no-data failure callback:', r.status, '->', String(r.body).includes('status=failed') ? 'redirected' : '?');
+    if (r.status !== 302) { console.log('ABORT: no-data failure not redirect'); process.exit(1); }
+    const rows = (await getPayments()).filter(p => p.pid === pid);
+    if (!rows.length || rows[0].status !== 'failed') { console.log('ABORT: no-data failure did not mark failed'); process.exit(1); }
+    console.log('no-data failure marks payment failed: true');
+}
+
+// 5c. success callback with NO data but ?pid= (dropped data payload)
+//     -> fallback status lookup runs; NOT_FOUND (no real tx) -> rejected
+{
+    const { getPayments, savePayments } = await import('../server/db.js');
+    await savePayments((await getPayments()).map(p => p.pid === pid ? { ...p, status: 'pending' } : p));
+    const r = await j(await fetch(BASE + `/api/subscription/esewa/success?pid=${encodeURIComponent(pid)}`, { redirect: 'manual' }));
+    console.log('no-data success callback:', r.status, '->', String(r.body).includes('status=failed') ? 'rejected' : 'ACCEPTED');
+    if (r.status !== 302 || !String(r.body).includes('status=failed')) { console.log('ABORT: no-data success NOT rejected'); process.exit(1); }
 }
 
 // 6. failure callback with a valid signed payload -> marks failed + redirect
