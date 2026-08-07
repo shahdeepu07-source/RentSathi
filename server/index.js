@@ -881,6 +881,41 @@ app.post('/api/admin/seed-demo', async (req, res) => {
     }
 });
 
+// ─── SuperAdmin: push/FCM configuration diagnostics ────────────
+app.get('/api/admin/push/status', async (req, res) => {
+    if (req.user.role !== 'superadmin') return res.status(403).json({ error: 'SuperAdmin access required' });
+    try {
+        const { isFcmConfigured } = await import('./fcm.js');
+        const { getVapidPublicKey } = await import('./push.js');
+        res.json({
+            success: true,
+            vapidPublicKey: getVapidPublicKey() ? true : false,
+            fcmConfigured: await isFcmConfigured()
+        });
+    } catch (err) {
+        console.error('Error checking push status:', err);
+        res.status(500).json({ error: 'Push status check failed: ' + err.message });
+    }
+});
+
+// ─── SuperAdmin: fire a test push to every registered device ──
+app.post('/api/admin/push/test', async (req, res) => {
+    if (req.user.role !== 'superadmin') return res.status(403).json({ error: 'SuperAdmin access required' });
+    try {
+        const { sendToMany, listSubscriptions } = await import('./push.js');
+        const { title, body } = req.body || {};
+        const subs = await listSubscriptions();
+        const userIds = [...new Set(subs.map(s => s.userId))];
+        const results = await sendToMany(userIds, {
+            title: title || 'Test push', body: body || 'Testing SajiloRent push notifications.', url: '/index.html'
+        });
+        res.json({ success: true, userIds: userIds.length, subscriptions: subs.length, delivered: results.reduce((a, r) => a + r.sent, 0) });
+    } catch (err) {
+        console.error('Error sending test push:', err);
+        res.status(500).json({ error: 'Test push failed: ' + err.message });
+    }
+});
+
 app.post('/api/admin/link-tenant', async (req, res) => {
     if (req.user.role !== 'admin' && req.user.role !== 'superadmin') return res.status(403).json({ error: 'Admin access required' });
     const { houseId, tenantId, userId } = req.body;
