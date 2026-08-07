@@ -2,6 +2,9 @@
 .env
 *.log
 .DS_Store
+# opencode local tooling (skills registry + lockfile)
+.agents/
+skills-lock.json
 desktop/dist/
 desktop/dist2/
 desktop/dist3/
