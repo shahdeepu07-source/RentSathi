@@ -576,6 +576,22 @@
         </div>
       </div>
     </div>
+    <div id="ownerOnboard" class="section-card" style="display:none;margin-bottom:16px;">
+      <div class="empty-state">
+        <div class="empty-ico">🚀</div>
+        <h3>Welcome to SajiloRent!</h3>
+        <p>You're all set to start managing your properties. Here's how to get going:</p>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;">
+          <button type="button" class="btn-primary" onclick="showToast('Your house must be created by the SajiloRent admin. Use Support to request it.')">Request a house</button>
+          <button type="button" class="btn-outline" onclick="switchTab('tab-support')">Get help</button>
+        </div>
+        <div class="onboard-steps">
+          <div class="onboard-step"><div class="os-num">1</div><b>Ask for your house</b><span>An admin creates houses and links them to your account. Send a support request if nothing appears.</span></div>
+          <div class="onboard-step"><div class="os-num">2</div><b>Add tenants</b><span>Once your house is linked, add your tenants with rent and meter readings.</span></div>
+          <div class="onboard-step"><div class="os-num">3</div><b>Generate bills</b><span>Create monthly bills and track what has been paid — all in one place.</span></div>
+        </div>
+      </div>
+    </div>
     <div class="stats-grid" id="overviewSection">
       <div class="stat-card"><div class="label">⏳ Pending Bills</div><div class="value yellow" id="pendingTotal">Rs. 0</div><div style="font-size:0.75rem;color:var(--text-muted);margin-top:6px;"><span id="pendingCount">0 bills</span> &middot; <span id="pendingTenants">0 tenants</span></div></div>
       <div class="stat-card"><div class="label">✅ Collected</div><div class="value green" id="paidTotal">Rs. 0</div><div style="font-size:0.75rem;color:var(--text-muted);margin-top:6px;"><span id="paidCount">0 bills</span> &middot; <span id="paidTenants">0 tenants</span></div></div>
@@ -1173,13 +1189,19 @@ refreshUserFromServer();
 async function loadHouses() {
   try {
     const houses = await api('GET', '/houses');
+    const onboard = document.getElementById('ownerOnboard');
+    const stats = document.getElementById('overviewSection');
     const select = document.getElementById('globalHouseSelect');
     if (!houses || houses.length === 0) {
       select.innerHTML = '<option value="">No houses assigned</option>';
       currentHouseId = '';
+      if (onboard) onboard.style.display = '';
+      if (stats) stats.style.display = 'none';
       await loadTenants();
       return;
     }
+    if (onboard) onboard.style.display = 'none';
+    if (stats) stats.style.display = '';
     select.innerHTML = houses.map(h => `<option value="${h}" ${h===currentHouseId?'selected':''}>${h}</option>`).join('');
     if (!houses.includes(currentHouseId) || !currentHouseId) {
       currentHouseId = houses[0];
@@ -1245,11 +1267,19 @@ function renderTenantSelect() {
 function renderTenants() {
   const tbody = document.getElementById('tenantTable');
   if (!currentHouseId) {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">No house selected</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">
+      <div class="empty-ico">🏢</div>
+      <h3>No house selected yet</h3>
+      <p>Your dashboard shows data for one house at a time. Pick a house from the dropdown, or ask the SajiloRent admin to assign your house if it's missing.</p>
+    </div></td></tr>`;
     return;
   }
   if (!tenants.length) {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">No tenants in this house</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">
+      <div class="empty-ico">👥</div>
+      <h3>No tenants in this house yet</h3>
+      <p>Add your first tenant using the form above — name, rent and a meter reading are all you need to start billing.</p>
+    </div></td></tr>`;
     return;
   }
   tbody.innerHTML = tenants.map(t => {
@@ -1642,7 +1672,7 @@ function renderHistory() {
   const houseId = currentHouseId || document.getElementById('globalHouseSelect').value;
   const summaryBox = document.getElementById('historySummary');
   if (!houseId) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">No house selected</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state" style="padding:36px 20px;"><div class="empty-ico">🏢</div><h3>Select a house first</h3><p>Choose a house from the dropdown to see its billing history.</p></div></td></tr>`;
     if (summaryBox) summaryBox.innerHTML = '';
     return;
   }
@@ -1667,7 +1697,7 @@ function renderHistory() {
   if (mName) rows = rows.filter(r => parseBillMonth(r.month).name === mName);
 
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">No bills</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state" style="padding:36px 20px;"><div class="empty-ico">🧾</div><h3>No bills here yet</h3><p>Generate your first bill from the Create Bill tab — the full history will collect here.</p></div></td></tr>`;
     summaryBox.innerHTML = '';
     return;
   }

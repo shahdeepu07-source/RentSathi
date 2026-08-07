@@ -601,8 +601,8 @@ async function loadTenantData() {
 
     if (!tenant) {
       document.getElementById('balanceValue').innerHTML = '<span style="font-size:0.9rem;color:var(--text-muted);">Not linked. Contact owner.</span>';
-      document.getElementById('currentBill').innerHTML = '<p style="color:var(--text-muted);font-size:0.9rem;">No bills found.</p>';
-      document.getElementById('historyTable').innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">No bills yet</td></tr>';
+      document.getElementById('currentBill').innerHTML = '<div class="empty-state" style="padding:40px 20px;"><div class="empty-ico">🔑</div><h3>Your account isn\'t linked yet</h3><p>Your owner needs to link this account to a house and tenant record. If it\'s been a while, send them a message or use the Support tab for help.</p></div>';
+      document.getElementById('historyTable').innerHTML = '<tr><td colspan="6"><div class="empty-state" style="padding:36px 20px;"><div class="empty-ico">📄</div><h3>No bills yet</h3><p>Bills will appear here once your owner generates them.</p></div></td></tr>';
       return;
     }
 
@@ -611,8 +611,8 @@ async function loadTenantData() {
       renderCurrentBill(bills[0]);
       renderHistory(bills);
     } else {
-      document.getElementById('currentBill').innerHTML = '<p style="color:var(--text-muted);font-size:0.9rem;">No bills generated yet.</p>';
-      document.getElementById('historyTable').innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">No bills yet</td></tr>';
+      document.getElementById('currentBill').innerHTML = '<div class="empty-state" style="padding:40px 20px;"><div class="empty-ico">🧾</div><h3>No bills generated yet</h3><p>Your owner hasn\'t created a bill yet. Current and past bills will show up here automatically.</p></div>';
+      document.getElementById('historyTable').innerHTML = '<tr><td colspan="6"><div class="empty-state" style="padding:36px 20px;"><div class="empty-ico">🧾</div><h3>No bills yet</h3><p>Once your owner generates a bill, it will appear here with a full breakdown.</p></div></td></tr>';
     }
   } catch (err) {
     console.error(err);
@@ -699,6 +699,10 @@ function renderHistory(bills) {
   const total = filtered.reduce((s, b) => s + Number(b.total || 0), 0);
   const paid = filtered.filter(b => b.paid_status).reduce((s, b) => s + Number(b.total || 0), 0);
   summaryBox.innerHTML = `<span class="badge badge-sub-active" style="font-size:0.9rem;">Total: <strong>Rs. ${Number(total).toLocaleString()}</strong></span> <span class="badge badge-paid" style="font-size:0.9rem;">Paid: <strong>Rs. ${Number(paid).toLocaleString()}</strong></span> <span class="badge badge-balance-due" style="font-size:0.9rem;">Due: <strong>Rs. ${Number(total - paid).toLocaleString()}</strong></span>`;
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state" style="padding:36px 20px;"><div class="empty-ico">🔍</div><h3>No bills match</h3><p>Try changing or clearing the filters above.</p></div></td></tr>';
+    return;
+  }
   tbody.innerHTML = filtered.map(b => {
     const statusBadge = b.paid_status ? 'badge-paid' : 'badge-unpaid';
     const statusText = b.paid_status ? 'Paid' : 'Unpaid';

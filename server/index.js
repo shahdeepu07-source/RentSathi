@@ -1235,6 +1235,12 @@ app.get('/register.html', (req, res) => {
 app.get('/payment-result.html', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'payment-result.html'));
 });
+app.get('/privacy', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'public', 'privacy.html'));
+});
+app.get('/privacy.html', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'public', 'privacy.html'));
+});
 app.get('/app-version.json', (req, res) => {
     res.set('Cache-Control', 'no-store');
     res.sendFile(path.join(__dirname, '..', 'public', 'app-version.json'));

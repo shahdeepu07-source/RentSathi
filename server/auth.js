@@ -22,6 +22,45 @@ const revealState = new Map();
 const SUPPORT_FILE = path.join(__dirname, '..', 'data', 'support-requests.json');
 const supportLimits = new Map(); // ip -> [timestamps]
 
+// Brute-force protection for /api/auth/login. Keyed by "ip|username" so one
+// attacker hammering one account gets locked out without locking everyone on
+// a shared IP. 10 consecutive failures → 15 min lockout; per-key window of
+// 20 tries / 15 min. Window and lock state purge themselves on access.
+const LOGIN_MAX_CONSECUTIVE_FAILS = 10;
+const LOGIN_LOCK_MS = 15 * 60 * 1000;
+const LOGIN_WINDOW_MS = 30 * 60 * 1000;
+const LOGIN_WINDOW_MAX_TRIES = 20;
+const loginState = new Map(); // "ip|username" -> { fails, window: [], lockUntil }
+
+function getClientIp(req) {
+    return (req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown').split(',')[0].trim();
+}
+
+function loginCheck(key) {
+    const now = Date.now();
+    let st = loginState.get(key) || { fails: 0, window: [], lockUntil: 0 };
+    if (st.lockUntil > now) return st;
+    st.window = st.window.filter(t => now - t < LOGIN_WINDOW_MS);
+    if (st.window.length >= LOGIN_WINDOW_MAX_TRIES) {
+        st.lockUntil = now + LOGIN_LOCK_MS;
+    }
+    loginState.set(key, st);
+    return st;
+}
+
+function recordLoginFailure(key) {
+    const now = Date.now();
+    const st = loginState.get(key) || { fails: 0, window: [], lockUntil: 0 };
+    st.window = st.window.filter(t => now - t < LOGIN_WINDOW_MS);
+    st.window.push(now);
+    st.fails += 1;
+    if (st.fails >= LOGIN_MAX_CONSECUTIVE_FAILS) {
+        st.fails = 0;
+        st.lockUntil = now + LOGIN_LOCK_MS;
+    }
+    loginState.set(key, st);
+}
+
 // Total active (non-deleted) tenants across all houses owned by a user
 export async function countActiveTenants(userId) {
     try {
@@ -171,9 +210,17 @@ router.post('/login', async (req, res) => {
         if (!username || !password) {
             return res.status(400).json({ error: 'Username and password required' });
         }
+        const ip = getClientIp(req);
+        const key = `${ip}|${username}`;
+        const guard = loginCheck(key);
+        if (guard.lockUntil > Date.now()) {
+            const mins = Math.ceil((guard.lockUntil - Date.now()) / 60000);
+            return res.status(429).json({ error: `Too many failed attempts. Try again in ${mins} min.` });
+        }
         const users = await getUsers(false);
         const user = users.find(u => u.username === username);
         if (!user) {
+            recordLoginFailure(key);
             return res.status(401).json({ error: 'Invalid credentials' });
         }
         if (user.role === 'owner' && user.subscription_status === 'trial') {
@@ -187,8 +234,10 @@ router.post('/login', async (req, res) => {
         const validPassword = await bcrypt.compare(password, user.password);
         console.log('Password check completed');
         if (!validPassword) {
+            recordLoginFailure(key);
             return res.status(401).json({ error: 'Invalid credentials' });
         }
+        loginState.set(key, { fails: 0, window: [], lockUntil: 0 });
         const token = jwt.sign(
             { userId: user.id, username: user.username, role: user.role },
             process.env.JWT_SECRET,
