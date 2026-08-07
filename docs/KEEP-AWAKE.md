@@ -1,5 +1,9 @@
 # Keeping SajiloRent awake on Render (free tier)
 
+> Status: the cron pinger is configured (every 5 min → `/health`). With
+> `DATABASE_URL` set to Neon, data is durable across redeploys; demo data
+> auto-seeds at boot (see `server/index.js`).
+
 ## Problem
 
 The Render free tier **spins the service down after ~15 minutes of no
