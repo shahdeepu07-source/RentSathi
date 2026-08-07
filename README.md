@@ -75,13 +75,14 @@ Output: `SajiloRent-windows-v1.0.0.exe`, published to GitHub releases (`v1.0.0`)
 
 Render auto-deploys from `main`. Free tier spins down on idle (~50s cold start) — the service worker (`public/sw.js`) serves a cached landing page instantly and a branded splash covers the wake-up wait.
 
-**Keep-warm (why it may sleep):** the pinger is an *external* cron job on your
-cron-job.org account — **not** stored in this repo. Point it at a cheap endpoint:
-
-- Target: `https://sajilorent.onrender.com/health` (or `/ping`)
-- Interval: every 10–15 minutes (Render free spins down after ~15 min idle)
-- Leave enabled; cron-job.org free jobs auto-pause after ~30 days of no logins,
-  then the server sleeps again until a real visitor wakes it (~50 s cold start).
+**Keep-warm (why it may sleep):** a GitHub Actions workflow
+(`.github/workflows/keep-warm.yml`) pings `https://sajilorent.onrender.com/health`
+every 9 minutes and `workflow_dispatch` allows a manual trigger. It's free &
+unlimited on this public repo and never auto-pauses, unlike an external cron. If
+the server is still found sleeping, check the workflow's **Actions** tab for
+failures, or that a deploy didn't drop the `/health` route. (An older
+cron-job.org setup is documented as backup only — it auto-paused after ~30 days
+without login, which is what originally let the server sleep.)
 
 The `/health` route returns `ok` with no DB/file I/O so the pinger is cheap even
 on cold start.
