@@ -21,3 +21,6 @@ data/clients/reveal-audit.json
 # Support inbox (runtime data, never commit)
 data/support-requests.json
 data/clients/support-requests.json
+# VAPID push keys (regenerated at boot if env vars unset)
+data/vapid.json
+data/clients/vapid.json

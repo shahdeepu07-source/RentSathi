@@ -1,4 +1,4 @@
-const CACHE = 'warm-v9';
+const CACHE = 'warm-v10';
 const SHELL = ['/', '/login.html', '/assets/logo.svg', '/assets/favicon.svg'];
 
 self.addEventListener('install', (event) => {
@@ -15,6 +15,42 @@ self.addEventListener('activate', (event) => {
     caches.keys()
       .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('push', (event) => {
+  try {
+    let data = { title: 'SajiloRent', body: '', url: '/' };
+    if (event.data) {
+      try { data = event.data.json(); } catch { data.body = event.data.text(); }
+    }
+    event.waitUntil(
+      self.registration.showNotification(data.title || 'SajiloRent', {
+        body: data.body || '',
+        icon: '/assets/favicon.svg',
+        badge: '/assets/favicon.svg',
+        data: { url: data.url || '/' }
+      })
+    );
+  } catch (err) {
+    console.error('SW push handler error:', err);
+  }
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      for (const client of windowClients) {
+        if (client.url.startsWith(self.location.origin)) {
+          if ('focus' in client) client.focus();
+          if ('navigate' in client) client.navigate(url);
+          return;
+        }
+      }
+      return clients.openWindow(url);
+    })
   );
 });
 

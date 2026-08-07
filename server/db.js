@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
 import 'dotenv/config';
-import { resolveDataDir, USERS_FILE, OWNERSHIP_FILE, NOTIF_FILE, UPGRADES_FILE, PAYMENTS_FILE } from './paths.js';
+import { resolveDataDir, USERS_FILE, OWNERSHIP_FILE, NOTIF_FILE, UPGRADES_FILE, PAYMENTS_FILE, PUSH_SUBS_FILE } from './paths.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -53,6 +53,10 @@ CREATE TABLE IF NOT EXISTS upgrade_requests (
 );
 CREATE TABLE IF NOT EXISTS payments (
     pid TEXT PRIMARY KEY,
+    data JSONB NOT NULL
+);
+CREATE TABLE IF NOT EXISTS push_subs (
+    id BIGINT PRIMARY KEY,
     data JSONB NOT NULL
 );
 `;
@@ -244,6 +248,33 @@ export async function savePayments(arr) {
         return;
     }
     await fs.writeFile(PAYMENTS_FILE, JSON.stringify(arr || [], null, 2));
+}
+
+// ─── Push subscriptions (Web Push / FCM device tokens) ──────────
+export async function getPushSubs() {
+    if (DB_ENABLED) {
+        const r = await pool.query('SELECT data FROM push_subs ORDER BY id');
+        return r.rows.map(x => x.data);
+    }
+    try {
+        const raw = await fs.readFile(PUSH_SUBS_FILE, 'utf8');
+        return JSON.parse(raw);
+    } catch {
+        return [];
+    }
+}
+
+export async function savePushSubs(arr) {
+    if (DB_ENABLED) {
+        await inTx(async (c) => {
+            await c.query('DELETE FROM push_subs');
+            for (const s of arr || []) {
+                await c.query('INSERT INTO push_subs (id, data) VALUES ($1, $2)', [s.id, s]);
+            }
+        });
+        return;
+    }
+    await fs.writeFile(PUSH_SUBS_FILE, JSON.stringify(arr || [], null, 2));
 }
 
 // ─── House listing / lifecycle ────────────────────────────────

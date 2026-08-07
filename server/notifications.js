@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { getNotifs, saveNotifs, getOwnership, listHouseIds, readTenants } from './db.js';
+import { getNotifs, saveNotifs, getOwnership, listHouseIds, readTenants, getUsers } from './db.js';
+import { sendToUser } from './push.js';
 
 const router = Router();
 
@@ -99,6 +100,47 @@ router.post('/notifications', async (req, res) => {
         notifs.push(notice);
         await saveNotifs(notifs);
         console.log(`${role} created notice for ${resolvedTargets.join(', ')}: "${notice.title}"`);
+
+// ─── Push notifications to target users ─────────────────
+        // Fire-and-forget: never block notice creation on delivery.
+        (async () => {
+            let targets = [];
+
+            if (resolvedTargets.includes('superadmin')) {
+                const users = await getUsers();
+                targets.push(...users.filter(u => u.role === 'superadmin' && !u.deleted).map(u => u.id));
+            }
+            if (resolvedTargets.includes('admin')) {
+                const users = await getUsers();
+                targets.push(...users.filter(u => (u.role === 'admin' || u.role === 'superadmin') && !u.deleted).map(u => u.id));
+            }
+            if (resolvedTargets.includes('owner') && !(resolvedTargets.length === 1 && role === 'owner')) {
+                const users = await getUsers();
+                targets.push(...users.filter(u => u.role === 'owner' && !u.deleted).map(u => u.id));
+            }
+            // Tenant target: only for this house when it is house-scoped.
+            if (resolvedTargets.includes('tenant')) {
+                const houses = notice.house_id ? [notice.house_id] : await listHouseIds();
+                for (const h of houses) {
+                    try {
+                        const tenants = await readTenants(h);
+                        for (const t of tenants) {
+                            if (t && !t.deleted && t.tenant_user_id) targets.push(t.tenant_user_id);
+                        }
+                    } catch { /* skip house */ }
+                }
+            }
+
+            const unique = [...new Set(targets)].slice(0, 500);
+            for (const uid of unique) {
+                await sendToUser(uid, {
+                    title: `📢 ${notice.title}`,
+                    body: notice.message.slice(0, 160),
+                    url: role === 'tenant' ? '/tenant.html' : '/index.html'
+                }).catch(e => console.error('[push] notice hook:', e.message || e));
+            }
+        })().catch(err => console.error('[push] notice hook error:', err));
+
         res.status(201).json(notice);
     } catch (err) {
         console.error('Error creating notice:', err);

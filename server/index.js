@@ -6,6 +6,8 @@ import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import authRoutes from './auth.js';
 import notificationRoutes from './notifications.js';
+import pushRoutes, { initPush, sendToUser } from './push.js';
+import { maybeFireBillingDayReminder } from './billing-day.js';
 import { verifyToken } from './middleware.js';
 import { createUser } from './auth.js';
 import { resolveDataDir } from './paths.js';
@@ -28,6 +30,7 @@ app.use(cookieParser());
 // pingers to keep the Render free tier warm. Must not do any DB or file I/O
 // so a cold-start pinger gets the fastest possible 200.
 app.get('/health', (req, res) => {
+    maybeFireBillingDayReminder();
     res.set('Cache-Control', 'no-store');
     res.type('text/plain').status(200).send('ok');
 });
@@ -110,6 +113,9 @@ app.get('/api/subscription/esewa/failure', async (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api', verifyToken);
 app.use('/api', notificationRoutes);
+app.use('/api', pushRoutes);
+
+await initPush();
 
 await fs.mkdir(DATA_DIR, { recursive: true });
 
@@ -723,6 +729,16 @@ app.post('/api/calculate', async (req, res) => {
         tenant.history.push(bill);
         tenant.balance = (tenant.balance || 0) + total;
         await writeTenants(houseId, tenants);
+
+        // Push a "new bill" notification to the linked tenant account.
+        if (tenant.tenant_user_id) {
+            sendToUser(tenant.tenant_user_id, {
+                title: '🧾 New bill ready',
+                body: `${tenant.name}: ${bill.month} — Rs ${total.toLocaleString()}`,
+                url: '/tenant.html'
+            }).catch(err => console.error('[push] bill hook:', err.message || err));
+        }
+
         res.json(bill);
     } catch (err) {
         console.error('Error calculating bill:', err);
@@ -1295,6 +1311,10 @@ app.get('/sitemap.xml', (req, res) => {
 });
 app.get('/install-widget.js', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'install-widget.js'));
+});
+app.get('/push.js', (req, res) => {
+    res.type('text/javascript');
+    res.sendFile(path.join(__dirname, '..', 'public', 'push.js'));
 });
 app.get('/downloads/:file', (req, res) => {
     const file = path.basename(req.params.file);
