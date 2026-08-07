@@ -73,7 +73,18 @@ Output: `SajiloRent-windows-v1.0.0.exe`, published to GitHub releases (`v1.0.0`)
 
 ## Deployment
 
-Render auto-deploys from `main`. Free tier spins down on idle (~50s cold start) — the service worker (`public/sw.js`) serves a cached landing page instantly and a branded splash covers the wake-up wait. A cron-job.org ping keeps it warm.
+Render auto-deploys from `main`. Free tier spins down on idle (~50s cold start) — the service worker (`public/sw.js`) serves a cached landing page instantly and a branded splash covers the wake-up wait.
+
+**Keep-warm (why it may sleep):** the pinger is an *external* cron job on your
+cron-job.org account — **not** stored in this repo. Point it at a cheap endpoint:
+
+- Target: `https://sajilorent.onrender.com/health` (or `/ping`)
+- Interval: every 10–15 minutes (Render free spins down after ~15 min idle)
+- Leave enabled; cron-job.org free jobs auto-pause after ~30 days of no logins,
+  then the server sleeps again until a real visitor wakes it (~50 s cold start).
+
+The `/health` route returns `ok` with no DB/file I/O so the pinger is cheap even
+on cold start.
 
 ## Project layout
 

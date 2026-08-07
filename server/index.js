@@ -24,6 +24,18 @@ const app = express();
 app.use(express.json({ limit: '8mb' }));
 app.use(cookieParser());
 
+// ─── Uptime keeper: lightweight health used by cron-job.org / external
+// pingers to keep the Render free tier warm. Must not do any DB or file I/O
+// so a cold-start pinger gets the fastest possible 200.
+app.get('/health', (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    res.type('text/plain').status(200).send('ok');
+});
+app.get('/ping', (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    res.type('text/plain').status(200).send('pong');
+});
+
 // ─── Public eSewa callbacks (eSewa redirects the browser here with NO
 // bearer token, so these must be registered before the auth middleware) ──
 app.get('/api/subscription/esewa/success', async (req, res) => {
