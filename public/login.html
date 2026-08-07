@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="SajiloRent">
-  <script>if (new URLSearchParams(location.search).get('view') === 'app') document.documentElement.classList.add('app-mode');</script>
+  <script>if (new URLSearchParams(location.search).get('view') === 'app') { document.documentElement.classList.add('app-mode'); try { localStorage.setItem('sajiloIsApp', '1'); } catch (e) {} }</script>
   <script>try { if (localStorage.getItem('sajiloTheme') !== 'light') document.documentElement.setAttribute('data-theme', 'dark'); } catch (e) {}</script>
 
     <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
@@ -72,7 +72,9 @@
         .header-cta { display:flex; align-items:center; gap:14px; }
         .header-cta .btn { padding:9px 18px; font-size:.88rem; }
         .header-cta .btn-primary { display:inline-flex; }
-        .header-cta .hbl-burger { display:none; }
+        .hbl-burger { display:none; }
+        .hbl-burger button { display:flex; align-items:center; justify-content:center; width:38px; height:38px; border-radius:10px; border:1px solid var(--border); background:var(--white); color:var(--text); cursor:pointer; }
+        .hbl-burger svg { width:19px; height:19px; }
 
         /* ─── Hero ─── */
         .hero { position:relative; background:var(--navy); color:#fff; overflow:hidden; }
@@ -276,6 +278,12 @@
 
         /* ─── Responsive ─── */
         @media (max-width:900px) {
+            .nav-links { display:none; position:absolute; top:64px; left:0; right:0; flex-direction:column; align-items:stretch; background:var(--white); border-bottom:1px solid var(--border); padding:10px 24px 18px; gap:6px; box-shadow:var(--shadow-2); }
+            .nav-links.open { display:flex; }
+            .nav-links a { padding:11px 8px; border-radius:8px; }
+            .nav-links a:hover { background:var(--subtle); }
+            .header-cta .hbl-burger { display:flex; }
+            [data-theme="dark"] .nav-links { background:var(--navy-2); border-bottom-color:#1e293b; }
             .hero-grid { grid-template-columns:1fr; gap:44px; padding:56px 0 64px; }
             .login-area { max-width:420px; }
             .feat-grid, .steps, .benefit-grid { grid-template-columns:1fr 1fr; }
@@ -284,7 +292,6 @@
             .footer-grid { grid-template-columns:1fr 1fr; }
         }
         @media (max-width:560px) {
-            .nav-links { display:none; }
             .section, .band { padding:60px 0; }
             .feat-grid, .steps, .benefit-grid, .sec-grid { grid-template-columns:1fr; }
             .hero-cta { flex-direction:column; align-items:stretch; }
@@ -350,6 +357,7 @@
                 <svg class="ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
                 <svg class="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
             </button>
+            <span class="hbl-burger"><button type="button" id="menuToggle" aria-label="Open menu" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button></span>
             <a href="#login-area" class="btn btn-primary">Sign in</a>
         </div>
     </div>
@@ -1016,6 +1024,20 @@
         }
         btn.addEventListener('click', function () {
             apply(!root.hasAttribute('data-theme'));
+        });
+    })();
+</script>
+<script>
+    (function () {
+        var burger = document.getElementById('menuToggle');
+        var nav = document.querySelector('.nav-links');
+        if (!burger || !nav) return;
+        burger.addEventListener('click', function () {
+            var open = nav.classList.toggle('open');
+            burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+        nav.querySelectorAll('a').forEach(function (a) {
+            a.addEventListener('click', function () { nav.classList.remove('open'); burger.setAttribute('aria-expanded', 'false'); });
         });
     })();
 </script>

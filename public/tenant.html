@@ -582,6 +582,17 @@ function escHtml(s) {
   return d.innerHTML;
 }
 
+function escAttr(s) {
+  return escHtml(String(s == null ? '' : s)).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+window.openBillModal = function(btn) {
+  let bill = null;
+  try { bill = JSON.parse(btn.getAttribute('data-bill')); } catch (e) { bill = null; }
+  if (!bill) { window.showBillModalForTenant({}, btn.getAttribute('data-house') || ''); return; }
+  window.showBillModalForTenant(bill, btn.getAttribute('data-house') || currentHouse);
+};
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // TENANT DATA
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -660,7 +671,7 @@ function renderCurrentBill(bill) {
       </div>
       ${bill.note ? `<div style="margin-top:8px;font-size:0.85rem;color:var(--warn);line-height:1.5;">📌 ${bill.note}</div>` : ''}
       <div style="margin-top:12px;">
-        <button class="btn-primary" style="min-height:44px;padding:10px 18px;" onclick="showBillModalForTenant(${JSON.stringify(bill).replace(/"/g,'&quot;')}, '${currentHouse}')">📷 View &amp; Download Bill</button>
+        <button class="btn-primary" style="min-height:44px;padding:10px 18px;" data-bill="${escAttr(JSON.stringify(bill))}" data-house="${escAttr(currentHouse)}" onclick="openBillModal(this)">📷 View &amp; Download Bill</button>
       </div>
     </div>
   `;
@@ -715,7 +726,7 @@ function renderHistory(bills) {
         <td>Rs. ${Number(b.total).toLocaleString()}</td>
         <td><span class="badge ${statusBadge}">${statusText}</span></td>
         <td style="font-size:0.8rem;color:var(--text-muted);">${paymentInfo}</td>
-        <td><button class="btn-primary btn-sm" title="View Bill" onclick="showBillModalForTenant(${JSON.stringify(b).replace(/"/g,'&quot;')}, '${currentHouse}')">📷</button></td>
+        <td><button class="btn-primary btn-sm" title="View Bill" data-bill="${escAttr(JSON.stringify(b))}" data-house="${escAttr(currentHouse)}" onclick="openBillModal(this)">📷</button></td>
       </tr>
     `;
   }).join('');

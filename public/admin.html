@@ -492,6 +492,30 @@
 
 <!-- ═══ MODALS ═══ -->
 
+<!-- Create / Edit House Modal -->
+<div class="modal-overlay" id="houseModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="houseModalTitle">Edit House</h3>
+      <button type="button" class="modal-close" aria-label="Close dialog" onclick="closeModal('houseModal')">×</button>
+    </div>
+    <form id="houseForm">
+      <input type="hidden" id="editHouseId">
+      <div class="form-group"><label>House Name *</label><input type="text" id="houseName" required></div>
+      <div class="form-group"><label>Address</label><input type="text" id="houseAddress"></div>
+      <div class="form-group" id="houseOwnerGroup" style="display:none;">
+        <label>Owner username</label>
+        <input type="text" id="houseOwner" list="ownerList" placeholder="e.g. demo_owner1">
+        <datalist id="ownerList"></datalist>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn-outline" onclick="closeModal('houseModal')">Cancel</button>
+        <button type="submit" class="btn-success">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- Create / Edit User Modal -->
 <div class="modal-overlay" id="userModal">
   <div class="modal">
@@ -753,8 +777,8 @@
             const subStatus = u.subscription_status || 'active';
 
             return `<tr>
-                <td><strong>${u.username}</strong></td>
-                <td>${displayName}</td>
+                <td><strong>${escHtml(u.username)}</strong></td>
+                <td>${escHtml(displayName)}</td>
                 <td><span class="badge ${badgeMap[u.role] || ''}">${u.role}</span></td>
                 <td><span class="badge ${subBadge[subStatus] || 'badge-sub-active'}">${subStatus}</span></td>
                 <td><div class="actions">${actionsHtml}</div></td>
@@ -778,13 +802,13 @@
             const owner = allUsers.find(u => u.id === ownerId);
             const tenantCount = allTenants.filter(t => t.houseName === h).length;
             return `<tr>
-                <td><strong>${h}</strong></td>
-                <td>${owner ? owner.username : '<span class="text-muted">—</span>'}</td>
+                <td><strong>${escHtml(h)}</strong></td>
+                <td>${owner ? escHtml(owner.username) : '<span class="text-muted">—</span>'}</td>
                 <td><span class="badge badge-tenant">${tenantCount}</span></td>
                 <td>
                     <div class="actions">
-                        <button onclick="editHouse('${h}')" title="Edit">✏️</button>
-                        <button onclick="deleteHouse('${h}')" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                        <button onclick="editHouse('${escAttr(h)}')" title="Edit">✏️</button>
+                        <button onclick="deleteHouse('${escAttr(h)}')" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
                     </div>
                 </td>
             </tr>`;
@@ -810,7 +834,7 @@
             userTbody.innerHTML = `<tr><td colspan="4" class="text-muted" style="text-align:center;">No deleted users.</td></tr>`;
         } else {
             userTbody.innerHTML = deletedUsers.map(u => `<tr>
-                <td>${u.username}</td>
+                <td>${escHtml(u.username)}</td>
                 <td>${u.role}</td>
                 <td>${u.deleted_at ? new Date(u.deleted_at).toLocaleString() : '—'}</td>
                 <td>
@@ -826,12 +850,12 @@
             houseTbody.innerHTML = `<tr><td colspan="3" class="text-muted" style="text-align:center;">No deleted houses.</td></tr>`;
         } else {
             houseTbody.innerHTML = deletedHouses.map(h => `<tr>
-                <td>${h.name}</td>
+                <td>${escHtml(h.name)}</td>
                 <td>${h.deleted_at ? new Date(h.deleted_at).toLocaleString() : '—'}</td>
                 <td>
                     <div class="actions">
-                        <button onclick="restoreHouse('${h.name}')" class="btn-success btn-sm">↩️ Restore</button>
-                        <button onclick="permanentDeleteHouse('${h.name}')" class="btn-danger btn-sm">💀 Delete</button>
+                        <button onclick="restoreHouse('${escAttr(h.name)}')" class="btn-success btn-sm">↩️ Restore</button>
+                        <button onclick="permanentDeleteHouse('${escAttr(h.name)}')" class="btn-danger btn-sm">💀 Delete</button>
                     </div>
                 </td>
             </tr>`).join('');
@@ -841,13 +865,13 @@
             tenantTbody.innerHTML = `<tr><td colspan="4" class="text-muted" style="text-align:center;">No deleted tenants.</td></tr>`;
         } else {
             tenantTbody.innerHTML = deletedTenants.map(t => `<tr>
-                <td>${t.name}</td>
-                <td>${t.houseName}</td>
+                <td>${escHtml(t.name)}</td>
+                <td>${escHtml(t.houseName)}</td>
                 <td>${t.deleted_at ? new Date(t.deleted_at).toLocaleString() : '—'}</td>
                 <td>
                     <div class="actions">
-                        <button onclick="restoreTenant(${t.id}, '${t.houseName}')" class="btn-success btn-sm">↩️ Restore</button>
-                        <button onclick="permanentDeleteTenant(${t.id}, '${t.houseName}')" class="btn-danger btn-sm">💀 Delete</button>
+                        <button onclick="restoreTenant(${t.id}, '${escAttr(t.houseName)}')" class="btn-success btn-sm">↩️ Restore</button>
+                        <button onclick="permanentDeleteTenant(${t.id}, '${escAttr(t.houseName)}')" class="btn-danger btn-sm">💀 Delete</button>
                     </div>
                 </td>
             </tr>`).join('');
@@ -967,34 +991,52 @@
     };
 
     // ─── Houses ──────────────────────────────────────────────────
-    document.getElementById('createHouseBtn').addEventListener('click', async function() {
-        const name = prompt('Enter house name:');
-        if (!name) return;
-        const address = prompt('Enter address (optional):') || '';
-        const ownerInput = prompt('Enter owner username (optional):');
-        let ownerId = undefined;
-        if (ownerInput) {
-            const owner = allUsers.find(u => u.username === ownerInput && (u.role === 'owner' || u.role === 'admin'));
-            if (owner) ownerId = owner.id;
-            else showToast('Owner not found.', 'warning');
-        }
-        try {
-            await api('POST', '/houses', { name, address, owner_id: ownerId });
-            showToast(`House "${name}" created!`);
-            loadAll();
-        } catch (e) { showToast('Error: ' + e.message, 'error'); }
+    document.getElementById('createHouseBtn').addEventListener('click', function() {
+        document.getElementById('editHouseId').value = '';
+        document.getElementById('houseName').value = '';
+        document.getElementById('houseAddress').value = '';
+        document.getElementById('houseModalTitle').textContent = 'Create House';
+        document.getElementById('houseOwnerGroup').style.display = '';
+        const dl = document.getElementById('ownerList');
+        dl.innerHTML = allUsers.filter(u => u.role === 'owner' || u.role === 'admin').map(u => `<option value="${escAttr(u.username)}">`).join('');
+        openModal('houseModal');
     });
 
     window.editHouse = async (houseId) => {
-        const newName = prompt('Enter new house name (or leave blank):', houseId);
-        if (!newName || newName === houseId) return;
-        const newAddress = prompt('Enter new address (or leave blank):', '');
+        const ownershipData = ownership[houseId] || {};
+        document.getElementById('editHouseId').value = houseId;
+        document.getElementById('houseName').value = houseId;
+        document.getElementById('houseAddress').value = ownershipData.address || '';
+        document.getElementById('houseModalTitle').textContent = 'Edit House';
+        document.getElementById('houseOwnerGroup').style.display = 'none';
+        openModal('houseModal');
+    };
+
+    document.getElementById('houseForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const editing = document.getElementById('editHouseId').value;
+        const name = document.getElementById('houseName').value.trim();
+        const address = document.getElementById('houseAddress').value.trim();
+        if (!name) { showToast('House name required', 'error'); return; }
+        const ownerInput = document.getElementById('houseOwner').value.trim();
+        let ownerId;
+        if (ownerInput) {
+            const owner = allUsers.find(u => u.username === ownerInput && (u.role === 'owner' || u.role === 'admin'));
+            if (owner) ownerId = owner.id;
+            else { showToast('Owner not found.', 'warning'); return; }
+        }
         try {
-            await api('PUT', `/houses/${houseId}`, { name: newName, address: newAddress });
-            showToast('House updated');
+            if (editing) {
+                await api('PUT', `/houses/${editing}`, { name, address });
+                showToast('House updated');
+            } else {
+                await api('POST', '/houses', { name, address, owner_id: ownerId });
+                showToast(`House "${name}" created!`);
+            }
+            closeModal('houseModal');
             loadAll();
         } catch (e) { showToast('Error: ' + e.message, 'error'); }
-    };
+    });
 
     window.deleteHouse = async (houseId) => {
         if (!confirm(`Delete house "${houseId}" and move to trash?`)) return;
@@ -1189,6 +1231,10 @@
         const d = document.createElement('div');
         d.textContent = s;
         return d.innerHTML;
+    }
+
+    function escAttr(s) {
+        return escHtml(String(s == null ? '' : s)).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

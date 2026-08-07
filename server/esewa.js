@@ -21,6 +21,11 @@ export const ESEWA_GATEWAY = MODE === 'live'
 export const ESEWA_SCD = (process.env.ESEWA_SCD || 'EPAYTEST').trim();
 export const ESEWA_SECRET = (process.env.ESEWA_SECRET || '8gBm/:&EnhH.1/q').trim();
 
+// Never silently sign live payments with the public sandbox secret.
+if (MODE === 'live' && (!process.env.ESEWA_SECRET || !process.env.ESEWA_SCD)) {
+    throw new Error('ESEWA_MODE=live requires ESEWA_SECRET and ESEWA_SCD to be set. Refusing to start with sandbox credentials.');
+}
+
 // ─── Tiered per-tenant pricing (NPR) — must mirror the landing page ───
 // [minTenants, ratePerTenantPerMonth]
 const TIERS = {

@@ -214,18 +214,18 @@
 
   // ─── App update check (installed APK / EXE only) ──────────────
   var APP_VERSION_KEY = 'sajiloAppVersion';
+  var APP_MODE_KEY = 'sajiloIsApp';
 
   function isAppMode() {
     try {
       if (document.documentElement.classList.contains('app-mode')) return true;
     } catch (e) {}
+    try {
+      if (localStorage.getItem(APP_MODE_KEY) === '1') return true;
+    } catch (e) {}
     var p = null;
     try { p = new URLSearchParams(location.search); } catch (e) { return false; }
-    if (p && p.get('view') === 'app') {
-      try { document.documentElement.classList.add('app-mode'); } catch (e) {}
-      return true;
-    }
-    return !!getAppVersion();
+    return !!(p && p.get('view') === 'app');
   }
 
   function getAppVersion() {
@@ -268,9 +268,16 @@
         '<h3>Update available</h3>' +
         '<p>' + (v.message || 'A new version of the SajiloRent app is ready.') + '</p>' +
         '<a href="' + primary + '" rel="noopener">' + primaryLabel + '</a>' +
-        '<a class="u-sec" href="' + (v.web || '/') + '" rel="noopener">Open in browser</a>' +
+        (v.web ? '<a class="u-sec" href="' + v.web + '" rel="noopener">Open in browser</a>' : '') +
         (force ? '' : '<button type="button" data-act="later">Later</button>');
       ov.appendChild(card);
+      var webLink = card.querySelector('a.u-sec');
+      if (webLink) {
+        webLink.addEventListener('click', function () {
+          try { localStorage.removeItem(APP_MODE_KEY); } catch (e) {}
+          try { document.documentElement.classList.remove('app-mode'); } catch (e) {}
+        });
+      }
       var btn = card.querySelector('button');
       if (btn) btn.addEventListener('click', function () { if (ov.parentNode) ov.parentNode.removeChild(ov); });
       document.body.appendChild(ov);

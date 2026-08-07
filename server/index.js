@@ -64,7 +64,7 @@ app.get('/api/subscription/esewa/success', async (req, res) => {
             return res.redirect('/payment-result.html?status=failed');
         }
 
-        const refId = cb.transaction_code || st.ref_id || null;
+        const refId = (cb && cb.transaction_code) || st.ref_id || null;
         p.status = 'paid';
         p.refId = refId;
         p.verifiedAt = new Date().toISOString();
@@ -280,6 +280,7 @@ app.post('/api/houses', async (req, res) => {
             owner_id: finalOwnerId,
             created_by: userId,
             created_at: new Date().toISOString(),
+            address: address || '',
             deleted: false,
             deleted_at: null
         };
@@ -300,11 +301,11 @@ app.put('/api/houses/:id', async (req, res) => {
         if (houseId === 'M_house' && !(await canAccessMHouse(user))) {
             return res.status(403).json({ error: 'You do not have permission to manage M_house' });
         }
-        if (!['admin', 'superadmin'].includes(userRole)) {
-            return res.status(403).json({ error: 'Admin or SuperAdmin access required' });
-        }
         if (!(await checkOwnership(houseId, req.user))) {
             return res.status(403).json({ error: 'You do not have access to this house' });
+        }
+        if (!['admin', 'superadmin'].includes(userRole) && userRole !== 'owner') {
+            return res.status(403).json({ error: 'Admin or SuperAdmin access required' });
         }
         const { name, address, owner_id } = req.body;
         const ownership = await getOwnership();
@@ -340,11 +341,11 @@ app.post('/api/houses/:id/delete', async (req, res) => {
         if (houseId === 'M_house' && !(await canAccessMHouse(user))) {
             return res.status(403).json({ error: 'You do not have permission to manage M_house' });
         }
-        if (!['admin', 'superadmin'].includes(userRole)) {
-            return res.status(403).json({ error: 'Only admin can delete houses' });
-        }
         if (!(await checkOwnership(houseId, req.user))) {
             return res.status(403).json({ error: 'You do not have access to this house' });
+        }
+        if (!['admin', 'superadmin'].includes(userRole) && userRole !== 'owner') {
+            return res.status(403).json({ error: 'Only owner/admin can delete houses' });
         }
         const ownership = await getOwnership();
         if (!ownership[houseId]) {
@@ -537,9 +538,14 @@ app.patch('/api/admin/subscription/:userId', async (req, res) => {
                 break;
             case 'extend':
                 if (!duration) return res.status(400).json({ error: 'Duration in days required for extend' });
+                const days = parseInt(duration, 10);
+                if (!Number.isInteger(days) || days <= 0 || days > 3650) {
+                    return res.status(400).json({ error: 'Invalid duration; must be a whole number of days (1 – 3650)' });
+                }
                 const currentEnd = user.trial_end ? new Date(user.trial_end) : new Date();
+                if (isNaN(currentEnd.getTime())) return res.status(400).json({ error: 'User trial_end date is invalid' });
                 const newEnd = new Date(currentEnd);
-                newEnd.setDate(newEnd.getDate() + parseInt(duration));
+                newEnd.setDate(newEnd.getDate() + days);
                 user.trial_end = newEnd.toISOString();
                 user.subscription_status = 'active';
                 break;
@@ -613,15 +619,18 @@ app.post('/api/tenants', async (req, res) => {
         }
         const { name, rent_amount, last_reading, tenant_username, tenant_password, tenant_fullName, tenant_phone, tenant_email, tenant_address } = req.body;
         if (!name || rent_amount == null) return res.status(400).json({ error: 'Name and rent required' });
+        const cPhone = tenant_phone !== undefined ? tenant_phone : (req.body.phone !== undefined ? req.body.phone : '');
+        const cEmail = tenant_email !== undefined ? tenant_email : (req.body.email !== undefined ? req.body.email : '');
+        const cAddress = tenant_address !== undefined ? tenant_address : (req.body.address !== undefined ? req.body.address : '');
         const tenants = await readTenants(houseId);
         let tenant_user_id = null;
         if (tenant_username && tenant_password) {
             try {
                 const newUser = await createUser(tenant_username, tenant_password, 'tenant', {
                     fullName: tenant_fullName || name,
-                    phone: tenant_phone || '',
-                    email: tenant_email || '',
-                    address: tenant_address || ''
+                    phone: cPhone,
+                    email: cEmail,
+                    address: cAddress
                 });
                 tenant_user_id = newUser.id;
                 console.log(`Tenant user "${tenant_username}" created with ID ${newUser.id}`);
@@ -634,9 +643,9 @@ app.post('/api/tenants', async (req, res) => {
             name,
             rent_amount: Number(rent_amount),
             last_reading: Number(last_reading || 0),
-            phone: tenant_phone || '',
-            email: tenant_email || '',
-            address: tenant_address || '',
+            phone: cPhone,
+            email: cEmail,
+            address: cAddress,
             tenant_user_id: tenant_user_id,
             balance: 0,
             deleted: false,
@@ -700,6 +709,31 @@ app.post('/api/tenants/:id/delete', async (req, res) => {
         const idx = tenants.findIndex(t => t.id === tenantId);
         if (idx === -1) return res.status(404).json({ error: 'Tenant not found' });
         if (tenants[idx].deleted) return res.status(400).json({ error: 'Already deleted' });
+        const tenant = tenants[idx];
+
+        const permanent = String(req.query.permanent || req.body.permanent || '') === '1';
+        if (permanent) {
+            const linkedUser = tenant.tenant_user_id;
+            tenants.splice(idx, 1);
+            await writeTenants(houseId, tenants);
+            // Deactivate the linked tenant login account so it can no longer sign in.
+            if (linkedUser) {
+                try {
+                    const users = await getUsers(false);
+                    const lu = users.find(x => String(x.id) === String(linkedUser));
+                    if (lu) {
+                        lu.deleted = true;
+                        lu.deleted_at = new Date().toISOString();
+                        await saveUsers(users);
+                    }
+                } catch (err) {
+                    console.error('[tenant permanent delete] user cleanup:', err.message || err);
+                }
+            }
+            console.log(`Tenant "${tenant.name}" permanently deleted from ${houseId}`);
+            return res.json({ success: true, permanent: true });
+        }
+
         tenants[idx].deleted = true;
         tenants[idx].deleted_at = new Date().toISOString();
         await writeTenants(houseId, tenants);
@@ -723,29 +757,39 @@ app.post('/api/calculate', async (req, res) => {
         if (!hasAccess) return res.status(403).json({ error: 'Access denied' });
         const { id, curr, water, waste, due, ded, month, dedReason, note } = req.body;
         if (!id || curr == null) return res.status(400).json({ error: 'Tenant ID and current reading required' });
+        const num = v => { if (v === null || v === undefined || v === '') return 0; const n = Number(v); return Number.isFinite(n) ? n : NaN; };
+        const cNum = num(curr), wNum = num(water), waNum = num(waste), duNum = num(due), deNum = num(ded);
+        if (!Number.isFinite(cNum) || !Number.isFinite(wNum) || !Number.isFinite(waNum) ||
+            !Number.isFinite(duNum) || !Number.isFinite(deNum)) {
+            return res.status(400).json({ error: 'All readings must be valid numbers' });
+        }
+        if (cNum < 0 || wNum < 0 || waNum < 0 || duNum < 0 || deNum < 0) {
+            return res.status(400).json({ error: 'Readings cannot be negative' });
+        }
         let tenants = await readTenants(houseId);
         const tenant = tenants.find(t => t.id == id);
         if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
         if (tenant.deleted) return res.status(400).json({ error: 'Cannot generate bill for deleted tenant' });
-        const prev = tenant.last_reading || 0;
-        const units = Number(curr) - Number(prev);
+        const rentNum = Number(tenant.rent_amount);
+        if (!Number.isFinite(rentNum)) return res.status(400).json({ error: 'Tenant rent amount is invalid' });
+        const prev = Number(tenant.last_reading) || 0;
+        const units = cNum - prev;
         if (units < 0) return res.status(400).json({ error: 'Current reading cannot be less than previous' });
         const electricity = units * RATE;
-        const total = electricity + Number(tenant.rent_amount) + Number(water || 0) + 
-                      Number(waste || 0) + Number(due || 0) - Number(ded || 0);
+        const total = electricity + rentNum + wNum + waNum + duNum - deNum;
         const bill = {
             id: Date.now(),
             name: tenant.name,
             month: month || new Date().toLocaleString('default', { month: 'long', year: 'numeric' }),
             prev,
-            curr: Number(curr),
+            curr: cNum,
             units,
             electricity,
             rent: tenant.rent_amount,
-            water: Number(water || 0),
-            waste: Number(waste || 0),
-            due: Number(due || 0),
-            ded: Number(ded || 0),
+            water: wNum,
+            waste: waNum,
+            due: duNum,
+            ded: deNum,
             dedReason: dedReason || '',
             note: note || '',
             total,
@@ -816,7 +860,10 @@ app.patch('/api/bills/pay', async (req, res) => {
         }
 
         tenant.balance = (tenant.balance || 0) - paidAmount;
-        bill.paid_status = true;
+        const coversTotal = paidAmount >= (bill.total || 0);
+        if (coversTotal) {
+            bill.paid_status = true;
+        }
         bill.payment_type = paymentType;
         bill.payment_amount = paidAmount;
         bill.payment_reason = reason || '';
@@ -842,10 +889,12 @@ app.delete('/api/tenants/:id/history/:index', async (req, res) => {
         const hasAccess = await checkOwnership(houseId, req.user);
         if (!hasAccess) return res.status(403).json({ error: 'Access denied' });
         const id = parseInt(req.params.id);
-        const idx = parseInt(req.params.index);
+        const idx = Number(req.params.index);
         let tenants = await readTenants(houseId);
         const t = tenants.find(t => t.id === id);
-        if (!t || !t.history || idx >= t.history.length) return res.status(404).json({ error: 'History entry not found' });
+        if (!t || !t.history || !Number.isInteger(idx) || idx < 0 || idx >= t.history.length) {
+            return res.status(404).json({ error: 'History entry not found' });
+        }
         const bill = t.history[idx];
         const billTotal = bill.total || 0;
         const paymentAmount = bill.paid_status ? (bill.payment_amount || 0) : 0;
@@ -1358,7 +1407,7 @@ app.get('/logo.svg', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'assets', 'logo.svg'));
 });
 app.get('/assets/:file', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'public', 'assets', req.params.file));
+    res.sendFile(path.join(__dirname, '..', 'public', 'assets', path.basename(req.params.file)));
 });
 app.get('/apple-touch-icon.png', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'assets', 'icon-192.png'));
