@@ -160,7 +160,7 @@
     .modal .form-actions { display:flex; gap:10px; margin-top:20px; justify-content:flex-end; }
 
     /* ─── TOAST ─── */
-    .toast { position:fixed; bottom:24px; right:24px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px 24px; box-shadow:var(--shadow); z-index:2000; transform:translateY(120px); opacity:0; transition:all 0.4s ease; max-width:400px; }
+    .toast { position:fixed; bottom:24px; right:24px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px 24px; box-shadow:var(--shadow); z-index:2000; transform:translateY(120px); opacity:0; transition:transform 0.4s ease, opacity 0.4s ease; max-width:400px; }
     .toast.show { transform:translateY(0); opacity:1; }
     .toast.success { border-left:4px solid var(--success); }
     .toast.error { border-left:4px solid var(--danger); }
@@ -497,7 +497,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3 id="userModalTitle">Create Owner</h3>
-      <span class="modal-close" onclick="closeModal('userModal')">×</span>
+      <button type="button" class="modal-close" aria-label="Close dialog" onclick="closeModal('userModal')">×</button>
     </div>
     <form id="userForm">
       <input type="hidden" id="editUserId">
@@ -523,7 +523,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Manage Subscription</h3>
-      <span class="modal-close" onclick="closeModal('subscriptionModal')">×</span>
+      <button type="button" class="modal-close" aria-label="Close dialog" onclick="closeModal('subscriptionModal')">×</button>
     </div>
     <form id="subscriptionForm">
       <input type="hidden" id="subUserId">
@@ -554,7 +554,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>🔐 Confirm Password</h3>
-      <span class="modal-close" onclick="closeModal('passwordModal')">×</span>
+      <button type="button" class="modal-close" aria-label="Close dialog" onclick="closeModal('passwordModal')">×</button>
     </div>
     <form id="passwordForm">
       <div class="form-group">
@@ -574,7 +574,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>✏️ Edit Notice</h3>
-      <span class="modal-close" onclick="closeModal('editNoticeModal')">×</span>
+      <button type="button" class="modal-close" aria-label="Close dialog" onclick="closeModal('editNoticeModal')">×</button>
     </div>
     <form id="editNoticeForm">
       <input type="hidden" id="editNoticeId">

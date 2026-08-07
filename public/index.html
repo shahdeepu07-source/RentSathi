@@ -144,7 +144,7 @@
     .modal .form-group input, .modal .form-group select, .modal .form-group textarea { width:100%; padding:10px 12px; background:#0f172a; border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:0.9rem; }
     .modal .form-actions { display:flex; gap:10px; margin-top:16px; justify-content:flex-end; }
 
-    .toast { position:fixed; bottom:24px; right:24px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px 24px; box-shadow:var(--shadow); z-index:2000; transform:translateY(120px); opacity:0; transition:all 0.4s ease; max-width:400px; }
+    .toast { position:fixed; bottom:24px; right:24px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px 24px; box-shadow:var(--shadow); z-index:2000; transform:translateY(120px); opacity:0; transition:transform 0.4s ease, opacity 0.4s ease; max-width:400px; }
     .toast.show { transform:translateY(0); opacity:1; }
     .toast.success { border-left:4px solid var(--success); }
     .toast.error { border-left:4px solid var(--danger); }
@@ -848,6 +848,7 @@
     <div class="section-card">
       <h3 style="margin-bottom:8px;">🙋 Need help?</h3>
       <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:16px;">Send us a message about billing, tenants, houses, your account or any app/website problem. We usually reply within 24 hours.</p>
+      <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:16px;">New here? Watch the <a href="/downloads/owner-guide.mp4" download="owner-guide.mp4" style="color:var(--accent);font-weight:600;">owner guide video ▶</a> or read the <a href="/downloads/owner-guide.pdf" download="owner-guide.pdf" style="color:var(--accent);font-weight:600;">owner guide PDF</a>.</p>
       <form id="supportForm" onsubmit="event.preventDefault(); submitAppSupport();">
         <div class="form-grid" style="grid-template-columns:1fr 1fr;">
           <div class="form-group"><label>Your name *</label><input type="text" id="sup-name" required maxlength="80"></div>
@@ -896,7 +897,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Bill Preview</h3>
-      <span class="modal-close" onclick="closeBillModal()">×</span>
+      <button type="button" class="modal-close" aria-label="Close dialog" onclick="closeBillModal()">×</button>
     </div>
     <div id="printArea" class="pro-bill"></div>
     <div style="margin-top:16px;display:flex;gap:10px;">
@@ -912,7 +913,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>💰 Mark Payment</h3>
-      <span class="modal-close" onclick="closePaymentModal()">×</span>
+      <button type="button" class="modal-close" aria-label="Close dialog" onclick="closePaymentModal()">×</button>
     </div>
     <form id="paymentForm">
       <div class="form-group">
@@ -944,7 +945,7 @@
   <div class="modal" style="max-width:400px;">
     <div class="modal-header">
       <h3>🔐 Confirm Password</h3>
-      <span class="modal-close" onclick="closePasswordModal()">×</span>
+      <button type="button" class="modal-close" aria-label="Close dialog" onclick="closePasswordModal()">×</button>
     </div>
     <div class="form-group">
       <label>Enter your password</label>
@@ -962,7 +963,7 @@
   <div class="modal" style="max-width:400px;">
     <div class="modal-header">
       <h3>💰 Edit Tenant Balance</h3>
-      <span class="modal-close" onclick="closeBalanceModal()">×</span>
+      <button type="button" class="modal-close" aria-label="Close dialog" onclick="closeBalanceModal()">×</button>
     </div>
     <form id="balanceForm">
       <div class="form-group">
@@ -983,7 +984,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>✏️ Edit Notice</h3>
-      <span class="modal-close" onclick="closeModal('editNoticeModal')">×</span>
+      <button type="button" class="modal-close" aria-label="Close dialog" onclick="closeModal('editNoticeModal')">×</button>
     </div>
     <form id="editNoticeForm">
       <input type="hidden" id="editNoticeId">

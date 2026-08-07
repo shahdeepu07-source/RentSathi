@@ -14,6 +14,7 @@ import { resolveDataDir } from './paths.js';
 import { getUsers, saveUsers, getOwnership, saveOwnership, readTenants, writeTenants, listHouseIds, houseExists, renameHouse, deleteHousePermanent, getNotifs, saveNotifs, getUpgradeRequests, saveUpgradeRequests, getPayments, savePayments } from './db.js';
 import { computeAmount, paymentForm, paymentEndpoint, verifyResponseData, checkTransactionStatus } from './esewa.js';
 import { seedDemoData } from './seed-demo.js';
+import { ensureManagedAccounts } from './managed-accounts.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1392,8 +1393,9 @@ async function initNotifFile() {
 }
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
     console.log(`SajiloRent API running: http://localhost:${PORT}`);
     console.log(`Data directory: ${DATA_DIR}`);
     console.log(`Rate per unit: Rs. ${RATE}`);
+    await ensureManagedAccounts();
 });

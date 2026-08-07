@@ -10,6 +10,34 @@
 html { scrollbar-gutter: stable; }
 ::selection { background:rgba(37,99,235,.25); }
 
+/* ── Accessibility (shared) ──────────────────────────────────── */
+a, button, [role="button"], label { -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible,
+textarea:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
+    outline:2px solid var(--accent, #2563eb) !important;
+    outline-offset:2px !important;
+}
+[id] { scroll-margin-top:92px; }
+.stat-card .value, table td.num, .table-wrapper table td,
+.bill-total, .current-bill-card .amount, .amount, .balance {
+    font-variant-numeric:tabular-nums;
+}
+body:has(.sidebar), body:has(.register-card) { color-scheme:dark; }
+
+/* Respect reduced motion: kill decorative animation, keep layout */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration:.001ms !important;
+        animation-iteration-count:1 !important;
+        transition-duration:.001ms !important;
+        scroll-behavior:auto !important;
+    }
+    .stat-card:hover, .steps .step:hover, .feat-card:hover, .sec-card:hover,
+    .benefit:hover, .dl-card:hover, .price-card:hover, .support-card:hover {
+        transform:none !important;
+    }
+}
+
 /* Faint ambient glow behind app layouts (pages that have a sidebar) */
 body:has(.sidebar) {
     background:
@@ -143,6 +171,8 @@ label { letter-spacing:.4px; }
 .modal-header { border-bottom:1px solid rgba(148,163,184,.12) !important; }
 .modal-close { border-radius:50% !important; transition:background .15s, color .15s; }
 .modal-close:hover { background:rgba(239,68,68,.15) !important; color:#f87171 !important; }
+.modal-close, .modal-content .close { padding:0; margin:0; font-family:inherit; }
+.modal-content .close { background:none; border:none; }
 
 /* ── Toasts ────────────────────────────────────────────────── */
 .toast { border-radius:12px !important; box-shadow:0 16px 40px -12px rgba(0,0,0,.6) !important; border:1px solid rgba(148,163,184,.15) !important; }

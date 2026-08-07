@@ -212,11 +212,77 @@
 
   window.SajiloPush = { init: init, enable: enable };
 
+  // ─── App update check (installed APK / EXE only) ──────────────
+  var APP_VERSION_KEY = 'sajiloAppVersion';
+
+  function isAppMode() {
+    try {
+      if (document.documentElement.classList.contains('app-mode')) return true;
+    } catch (e) {}
+    var p = null;
+    try { p = new URLSearchParams(location.search); } catch (e) { return false; }
+    if (p && p.get('view') === 'app') {
+      try { document.documentElement.classList.add('app-mode'); } catch (e) {}
+      return true;
+    }
+    return !!getAppVersion();
+  }
+
+  function getAppVersion() {
+    try {
+      var p = new URLSearchParams(location.search);
+      var v = p.get('build');
+      if (v) { localStorage.setItem(APP_VERSION_KEY, v); return v; }
+      return localStorage.getItem(APP_VERSION_KEY) || '1.0';
+    } catch (e) { return '1.0'; }
+  }
+
+  function cmpVersion(a, b) {
+    var pa = String(a).split('.').map(Number), pb = String(b).split('.').map(Number);
+    for (var i = 0; i < 3; i++) {
+      var x = pa[i] || 0, y = pb[i] || 0;
+      if (x !== y) return x > y ? 1 : -1;
+    }
+    return 0;
+  }
+
+  function checkForUpdate() {
+    if (!isAppMode()) return;
+    var APP_VERSION = getAppVersion();
+    fetch('/app-version.json', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (v) {
+      if (!v || !v.version || cmpVersion(v.version, APP_VERSION) <= 0) return;
+      if (document.getElementById('app-update-overlay')) return;
+      var force = v.minimum ? cmpVersion(v.minimum, APP_VERSION) > 0 : false;
+      var isAndroid = /Android/i.test(navigator.userAgent);
+      var primary = isAndroid && v.apk ? v.apk : (v.exe || v.apk || '/');
+      var primaryLabel = isAndroid && v.apk ? 'Download latest APK' : 'Download latest Windows app';
+      var style = document.createElement('style');
+      style.textContent = '#app-update-overlay{position:fixed;inset:0;z-index:100000;background:rgba(5,10,25,.88);display:flex;align-items:center;justify-content:center;padding:20px}#app-update-box{background:#111827;color:#e5e7eb;border:1px solid #334155;border-radius:16px;max-width:380px;width:100%;padding:26px 24px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-align:center;font-family:Inter,system-ui,sans-serif}#app-update-box .u-ico{font-size:2.2rem;margin-bottom:8px}#app-update-box h3{margin:0 0 8px;font-size:1.2rem}#app-update-box p{color:#94a3b8;font-size:.85rem;line-height:1.55;margin:0 0 18px}#app-update-box a{display:block;padding:13px;border-radius:9px;background:#2563eb;color:#fff;text-decoration:none;font-weight:700;font-size:.92rem;margin-bottom:10px}#app-update-box a.u-sec{background:rgba(37,99,235,.12);border:1px solid rgba(37,99,235,.45);color:#fff}#app-update-box button{width:100%;padding:11px;border-radius:9px;border:1px solid #334155;background:transparent;color:#9ca3af;font-size:.85rem;cursor:pointer;margin-top:2px}';
+      document.head.appendChild(style);
+      var ov = document.createElement('div');
+      ov.id = 'app-update-overlay';
+      var card = document.createElement('div');
+      card.id = 'app-update-box';
+      card.innerHTML =
+        '<div class="u-ico">\u2b06\ufe0f</div>' +
+        '<h3>Update available</h3>' +
+        '<p>' + (v.message || 'A new version of the SajiloRent app is ready.') + '</p>' +
+        '<a href="' + primary + '" rel="noopener">' + primaryLabel + '</a>' +
+        '<a class="u-sec" href="' + (v.web || '/') + '" rel="noopener">Open in browser</a>' +
+        (force ? '' : '<button type="button" data-act="later">Later</button>');
+      ov.appendChild(card);
+      var btn = card.querySelector('button');
+      if (btn) btn.addEventListener('click', function () { if (ov.parentNode) ov.parentNode.removeChild(ov); });
+      document.body.appendChild(ov);
+    }).catch(function () {});
+  }
+
   function boot() {
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', init);
+      document.addEventListener('DOMContentLoaded', function () { init(); checkForUpdate(); });
     } else {
       init();
+      checkForUpdate();
     }
   }
   boot();

@@ -403,6 +403,7 @@
     <div class="section-card">
       <h3 style="margin-bottom:8px;">🙋 Need help?</h3>
       <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:16px;">Questions about your bill, payment, house or the app itself? Send us a message — we usually reply within 24 hours.</p>
+      <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:16px;">New here? Watch the <a href="/downloads/tenant-guide.mp4" download="tenant-guide.mp4" style="color:var(--accent);font-weight:600;">tenant guide video ▶</a> or read the <a href="/downloads/tenant-guide.pdf" download="tenant-guide.pdf" style="color:var(--accent);font-weight:600;">tenant guide PDF</a>.</p>
       <form onsubmit="event.preventDefault(); submitTenantSupport();">
         <div class="form-grid" style="grid-template-columns:1fr 1fr;">
           <div class="form-group"><label>Your name *</label><input type="text" id="sup-name" required maxlength="80"></div>
@@ -444,7 +445,7 @@
   <div class="modal-content">
     <div class="modal-header">
       <h3>Bill Preview</h3>
-      <span class="close" onclick="closeBillModal()">×</span>
+      <button type="button" class="close" aria-label="Close dialog" onclick="closeBillModal()">×</button>
     </div>
     <div id="printArea" class="pro-bill"></div>
     <div style="margin-top:16px; display:flex; gap:10px;">
