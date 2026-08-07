@@ -108,6 +108,10 @@
         .login-card button[type="submit"]:hover { background:var(--accent-dark); }
         .login-card .error { background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.3); color:#dc2626; padding:10px 14px; border-radius:9px; margin-bottom:15px; display:none; font-size:.86rem; text-align:center; }
         .login-card .footer-text { text-align:center; color:var(--muted); font-size:.82rem; margin-top:16px; }
+        .remember-row { display:none; align-items:center; gap:8px; margin:-4px 0 14px; font-size:.85rem; color:var(--text); cursor:pointer; }
+        html.app-mode .remember-row { display:flex; }
+        .remember-row input[type="checkbox"] { width:auto; accent-color:var(--accent); cursor:pointer; }
+        .remember-row label { color:var(--text); cursor:pointer; margin:0; font-size:.85rem; text-transform:none; letter-spacing:normal; font-weight:500; }
         .login-card .footer-text a { color:var(--accent); font-weight:600; }
         .login-card .footer-text a:hover { text-decoration:underline; }
         .spinner { display:inline-block; width:18px; height:18px; border:2px solid rgba(255,255,255,.35); border-radius:50%; border-top-color:#fff; animation:spin .6s linear infinite; vertical-align:-3px; margin-right:8px; }
@@ -427,6 +431,10 @@
                             <label>Password</label>
                             <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password">
                         </div>
+                        <label class="remember-row" for="rememberMe">
+                            <input type="checkbox" id="rememberMe">
+                            Remember my username
+                        </label>
                         <button type="submit" id="loginBtn">
                             <span class="btn-text">Sign In</span>
                         </button>
@@ -945,6 +953,21 @@
     const btn = document.getElementById('loginBtn');
     const roleBtns = document.querySelectorAll('.role-selector button');
     let selectedRole = 'owner';
+    const isApp = document.documentElement.classList.contains('app-mode');
+    const usernameField = document.getElementById('username');
+    const rememberBox = document.getElementById('rememberMe');
+
+    function prefillUsername() {
+        if (!isApp) return;
+        const saved = localStorage.getItem('sajiloRememberUser_' + selectedRole);
+        if (saved) {
+            usernameField.value = saved;
+            rememberBox.checked = true;
+        } else {
+            usernameField.value = '';
+            rememberBox.checked = false;
+        }
+    }
 
     roleBtns.forEach(btn => {
         btn.addEventListener('click', function() {
@@ -955,8 +978,11 @@
             field.placeholder = selectedRole === 'owner' ? 'Enter your owner username' :
                                  selectedRole === 'tenant' ? 'Enter your tenant username' :
                                  'Enter your admin username';
+            prefillUsername();
         });
     });
+
+    prefillUsername();
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -988,6 +1014,10 @@
             }
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
+            if (isApp) {
+                if (rememberBox.checked) localStorage.setItem('sajiloRememberUser_' + selectedRole, username);
+                else localStorage.removeItem('sajiloRememberUser_' + selectedRole);
+            }
             let redirect = '/index.html';
             if (data.user.role === 'admin') redirect = '/admin.html';
             else if (data.user.role === 'superadmin') redirect = '/superadmin.html';

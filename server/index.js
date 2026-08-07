@@ -151,7 +151,7 @@ async function requireSubscription(req, res) {
 // Houses the current user may access.
 //  - superadmin  → all active houses
 //  - admin       → all active houses; M_house is exclusive to the `admin`
-//                  account (admin/5545)
+//                  account (admin/5545) and the owner who owns it
 //  - owner       → houses they own
 async function accessibleHouses(user, includeDeleted = false) {
     const ownership = await getOwnership();
@@ -172,7 +172,17 @@ async function accessibleHouses(user, includeDeleted = false) {
 async function canAccessMHouse(user) {
     if (!user) return false;
     if (user.role === 'superadmin') return true;
-    return user.role === 'admin' && user.username === 'admin';
+    if (user.role === 'admin' && user.username === 'admin') return true;
+    // The owner who owns M_house may use it as their own house.
+    if (user.role === 'owner') {
+        try {
+            const ownership = await getOwnership();
+            return ownership['M_house'] && !ownership['M_house'].deleted && ownership['M_house'].owner_id == user.userId;
+        } catch {
+            return false;
+        }
+    }
+    return false;
 }
 
 async function checkOwnership(houseId, user) {
@@ -516,6 +526,14 @@ app.patch('/api/admin/subscription/:userId', async (req, res) => {
                 newEnd.setDate(newEnd.getDate() + parseInt(duration));
                 user.trial_end = newEnd.toISOString();
                 user.subscription_status = 'active';
+                break;
+            case 'lifetime':
+                user.subscription_status = 'paid';
+                user.subscription_plan = 'self';
+                user.billing_cycle = '∞';
+                user.subscription_tenants = null;
+                user.trial_end = null;
+                user.subscription_approved_at = new Date().toISOString();
                 break;
             default:
                 return res.status(400).json({ error: 'Invalid action' });
@@ -1009,7 +1027,7 @@ app.get('/api/admin/trash/tenants', async (req, res) => {
         const houses = await listHouseIds();
         let deletedTenants = [];
         for (const house of houses) {
-            if (house === 'M_house' && user.role === 'admin' && user.username !== 'admin') continue;
+            if (house === 'M_house' && user.role !== 'superadmin' && !(await canAccessMHouse(user))) continue;
             const tenants = await readTenants(house);
             tenants.filter(t => t.deleted === true).forEach(t => {
                 deletedTenants.push({ ...t, houseName: house });
