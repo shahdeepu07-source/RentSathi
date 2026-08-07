@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "528686216128",
+    "project_id": "sajilorent-3f172",
+    "storage_bucket": "sajilorent-3f172.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:528686216128:android:aa80de9a397ce0af4ece25",
+        "android_client_info": {
+          "package_name": "com.sajilorent.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBXZM3lFRrTyc2W1WxAc-WyyUx22qe3ofQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

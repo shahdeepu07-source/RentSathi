@@ -61,23 +61,40 @@
       return Promise.resolve(false);
     }
     var push = window.Capacitor.Plugins.PushNotifications;
+    push.addListener('registration', function (data) {
+      window.__sajiloFcmToken = data.value;
+      window.__sajiloDoAndroidRegister(token, user);
+    });
+    push.addListener('registrationError', function () {});
     return push.requestPermissions().then(function () {
       return push.register().then(function () {
         if (window.__sajiloFcmToken) {
-          return fetch('/api/push/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-            body: JSON.stringify({
-              platform: 'android',
-              subscription: { token: window.__sajiloFcmToken },
-              deviceName: 'Android app'
-            })
-          }).then(function (r) { return r.ok; });
+          return window.__sajiloDoAndroidRegister(token, user);
         }
         return false;
       });
     }).catch(function () { return false; });
   }
+
+  function buildAndroidPayload() {
+    return {
+      platform: 'android',
+      subscription: { token: window.__sajiloFcmToken },
+      deviceName: 'Android app'
+    };
+  }
+
+  window.__sajiloDoAndroidRegister = function (token, user) {
+    if (!token || !window.__sajiloFcmToken) return Promise.resolve(false);
+    return fetch('/api/push/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify(buildAndroidPayload())
+    }).then(function (r) {
+      if (r.ok && user) localStorage.setItem(KEY, JSON.stringify({ userId: user.id, platform: 'android' }));
+      return r.ok;
+    }).catch(function () { return false; });
+  };
 
   window.__sajiloSetFcmToken = function (tokenValue) {
     window.__sajiloFcmToken = tokenValue;

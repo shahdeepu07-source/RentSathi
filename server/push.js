@@ -5,6 +5,7 @@ import { Router } from 'express';
 import webpush from 'web-push';
 import { getPushSubs, savePushSubs } from './db.js';
 import { resolveDataDir } from './paths.js';
+import { isFcmConfigured, sendFcmToToken } from './fcm.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -109,8 +110,20 @@ export async function sendToUser(userId, { title, body, url }) {
     for (const sub of subs) {
         try {
             if (sub.platform === 'android') {
-                // FCM tokens are handled by sendFcmToUser when Firebase is
-                // configured (added with the Android push milestone).
+                if (!(await isFcmConfigured())) {
+                    continue;
+                }
+                try {
+                    await sendFcmToToken(sub.subscription.token, { title, body, url: url || '/' });
+                    sent += 1;
+                    console.log(`[push] delivered to android device of user ${userId}${sub.deviceName ? ' (' + sub.deviceName + ')' : ''}`);
+                } catch (err) {
+                    if (err && (err.statusCode === 404 || err.statusCode === 410)) {
+                        pruned.push(sub.id);
+                    } else {
+                        console.error(`[push] FCM send failed (${sub.platform}):`, err.message || err);
+                    }
+                }
                 continue;
             }
             const payload = JSON.stringify({ title, body, url: url || '/' });
