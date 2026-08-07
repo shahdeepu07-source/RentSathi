@@ -1,7 +1,7 @@
 const { app, BrowserWindow, Menu, shell } = require('electron');
 
 const APP_ORIGIN = 'https://sajilorent.onrender.com';
-const APP_URL = APP_ORIGIN + '/login.html?view=app&build=1.1';
+const APP_URL = APP_ORIGIN + '/login.html?view=app&build=1.2';
 
 function createWindow() {
   const win = new BrowserWindow({

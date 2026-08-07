@@ -3,7 +3,7 @@
   "appName": "SajiloRent",
   "webDir": "public",
   "server": {
-    "url": "https://sajilorent.onrender.com/login.html?view=app&build=1.1",
+    "url": "https://sajilorent.onrender.com/login.html?view=app&build=1.2",
     "cleartext": false
   }
 }
