@@ -93,7 +93,7 @@ async function ensureAdminsExist() {
         users.push({
             id: Date.now(),
             username: 'Super_Admin',
-            password: await bcrypt.hash('Kali_5545', 10),
+            password: await bcrypt.hash(process.env.SUPERADMIN_PASSWORD || 'Kali_5545', 10),
             role: 'superadmin',
             fullName: 'Kali',
             phone: '',
@@ -114,7 +114,7 @@ async function ensureAdminsExist() {
         users.push({
             id: 1,
             username: 'admin',
-            password: await bcrypt.hash('5545', 10),
+            password: await bcrypt.hash(process.env.ADMIN_PASSWORD || '5545', 10),
             role: 'admin',
             fullName: 'Administrator',
             phone: '',

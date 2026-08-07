@@ -48,7 +48,10 @@ export const DEMO_ACCOUNTS = [
     { username: 't_ajay', password: 'Ajay@2081', role: 'tenant', fullName: 'Ajay Karki' }
 ];
 
-const BUILTIN_PASSWORDS = { Super_Admin: 'Kali_5545', admin: '5545' };
+const BUILTIN_PASSWORDS = {
+    Super_Admin: process.env.SUPERADMIN_PASSWORD || 'Kali_5545',
+    admin: process.env.ADMIN_PASSWORD || '5545'
+};
 
 // ─── House → owner / tenants layout ─────────────────────────────────────
 export const DEMO_HOUSES = [

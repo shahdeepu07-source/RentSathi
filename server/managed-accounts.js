@@ -8,11 +8,12 @@ import bcrypt from 'bcrypt';
 import { getUsers, saveUsers, getOwnership, saveOwnership } from './db.js';
 
 // Seema — real owner of M_house, lifetime subscription.
-// username 9818100062, password 5052 (set only at creation).
+// username 9818100062. Password is set via env (SEEMA_PASSWORD) with a
+// local-only default so the real credential is never committed to git.
 const MANAGED_ACCOUNTS = [
     {
         username: '9818100062',
-        password: '5052',
+        password: process.env.SEEMA_PASSWORD || '5052',
         role: 'owner',
         fullName: 'Seema Devi',
         phone: '9818100062',
