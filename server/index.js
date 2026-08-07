@@ -218,6 +218,21 @@ async function initOwnership() {
 await initOwnership();
 await initNotifFile();
 
+// Auto-seed demo/test data at boot if missing (idempotent). Keeps the
+// live demo accounts + houses available after every redeploy instead of
+// relying on a manual /api/admin/seed-demo call. Runs before app.listen
+// so it cannot race with ensureManagedAccounts() (both write user data).
+try {
+    const summary = await seedDemoData();
+    if (summary.created.users) {
+        console.log(`Demo data seeded at boot: ${summary.created.users} users, ${summary.created.houses} houses, ${summary.created.tenants} tenants`);
+    } else {
+        console.log('Demo data already present (boot seed skipped)');
+    }
+} catch (err) {
+    console.error('Boot demo seed failed (continuing):', err.message || err);
+}
+
 // ─── Houses ──────────────────────────────────────────────────
 app.get('/api/houses', async (req, res) => {
     try {
