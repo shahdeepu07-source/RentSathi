@@ -16,6 +16,9 @@ android/.idea/
 android/keystore/
 backups/
 desktop/node_modules/
+# Runtime data — never commit (app seeds builtins/demo at boot from code)
+data/
+!data/.gitkeep
 # Test-only plaintext store + reveal audit (never commit)
 data/demo-passwords.json
 data/reveal-audit.json
