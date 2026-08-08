@@ -1,7 +1,7 @@
 {
-  "version": "1.2",
+  "version": "1.3",
   "minimum": "1.1",
-  "message": "A new version of the SajiloRent app is available — it adds push notifications for new bills and notices, plus a monthly billing-day reminder. Please install the update to continue.",
+  "message": "A new version of the SajiloRent app is available — it adds the support inbox, faster billing fixes, and more. Please install the update to continue.",
   "apk": "/downloads/SajiloRent-v1.2.apk",
   "exe": "/downloads/SajiloRent-windows-v1.2.0.exe",
   "web": "https://sajilorent.onrender.com"

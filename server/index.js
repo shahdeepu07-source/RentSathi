@@ -9,7 +9,7 @@ import notificationRoutes from './notifications.js';
 import pushRoutes, { initPush, sendToUser } from './push.js';
 import { maybeFireBillingDayReminder } from './billing-day.js';
 import { verifyToken } from './middleware.js';
-import { createUser } from './auth.js';
+import { createUser, SUPPORT_FILE_PATH, readSupportRequests } from './auth.js';
 import { resolveDataDir } from './paths.js';
 import { getUsers, saveUsers, getOwnership, saveOwnership, readTenants, writeTenants, listHouseIds, houseExists, renameHouse, deleteHousePermanent, getNotifs, saveNotifs, getUpgradeRequests, saveUpgradeRequests, getPayments, savePayments } from './db.js';
 import { computeAmount, paymentForm, paymentEndpoint, verifyResponseData, checkTransactionStatus } from './esewa.js';
@@ -961,6 +961,37 @@ app.post('/api/admin/seed-demo', async (req, res) => {
     } catch (err) {
         console.error('Error seeding demo data:', err);
         res.status(500).json({ error: 'Seeding failed: ' + err.message });
+    }
+});
+
+// ─── Admin/SuperAdmin: support inbox ───────────────────────────
+import { promises as fsA } from 'fs';
+import pathA from 'path';
+app.get('/api/admin/support', async (req, res) => {
+    if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
+    try {
+        const all = await readSupportRequests();
+        res.json(all.slice().reverse());
+    } catch (err) {
+        console.error('Error fetching support requests:', err);
+        res.status(500).json({ error: 'Failed to load support requests' });
+    }
+});
+
+app.delete('/api/admin/support/:id', async (req, res) => {
+    if (!['admin', 'superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required' });
+    try {
+        const id = Number(req.params.id);
+        if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid request id' });
+        const all = await readSupportRequests();
+        const remaining = all.filter(r => r.id !== id);
+        if (remaining.length === all.length) return res.status(404).json({ error: 'Request not found' });
+        await fsA.mkdir(pathA.dirname(SUPPORT_FILE_PATH), { recursive: true }).catch(() => {});
+        await fsA.writeFile(SUPPORT_FILE_PATH, JSON.stringify(remaining, null, 2));
+        res.json({ success: true, id });
+    } catch (err) {
+        console.error('💥 Support delete error:', err);
+        res.status(500).json({ error: 'Failed to delete support request' });
     }
 });
 

@@ -597,6 +597,9 @@ async function readSupportRequests() {
     }
 }
 
+export const SUPPORT_FILE_PATH = SUPPORT_FILE;
+export { readSupportRequests };
+
 router.post('/support', async (req, res) => {
     try {
         const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown').split(',')[0].trim();
@@ -670,27 +673,6 @@ router.post('/support', async (req, res) => {
 // ──────────────────────────────────────────────────────────────
 // ADMIN / SUPERADMIN: List support inquiries
 // ──────────────────────────────────────────────────────────────
-router.get('/admin/support', async (req, res) => {
-    try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader) return res.status(401).json({ error: 'No token provided' });
-        const token = authHeader.split(' ')[1];
-        let decoded;
-        try {
-            decoded = jwt.verify(token, process.env.JWT_SECRET);
-        } catch {
-            return res.status(401).json({ error: 'Invalid token' });
-        }
-        if (!['admin', 'superadmin'].includes(decoded.role)) {
-            return res.status(403).json({ error: 'Admin or SuperAdmin access required' });
-        }
-        const all = await readSupportRequests();
-        res.json(all.slice().reverse());
-    } catch (err) {
-        console.error('💥 Support list error:', err);
-        res.status(500).json({ error: 'Failed to load support requests' });
-    }
-});
 
 // ──────────────────────────────────────────────────────────────
 // SUPERADMIN: Reveal stored (test-only) plaintext password

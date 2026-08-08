@@ -227,6 +227,7 @@
     <a data-tab="tab-houses"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>  <span>Houses</span></a>
     <a data-tab="tab-trash"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>  <span>Trash</span></a>
     <a data-tab="tab-notices"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l3 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M16 8a5 5 0 0 1 0 8"/></svg>  <span>Notices</span></a>
+    <a data-tab="tab-support"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>  <span>Support</span></a>
     <a data-tab="tab-revenue"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v12"/><path d="M16 14a4 4 0 0 1-4 4 4 4 0 0 1 0-8 4 4 0 0 0 0-8 4 4 0 0 1 4 4"/></svg>  <span>Revenue</span></a>
   </div>
   <div class="sidebar-footer">
@@ -535,6 +536,22 @@
     </div>
   </div>
 
+  <!-- ─── TAB: Support inbox ─── -->
+  <div class="tab-panel" id="tab-support">
+    <div class="main-header">
+      <div>
+        <h1>Support Inbox</h1>
+        <div class="sub">Requests sent from owners and visitors</div>
+      </div>
+      <button type="button" class="btn-outline" onclick="loadSupport()">Refresh</button>
+    </div>
+    <div class="section-card">
+      <div id="supportList">
+        <p class="text-muted" style="font-size:0.82rem;">Loading support requests…</p>
+      </div>
+    </div>
+  </div>
+
   <div style="height:40px;"></div>
 </div>
 
@@ -823,6 +840,7 @@
             deletedTenants = await api('GET', '/admin/trash/tenants');
             renderAll();
             loadUpgradeRequests();
+            loadSupport();
         } catch (e) { showToast('Failed to load data: ' + e.message, 'error'); }
     }
 
@@ -831,7 +849,60 @@
         renderHouses();
         renderStats();
         renderTrash();
+        renderSupport();
     }
+
+    // ═══════════════════════════════════════════════════════════
+    // SUPPORT INBOX
+    // ═══════════════════════════════════════════════════════════
+    let allSupport = [];
+
+    async function loadSupport() {
+        try {
+            allSupport = await api('GET', '/admin/support');
+            renderSupport();
+        } catch (e) { showToast('Failed to load support requests: ' + e.message, 'error'); }
+    }
+    window.loadSupport = loadSupport;
+
+    function renderSupport() {
+        const box = document.getElementById('supportList');
+        if (!box) return;
+        if (!allSupport.length) {
+            box.innerHTML = `<div class="empty-state" style="text-align:center;padding:36px 16px;"><div style="font-size:2rem;margin-bottom:8px;">📭</div><p class="text-muted" style="font-size:0.85rem;">No support requests yet. When an owner or visitor sends a message from the app's Support tab, it will appear here.</p></div>`;
+            return;
+        }
+        box.innerHTML = allSupport.map(r => {
+            const when = r.created_at ? new Date(r.created_at) : null;
+            const time = when && !isNaN(when) ? when.toLocaleString() : '';
+            const topic = r.topic ? escHtml(r.topic) : 'General question';
+            const badgeClass = r.topic === 'Houses / tenants' ? 'badge-warning' : 'badge-info';
+            return `<div style="border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px;background:rgba(255,255,255,0.02);">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0;">
+                        <strong>${escHtml(r.name)}</strong>
+                        <span class="badge ${badgeClass}">${topic}</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                        ${time ? `<span class="text-muted" style="font-size:0.72rem;">${escHtml(time)}</span>` : ''}
+                        <button type="button" class="btn-danger" style="padding:5px 12px;font-size:0.75rem;" onclick="deleteSupport(${r.id})">Delete</button>
+                    </div>
+                </div>
+                ${r.contact ? `<div class="text-muted" style="font-size:0.78rem;margin-top:6px;">📞 ${escHtml(r.contact)}</div>` : ''}
+                <div style="margin-top:8px;font-size:0.86rem;line-height:1.5;color:var(--text-2);white-space:pre-wrap;word-break:break-word;">${escHtml(r.message)}</div>
+            </div>`;
+        }).join('');
+    }
+
+    async function deleteSupport(id) {
+        if (!confirm('Delete this support request?')) return;
+        try {
+            await api('DELETE', `/admin/support/${id}`);
+            showToast('Support request deleted.');
+            loadSupport();
+        } catch (e) { showToast(e.message, 'error'); }
+    }
+    window.deleteSupport = deleteSupport;
 
     // ═══════════════════════════════════════════════════════════
     // UPGRADE REQUESTS
@@ -1686,6 +1757,7 @@
   <a data-tab="tab-trash"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span>Trash</span></a>
   <a data-tab="tab-notices"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l3 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M16 8a5 5 0 0 1 0 8"/></svg><span>Notices</span></a>
   <a data-tab="tab-revenue"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v12"/><path d="M16 14a4 4 0 0 1-4 4 4 4 0 0 1 0-8 4 4 0 0 0 0-8 4 4 0 0 1 4 4"/></svg><span>Revenue</span></a>
+  <a data-tab="tab-support"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Support</span></a>
 </nav>
 <script>
 if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => {}); }); }
