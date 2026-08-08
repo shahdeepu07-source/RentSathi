@@ -1,7 +1,7 @@
 {
-  "version": "1.3",
-  "minimum": "1.1",
-  "message": "A new version of the SajiloRent app is available — it adds the support inbox, faster billing fixes, and more. Please install the update to continue.",
+  "version": "1.2",
+  "minimum": "1.0",
+  "message": "SajiloRent app is up to date. All latest features (support inbox, faster billing) work automatically on the live site.",
   "apk": "/downloads/SajiloRent-v1.2.apk",
   "exe": "/downloads/SajiloRent-windows-v1.2.0.exe",
   "web": "https://sajilorent.onrender.com"
