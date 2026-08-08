@@ -403,7 +403,7 @@
     <div class="section-card">
       <h3 style="margin-bottom:8px;">🙋 Need help?</h3>
       <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:16px;">Questions about your bill, payment, house or the app itself? Send us a message — we usually reply within 24 hours.</p>
-      <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:16px;">New here? Watch the <a href="/downloads/tenant-guide.mp4" download="tenant-guide.mp4" style="color:var(--accent);font-weight:600;">tenant guide video ▶</a> or read the <a href="/downloads/tenant-guide.pdf" download="tenant-guide.pdf" style="color:var(--accent);font-weight:600;">tenant guide PDF</a>.</p>
+      <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:16px;">New here? Watch the <a href="javascript:void(0)" onclick="openGuidePreview('tenant')" style="color:var(--accent);font-weight:600;">tenant guide video ▶</a> or read the <a href="/downloads/tenant-guide.pdf" download="tenant-guide.pdf" style="color:var(--accent);font-weight:600;">tenant guide PDF</a>.</p>
       <form onsubmit="event.preventDefault(); submitTenantSupport();">
         <div class="form-grid" style="grid-template-columns:1fr 1fr;">
           <div class="form-group"><label>Your name *</label><input type="text" id="sup-name" required maxlength="80"></div>
@@ -867,5 +867,45 @@ if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navi
 </script>
 <script src="/push.js"></script>
 <script src="/install-widget.js"></script>
+
+<!-- Video preview modal (watch first, download only if wanted) -->
+<div id="guideModal" style="display:none;position:fixed;inset:0;z-index:5000;background:rgba(5,10,25,.9);align-items:center;justify-content:center;padding:20px;" onclick="if (event.target === this) closeGuidePreview()">
+    <div style="background:var(--card,#0f172a);border:1px solid var(--border,#334155);border-radius:16px;max-width:720px;width:100%;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.6);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h3 style="margin:0;font-size:1rem;" id="guideModalTitle">Guide video</h3>
+            <button type="button" onclick="closeGuidePreview()" aria-label="Close video" style="background:none;border:none;color:var(--text-muted);font-size:1.5rem;cursor:pointer;line-height:1;">×</button>
+        </div>
+        <video id="guideVideo" controls preload="metadata" playsinline style="width:100%;max-height:60vh;border-radius:10px;background:#000;"></video>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;gap:10px;flex-wrap:wrap;">
+            <span style="font-size:0.78rem;color:var(--text-muted);">Previewing above — download only if you'd like a copy.</span>
+            <a id="guideDownloadBtn" class="btn-primary" style="display:inline-block;padding:10px 18px;border-radius:8px;font-size:.85rem;font-weight:600;text-decoration:none;" download>Download video</a>
+        </div>
+    </div>
+</div>
+<script>
+(function () {
+    var modal = document.getElementById('guideModal');
+    var video = document.getElementById('guideVideo');
+    var title = document.getElementById('guideModalTitle');
+    var dlBtn = document.getElementById('guideDownloadBtn');
+    if (!modal || !video || !title || !dlBtn) return;
+    window.openGuidePreview = function (kind) {
+        var isOwner = kind === 'owner';
+        title.textContent = isOwner ? 'Owner guide video' : 'Tenant guide video';
+        video.src = '/downloads/' + (isOwner ? 'owner' : 'tenant') + '-guide.mp4';
+        dlBtn.href = '/downloads/' + (isOwner ? 'owner' : 'tenant') + '-guide.mp4';
+        dlBtn.setAttribute('download', isOwner ? 'owner-guide.mp4' : 'tenant-guide.mp4');
+        modal.style.display = 'flex';
+        video.play().catch(function () {});
+    };
+    window.closeGuidePreview = function () {
+        video.pause();
+        modal.style.display = 'none';
+    };
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeGuidePreview();
+    });
+})();
+</script>
 </body>
 </html>

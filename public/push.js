@@ -267,15 +267,33 @@
         '<div class="u-ico">\u2b06\ufe0f</div>' +
         '<h3>Update available</h3>' +
         '<p>' + (v.message || 'A new version of the SajiloRent app is ready.') + '</p>' +
-        '<a href="' + primary + '" rel="noopener">' + primaryLabel + '</a>' +
-        (v.web ? '<a class="u-sec" href="' + v.web + '" rel="noopener">Open in browser</a>' : '') +
+        '<a id="uDl" href="' + primary + '" download rel="noopener">' + primaryLabel + '</a>' +
+        (v.web ? '<a class="u-sec" id="uWeb" href="' + v.web + '" rel="noopener">Open in browser</a>' : '') +
         (force ? '' : '<button type="button" data-act="later">Later</button>');
       ov.appendChild(card);
-      var webLink = card.querySelector('a.u-sec');
+      var downloadLink = card.querySelector('#uDl');
+      if (downloadLink) {
+        downloadLink.addEventListener('click', function (e) {
+          e.preventDefault();
+          var url = downloadLink.getAttribute('href');
+          var win = null;
+          try { win = window.open(url, '_blank', 'noopener'); } catch (err) {}
+          if (!win || win.closed === undefined || typeof win.closed !== 'boolean') {
+            try { win = window.open(url, '_blank'); } catch (err) {}
+          }
+          if (!win) { location.href = url; }
+        });
+      }
+      var webLink = card.querySelector('#uWeb');
       if (webLink) {
-        webLink.addEventListener('click', function () {
-          try { localStorage.removeItem(APP_MODE_KEY); } catch (e) {}
-          try { document.documentElement.classList.remove('app-mode'); } catch (e) {}
+        webLink.addEventListener('click', function (e) {
+          e.preventDefault();
+          try { localStorage.removeItem(APP_MODE_KEY); } catch (err) {}
+          try { document.documentElement.classList.remove('app-mode'); } catch (err) {}
+          var url = webLink.getAttribute('href');
+          var win = null;
+          try { win = window.open(url, '_blank', 'noopener'); } catch (err) {}
+          if (!win) { location.href = url; }
         });
       }
       var btn = card.querySelector('button');
